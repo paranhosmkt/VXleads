@@ -1,0 +1,6 @@
+{
+  "name": "VX Leads",
+  "description": "App para melhorar resultados de estandes em feiras e eventos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
