@@ -1,0 +1,32 @@
+{
+  "collections": [
+    {
+      "name": "companies",
+      "description": "Stores company registration details for billing and CRM",
+      "documentId": "uid",
+      "fields": [
+        { "name": "uid", "type": "string", "description": "Firebase Auth UID" },
+        { "name": "razaoSocial", "type": "string", "description": "Company Name" },
+        { "name": "cnpj", "type": "string", "description": "CNPJ" },
+        { "name": "inscricaoEstadual", "type": "string", "description": "State Registration" },
+        { "name": "cep", "type": "string", "description": "Postal Code" },
+        { "name": "endereco", "type": "string", "description": "Address" },
+        { "name": "numero", "type": "string", "description": "Number" },
+        { "name": "complemento", "type": "string", "description": "Complement" },
+        { "name": "bairro", "type": "string", "description": "Neighborhood" },
+        { "name": "cidade", "type": "string", "description": "City" },
+        { "name": "estado", "type": "string", "description": "State" },
+        { "name": "nomeContato", "type": "string", "description": "Contact Name" },
+        { "name": "email", "type": "string", "description": "Email" },
+        { "name": "telefone", "type": "string", "description": "Phone" },
+        { "name": "createdAt", "type": "timestamp", "description": "Registration time" }
+      ],
+      "securityRules": {
+        "read": "request.auth != null && request.auth.uid == uid",
+        "create": "request.auth != null && request.auth.uid == uid",
+        "update": "request.auth != null && request.auth.uid == uid",
+        "delete": "false"
+      }
+    }
+  ]
+}
