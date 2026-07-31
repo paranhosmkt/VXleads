@@ -184,6 +184,22 @@ export default function Dashboard() {
           </button>
 
           <button 
+            onClick={() => navigate('/configurar-experiencia')}
+            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Settings size={18} />
+            <span className="hidden md:inline">Experiência</span>
+          </button>
+
+          <button 
+            onClick={() => window.open(window.location.origin + `/tv/${userId}`, '_blank')}
+            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-50 text-purple-700 font-semibold rounded-lg hover:bg-purple-100 transition-colors"
+          >
+            <ExternalLink size={18} />
+            <span className="hidden md:inline">Modo TV</span>
+          </button>
+          
+          <button 
             onClick={() => window.open(rouletteLink, '_blank')}
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
           >

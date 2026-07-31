@@ -8,6 +8,7 @@ import { auth, db } from '../lib/firebase';
 export default function Register() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     razaoSocial: '',
@@ -51,6 +52,11 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!acceptedTerms) {
+      setError('Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.');
+      return;
+    }
 
     if (formData.senha !== formData.confirmacaoSenha) {
       setError('As senhas não coincidem.');
@@ -425,6 +431,23 @@ export default function Register() {
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="flex items-start gap-3 mt-4 mb-2">
+              <input 
+                type="checkbox" 
+                id="terms" 
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <label htmlFor="terms" className="text-sm text-gray-600 leading-relaxed">
+                Eu li e concordo com os{' '}
+                <Link to="/termos-de-uso" target="_blank" className="text-blue-600 hover:underline">Termos de Uso</Link>
+                {' '}e a{' '}
+                <Link to="/politica-de-privacidade" target="_blank" className="text-blue-600 hover:underline">Política de Privacidade</Link>, 
+                incluindo a coleta e uso dos meus dados para fins comerciais e conformidade com a LGPD.
+              </label>
             </div>
             
             <div className="pt-6 border-t border-gray-100 flex flex-col items-center">

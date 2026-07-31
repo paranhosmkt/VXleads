@@ -31,7 +31,11 @@ export default function Roulette() {
   const [rotation, setRotation] = useState(0);
   const [selectedPrize, setSelectedPrize] = useState<any>(null);
 
-  const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '', area: '' });
+  const [leadForm, setLeadForm] = useState<Record<string, string>>({});
+  const [formFields, setFormFields] = useState<any[]>([]);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadCode, setLeadCode] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -40,6 +44,7 @@ export default function Roulette() {
   const [copied, setCopied] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [isInactive, setIsInactive] = useState(false);
+  const [planType, setPlanType] = useState('Starter');
 
   useEffect(() => {
     const fetchCompanyData = async (uid: string) => {
@@ -59,8 +64,26 @@ export default function Roulette() {
           setCharacter(char);
           setCompanyLogo(data.logoDataUrl || null);
           setCompanyName(data.razaoSocial || '');
+          setPlanType(data.planType || 'Starter');
+          setVideoUrl(data.videoUrl || null);
+          if (data.formFields && data.formFields.length > 0) {
+            setFormFields(data.formFields);
+          } else {
+            setFormFields([
+              { id: 'name', type: 'short_text', label: 'Nome Completo', required: true },
+              { id: 'email', type: 'email', label: 'E-mail', required: true },
+              { id: 'phone', type: 'phone', label: 'Telefone / WhatsApp', required: true },
+              { id: 'area', type: 'short_text', label: 'Área de Atuação', required: true }
+            ]);
+          }
         } else {
           setCharacter(AVAILABLE_CHARACTERS[0]);
+          setFormFields([
+            { id: 'name', type: 'short_text', label: 'Nome Completo', required: true },
+            { id: 'email', type: 'email', label: 'E-mail', required: true },
+            { id: 'phone', type: 'phone', label: 'Telefone / WhatsApp', required: true },
+            { id: 'area', type: 'short_text', label: 'Área de Atuação', required: true }
+          ]);
         }
         
         const prizesSnap = await getDocs(collection(db, 'companies', uid, 'prizes'));
@@ -107,6 +130,12 @@ export default function Roulette() {
             { id: '4', nome: 'Compre 1 Leve 2' },
           ]);
           setCharacter(AVAILABLE_CHARACTERS[0]);
+          setFormFields([
+            { id: 'name', type: 'short_text', label: 'Nome Completo', required: true },
+            { id: 'email', type: 'email', label: 'E-mail', required: true },
+            { id: 'phone', type: 'phone', label: 'Telefone / WhatsApp', required: true },
+            { id: 'area', type: 'short_text', label: 'Área de Atuação', required: true }
+          ]);
           setLoading(false);
         }
       });
@@ -114,13 +143,37 @@ export default function Roulette() {
     }
   }, [companyId]);
 
+    useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (isPlayingVideo && (videoUrl?.includes('youtube.com') || videoUrl?.includes('youtu.be'))) {
+      timeout = setTimeout(() => {
+        setIsPlayingVideo(false);
+        setVideoEnded(true);
+      }, 10000);
+    }
+    return () => clearTimeout(timeout);
+  }, [isPlayingVideo, videoUrl]);
+
+  useEffect(() => {
+    if (videoEnded && !isSpinning && !selectedPrize && !showForm) {
+      // Auto trigger spin when video ends
+      spin();
+    }
+  }, [videoEnded]);
+
   const spin = () => {
     if (isSpinning || prizes.length === 0) return;
+    if (videoUrl && !videoEnded) {
+      setIsPlayingVideo(true);
+      return;
+    }
+
     setIsSpinning(true);
     setSelectedPrize(null);
     setShowForm(false);
     setLeadCode('');
-    setLeadForm({ name: '', email: '', phone: '', area: '' });
+    setLeadForm({});
+    setVideoEnded(false);
 
     const prizeCount = prizes.length;
     const sliceAngle = 360 / prizeCount;
@@ -296,8 +349,45 @@ export default function Roulette() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col md:flex-row overflow-hidden relative">
+      
+      {isPlayingVideo && videoUrl && (
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+          {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
+            <iframe 
+              className="w-full h-full max-w-5xl aspect-video"
+              src={`https://www.youtube.com/embed/${videoUrl.split('v=')[1]?.split('&')[0] || videoUrl.split('/').pop()}?autoplay=1&controls=0&showinfo=0&rel=0`} 
+              frameBorder="0" 
+              allow="autoplay; encrypted-media" 
+              allowFullScreen
+              
+            ></iframe>
+          ) : (
+            <video 
+              autoPlay 
+              className="w-full h-full max-w-5xl object-contain"
+              onEnded={() => {
+                setIsPlayingVideo(false);
+                setVideoEnded(true);
+              }}
+            >
+              <source src={videoUrl} type="video/mp4" />
+            </video>
+          )}
+          
+          <button 
+            onClick={() => {
+              setIsPlayingVideo(false);
+              setVideoEnded(true);
+            }}
+            className="absolute top-8 right-8 bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-full backdrop-blur-md transition-colors"
+          >
+            Pular
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col justify-center items-center p-4 md:p-8 relative z-10 w-full md:w-1/2">
-        {isOwner && (
+        {isOwner && planType !== 'Starter' && (
           <div className="absolute top-4 left-4 z-40 flex flex-col gap-2">
             <button
               onClick={() => setShowShare(!showShare)}
@@ -389,22 +479,59 @@ export default function Roulette() {
 
              {showForm && (
                <form onSubmit={handleLeadSubmit} className="text-left mt-4 space-y-4">
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                   <input required type="text" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none" placeholder="Seu nome" />
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-                   <input required type="email" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none" placeholder="seu@email.com" />
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Telefone / WhatsApp</label>
-                   <input required type="tel" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none" placeholder="(00) 00000-0000" />
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Área de Atuação</label>
-                   <input required type="text" value={leadForm.area} onChange={(e) => setLeadForm({...leadForm, area: e.target.value})} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none" placeholder="Ex: Marketing, Vendas..." />
-                 </div>
+
+                 {formFields.map(field => (
+                   <div key={field.id}>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                     {field.type === 'long_text' ? (
+                       <textarea 
+                         required={field.required}
+                         value={leadForm[field.id] || ''}
+                         onChange={(e) => setLeadForm({...leadForm, [field.id]: e.target.value})}
+                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
+                         rows={3}
+                       />
+                     ) : field.type === 'multiple_choice' ? (
+                       <div className="space-y-2">
+                         {field.options?.map((opt, i) => (
+                           <label key={i} className="flex items-center gap-2 cursor-pointer">
+                             <input 
+                               type="radio" 
+                               name={field.id}
+                               value={opt}
+                               required={field.required}
+                               checked={leadForm[field.id] === opt}
+                               onChange={(e) => setLeadForm({...leadForm, [field.id]: e.target.value})}
+                               className="text-indigo-600 focus:ring-indigo-600"
+                             />
+                             <span className="text-sm text-gray-700">{opt}</span>
+                           </label>
+                         ))}
+                       </div>
+                     ) : field.type === 'dropdown' ? (
+                       <select
+                         required={field.required}
+                         value={leadForm[field.id] || ''}
+                         onChange={(e) => setLeadForm({...leadForm, [field.id]: e.target.value})}
+                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none bg-white"
+                       >
+                         <option value="">Selecione...</option>
+                         {field.options?.map((opt, i) => (
+                           <option key={i} value={opt}>{opt}</option>
+                         ))}
+                       </select>
+                     ) : (
+                       <input 
+                         required={field.required}
+                         type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text'}
+                         value={leadForm[field.id] || ''}
+                         onChange={(e) => setLeadForm({...leadForm, [field.id]: e.target.value})}
+                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-600 outline-none"
+                       />
+                     )}
+                   </div>
+                 ))}
+
                  <button 
                    type="submit"
                    disabled={submittingLead}

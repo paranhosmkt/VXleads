@@ -38,9 +38,9 @@ function PartnerSimulator() {
   const [sales, setSales] = useState(10);
 
   const plans = {
-    Starter: 497,
-    Pro: 997,
-    Enterprise: 2497
+    Starter: 797,
+    Pro: 1297,
+    Enterprise: 3597
   };
 
   const planPrice = plans[plan];
@@ -191,6 +191,7 @@ function FloatingBubbles() {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isAnnual, setIsAnnual] = useState(false);
 
   useEffect(() => {
     const video = document.createElement('video');
@@ -517,7 +518,7 @@ export default function App() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">4</div>
                 <h3 className="text-3xl font-bold text-gray-900">Copie o link gerado</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Esse link você poderá usar em um totem, tablet ou até mesmo enviar pelo WhatsApp para que diversos leads girem a roleta, ganhem brindes e façam o cadastro simultaneamente. O sistema se instala como um PWA e está pronto para rodar, garantindo funcionamento contínuo mesmo que a internet do evento oscile.
+                  Esse link você poderá usar em um totem ou tablet no seu estande para que os visitantes girem a roleta, ganhem brindes e façam o cadastro. O sistema se instala como um PWA e está pronto para rodar, garantindo funcionamento contínuo mesmo que a internet do evento oscile.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -533,7 +534,7 @@ export default function App() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-600 font-bold text-xl mb-2">5</div>
                 <h3 className="text-3xl font-bold text-gray-900">Pronto para converter leads em clientes</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  A mágica acontece: o visitante joga e se cadastra. Seu promoter simplesmente valida o QR Code do ganhador e entrega o brinde. Após o evento, você exporta uma planilha com todos os leads qualificados, prontinha para abastecer o seu CRM e guiar o time comercial no direcionamento de conteúdos e vendas.
+                  A mágica acontece: o visitante joga e se cadastra direto no estande. O seu promoter apenas valida a tela de ganhador e entrega o brinde. Após o evento, a empresa exporta uma planilha com todos os leads qualificados, prontinha para abastecer o seu CRM e guiar o time comercial no direcionamento de conteúdos e vendas.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -555,6 +556,23 @@ export default function App() {
               Escolha a melhor opção para transformar seu estande em uma máquina de captação de leads.
             </p>
           </div>
+          
+          <div className="flex justify-center mb-12">
+            <div className="bg-white p-1.5 rounded-xl border border-gray-200 inline-flex items-center shadow-sm">
+              <button
+                onClick={() => setIsAnnual(false)}
+                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${!isAnnual ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                Por Evento
+              </button>
+              <button
+                onClick={() => setIsAnnual(true)}
+                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${isAnnual ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900'}`}
+              >
+                Anual (Eventos Ilimitados)
+              </button>
+            </div>
+          </div>
 
           <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-8">
             {/* Starter Plan */}
@@ -563,18 +581,18 @@ export default function App() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
                 <p className="text-gray-500 min-h-[48px]">Para pequenos estandes e ativações pontuais.</p>
                 <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-gray-900">R$ 497</span>
-                  <span className="text-gray-500 font-medium">/evento</span>
+                  <span className="text-4xl font-extrabold text-gray-900">{isAnnual ? "R$ 4.997" : "R$ 797"}</span>
+                  <span className="text-gray-500 font-medium">{isAnnual ? "/ano" : "/evento"}</span>
                 </div>
               </div>
               <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Até 100 leads</span>
+                  <span className="text-gray-700">Até {isAnnual ? "2.400" : "100"} leads</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">1 Dispositivo (Totem/Tablet)</span>
+                  <span className="text-gray-700">{isAnnual ? "1 dispositivo (Totem/Tablet/smartphone) por evento" : "1 Dispositivo (Totem/Tablet)"}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -599,18 +617,18 @@ export default function App() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro</h3>
                 <p className="text-gray-500 min-h-[48px]">Para feiras regionais e médias empresas.</p>
                 <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-gray-900">R$ 997</span>
-                  <span className="text-gray-500 font-medium">/evento</span>
+                  <span className="text-4xl font-extrabold text-gray-900">{isAnnual ? "R$ 8.997" : "R$ 1.297"}</span>
+                  <span className="text-gray-500 font-medium">{isAnnual ? "/ano" : "/evento"}</span>
                 </div>
               </div>
               <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Até 1.000 leads</span>
+                  <span className="text-gray-700">Até {isAnnual ? "24.000" : "1.000"} leads</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700 font-medium">3 Dispositivos Simultâneos</span>
+                  <span className="text-gray-700 font-medium">{isAnnual ? "Até 10 dispositivos conectados por evento" : "Até 10 dispositivos conectados"}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -619,6 +637,10 @@ export default function App() {
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
                   <span className="text-gray-700">Gestão de Estoque</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                  <span className="text-gray-700">Integração com CRM</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -636,18 +658,18 @@ export default function App() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
                 <p className="text-gray-500 min-h-[48px]">Para grandes marcas e feiras maiores.</p>
                 <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold text-gray-900">R$ 2.497</span>
-                  <span className="text-gray-500 font-medium">/evento</span>
+                  <span className="text-4xl font-extrabold text-gray-900">{isAnnual ? "R$ 24.997" : "R$ 3.597"}</span>
+                  <span className="text-gray-500 font-medium">{isAnnual ? "/ano" : "/evento"}</span>
                 </div>
               </div>
               <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Até 10 mil Leads</span>
+                  <span className="text-gray-700">Até {isAnnual ? "240.000" : "10 mil"} Leads</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Até 50 dispositivos conectados</span>
+                  <span className="text-gray-700">{isAnnual ? "Até 1.000 dispositivos simultâneos por evento" : "Até 50 dispositivos conectados"}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -779,7 +801,7 @@ export default function App() {
               question="O que significa 'Dispositivos Simultâneos' nos planos?"
               answer={
                 <>
-                  Refere-se a quantas telas diferentes você pode conectar ao mesmo tempo usando o mesmo link de captação no seu estande. Se você alugar 3 totens para colocar em pontos diferentes do seu estande, precisará do Plano Pro, que permite que o sistema rode e sincronize leads vindos dessas 3 telas simultaneamente.
+                  Refere-se a quantas telas diferentes você pode conectar ao mesmo tempo usando o mesmo link de captação no seu estande. Se você alugar 10 totens para colocar em pontos diferentes do seu estande, precisará do Plano Pro, que permite que o sistema rode e sincronize leads vindos dessas 10 telas simultaneamente.
                 </>
               }
             />
@@ -802,6 +824,23 @@ export default function App() {
               <p className="text-gray-400 leading-relaxed">
                 A plataforma definitiva para captar leads qualificados, engajar visitantes e multiplicar seus resultados em feiras e eventos.
               </p>
+            </div>
+
+            {/* Legal Links */}
+            <div>
+              <h4 className="text-white font-bold text-lg mb-6">Políticas</h4>
+              <ul className="space-y-4">
+                <li>
+                  <RouterLink to="/termos-de-uso" className="text-gray-400 hover:text-white transition-colors cursor-pointer">
+                    Termos de Uso
+                  </RouterLink>
+                </li>
+                <li>
+                  <RouterLink to="/politica-de-privacidade" className="text-gray-400 hover:text-white transition-colors cursor-pointer">
+                    Política de Privacidade
+                  </RouterLink>
+                </li>
+              </ul>
             </div>
 
             {/* Contact */}
