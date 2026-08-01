@@ -205,7 +205,11 @@ export default function App() {
       </header>
 
       {/* Hero Section */}
-      <main className="px-6 py-24 max-w-7xl mx-auto flex flex-col lg:flex-row items-center w-full gap-12 lg:gap-8">
+      <motion.main className="px-6 py-24 max-w-7xl mx-auto flex flex-col lg:flex-row items-center w-full gap-12 lg:gap-8"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="flex-1 flex flex-col items-start w-full">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 max-w-2xl leading-[1.15] tracking-tight mb-6 text-left">
             Transforme seu estande em uma <span className="text-blue-600">máquina de atrair clientes</span>
@@ -227,10 +231,15 @@ export default function App() {
             <FloatingBubbles />
           </div>
         </div>
-      </main>
+      </motion.main>
 
       {/* Logos CRMs */}
-      <section className="px-6 py-12 border-t border-gray-100 bg-white">
+      <motion.section className="px-6 py-12 border-t border-gray-100 bg-white"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-7xl mx-auto w-full text-center">
           <p className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-8">Integração nativa com os principais CRMs do mercado</p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 grayscale opacity-60">
@@ -241,10 +250,15 @@ export default function App() {
             <div className="text-2xl font-bold tracking-tight text-gray-900">ActiveCampaign</div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Comparison Section */}
-      <section className="px-6 py-24 bg-gray-50 border-t border-gray-100">
+      <motion.section className="px-6 py-24 bg-gray-50 border-t border-gray-100"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">O Fim dos Estandes Vazios</h2>
@@ -337,11 +351,16 @@ export default function App() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
     
       {/* CRM Conversion Curve Section */}
-      <section className="px-6 py-24 bg-indigo-900 border-t border-indigo-800 text-white overflow-hidden relative">
+      <motion.section className="px-6 py-24 bg-indigo-900 border-t border-indigo-800 text-white overflow-hidden relative"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-400 via-indigo-900 to-transparent"></div>
         <div className="max-w-7xl mx-auto w-full relative z-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
           <div className="flex-1 space-y-6">
@@ -389,10 +408,15 @@ export default function App() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
     {/* Why Choose Us Section */}
-      <section className="px-6 py-24 bg-white border-t border-gray-100">
+      <motion.section className="px-6 py-24 bg-white border-t border-gray-100"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Por que escolher a VX Leads?</h2>
@@ -443,10 +467,15 @@ export default function App() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* How it Works Section */}
-      <section className="px-6 py-24 bg-white">
+      <motion.section className="px-6 py-24 bg-white"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-20">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Como Funciona</h2>
@@ -537,10 +566,15 @@ export default function App() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Pricing Section */}
-      <section className="px-6 py-24 bg-gray-50 border-t border-gray-100">
+      <motion.section className="px-6 py-24 bg-gray-50 border-t border-gray-100"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Planos que cabem no seu evento</h2>
@@ -722,10 +756,15 @@ export default function App() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Consultant Program Section */}
-      <section className="px-6 py-24 bg-gray-900 text-white">
+      <motion.section className="px-6 py-24 bg-gray-900 text-white"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-12">
           <div className="flex-1">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-400 font-semibold text-sm mb-6">
@@ -758,10 +797,15 @@ export default function App() {
             <img src="https://i.ibb.co/q3SrwYM5/6eafasf-3.png" alt="Programa de Parceiros VX Leads" className="w-full max-w-md rounded-2xl shadow-2xl shadow-blue-500/20 object-cover" />
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* FAQ Section */}
-      <section className="px-6 py-24 bg-white border-t border-gray-100">
+      <motion.section className="px-6 py-24 bg-white border-t border-gray-100"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-4xl mx-auto w-full">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">Perguntas Frequentes</h2>
@@ -797,12 +841,26 @@ export default function App() {
                 </>
               }
             />
+
+            <FaqItem 
+              question="O VX Leads é um CRM ou se integra com o meu CRM?"
+              answer={
+                <>
+                  <strong>O VX Leads não é um CRM</strong>. Nós somos uma plataforma especializada na <strong>captação e qualificação de leads</strong> durante os eventos. No entanto, você pode exportar facilmente todos os leads qualificados em uma planilha (Excel/CSV) diretamente do seu painel de controle. Essa planilha pode ser importada rapidamente em qualquer CRM do mercado (como RD Station, HubSpot, Pipedrive, Bitrix24, etc) para dar continuidade ao atendimento.
+                </>
+              }
+            />
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer Section */}
-      <footer className="bg-gray-900 pt-16 pb-8 border-t border-gray-800">
+      <motion.footer className="bg-gray-900 pt-16 pb-8 border-t border-gray-800"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
         <div className="max-w-7xl mx-auto px-6 w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             {/* Logo/About */}
@@ -877,7 +935,7 @@ export default function App() {
             </p>
           </div>
         </div>
-      </footer>
+      </motion.footer>
       <Chatbot />
     </div>
   );
