@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const code = `
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -35,6 +37,7 @@ export default function Roulette() {
   const [formFields, setFormFields] = useState<any[]>([]);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [submittingLead, setSubmittingLead] = useState(false);
+  const [leadCode, setLeadCode] = useState('');
   
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -159,6 +162,7 @@ export default function Roulette() {
 
     setIsSpinning(true);
     setSelectedPrize(null);
+    setLeadCode('');
 
     const prizeCount = prizes.length;
     const sliceAngle = 360 / prizeCount;
@@ -184,15 +188,18 @@ export default function Roulette() {
 
       setSubmittingLead(true);
       try {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const finalLeadData = {
           ...leadForm,
           companyId: companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid,
           prize: finalPrize.nome,
+          code: code,
           createdAt: serverTimestamp(),
           origin: window.location.origin
         };
         const leadsRef = collection(db, 'leads');
         await addDoc(leadsRef, finalLeadData);
+        setLeadCode(code);
       } catch (err) {
         console.error(err);
       } finally {
@@ -240,7 +247,7 @@ export default function Roulette() {
       const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
       
       const largeArcFlag = sliceAngle > 180 ? 1 : 0;
-      const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+      const pathData = \`M 50 50 L \${x1} \${y1} A 50 50 0 \${largeArcFlag} 1 \${x2} \${y2} Z\`;
       
       const textAngle = startAngle + sliceAngle / 2;
       const textX = 50 + 35 * Math.cos((Math.PI * textAngle) / 180);
@@ -279,13 +286,13 @@ export default function Roulette() {
             fontWeight="bold"
             textAnchor="middle" 
             alignmentBaseline="middle"
-            transform={`rotate(${textAngle}, ${textX}, ${textY})`}
+            transform={\`rotate(\${textAngle}, \${textX}, \${textY})\`}
             style={{ textShadow: '0px 1px 2px rgba(0,0,0,0.5)' }}
           >
             {lines.map((line: string, idx: number) => {
                const yOffset = (idx - (lines.length - 1) / 2) * 1.2;
                return (
-                 <tspan key={idx} x={textX} dy={idx === 0 ? `${yOffset}em` : '1.2em'}>
+                 <tspan key={idx} x={textX} dy={idx === 0 ? \`\${yOffset}em\` : '1.2em'}>
                    {line}
                  </tspan>
                );
@@ -305,7 +312,7 @@ export default function Roulette() {
   };
 
   const copyShareLink = () => {
-    const link = window.location.origin + `/roleta/${companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid}`;
+    const link = window.location.origin + \`/roleta/\${companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid}\`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -319,7 +326,7 @@ export default function Roulette() {
           {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
             <iframe 
               className="w-full h-full max-w-5xl aspect-video"
-              src={`https://www.youtube.com/embed/${videoUrl.split('v=')[1]?.split('&')[0] || videoUrl.split('/').pop()}?autoplay=1&controls=0&showinfo=0&rel=0`} 
+              src={\`https://www.youtube.com/embed/\${videoUrl.split('v=')[1]?.split('&')[0] || videoUrl.split('/').pop()}?autoplay=1&controls=0&showinfo=0&rel=0\`} 
               frameBorder="0" 
               allow="autoplay; encrypted-media" 
               allowFullScreen
@@ -360,7 +367,7 @@ export default function Roulette() {
                   <input 
                     type="text" 
                     readOnly 
-                    value={window.location.origin + `/roleta/${companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid}`}
+                    value={window.location.origin + \`/roleta/\${companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid}\`}
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600 outline-none"
                   />
                   <button 
@@ -482,7 +489,7 @@ export default function Roulette() {
                 <div 
                   className="w-full h-full rounded-full overflow-hidden shadow-2xl relative"
                   style={{ 
-                    transform: `rotate(${rotation}deg)`, 
+                    transform: \`rotate(\${rotation}deg)\`, 
                     transition: 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)' 
                   }}
                 >
@@ -513,25 +520,30 @@ export default function Roulette() {
                 {submittingLead ? (
                   <div className="flex flex-col items-center justify-center py-6">
                     <Loader2 size={32} className="animate-spin text-indigo-600 mb-4" />
-                    <p className="text-gray-500 font-medium">Registrando prêmio...</p>
+                    <p className="text-gray-500 font-medium">Gerando seu código...</p>
                   </div>
-                ) : (
+                ) : leadCode ? (
                   <div className="mt-4">
-                    <p className="text-sm text-gray-600 mb-6 font-medium">
-                      Prêmio registrado com sucesso no sistema.
+                    <h3 className="text-gray-500 font-medium uppercase tracking-wider mb-2">Seu código de resgate</h3>
+                    <div className="bg-gray-100 rounded-2xl p-6 mb-4">
+                      <p className="text-5xl font-black text-indigo-700 tracking-widest">{leadCode}</p>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Apresente este código para a promotora no estande para retirar o seu <strong>{selectedPrize.nome}</strong>.
                     </p>
                     <button 
                       onClick={() => {
                         setSelectedPrize(null);
+                        setLeadCode('');
                         setLeadForm({});
                         setStep('intro');
                       }} 
-                      className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-indigo-700 transition-colors w-full flex items-center justify-center"
+                      className="px-8 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors w-full"
                     >
-                      Realizar Novo Cadastro
+                      Finalizar
                     </button>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -557,3 +569,6 @@ export default function Roulette() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync('src/pages/Roulette.tsx', code);

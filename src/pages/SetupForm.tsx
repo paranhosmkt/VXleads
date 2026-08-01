@@ -13,10 +13,7 @@ export default function SetupForm() {
   
   const [videoUrl, setVideoUrl] = useState('');
   const [formFields, setFormFields] = useState<any[]>([
-    { id: 'name', type: 'short_text', label: 'Nome Completo', required: true, options: [] },
-    { id: 'email', type: 'email', label: 'E-mail', required: true, options: [] },
-    { id: 'phone', type: 'phone', label: 'Telefone / WhatsApp', required: true, options: [] },
-    { id: 'area', type: 'short_text', label: 'Área de Atuação', required: true, options: [] },
+    { id: 'area', type: 'multiple_choice', label: 'Área de Atuação', required: true, options: [] },
   ]);
 
   useEffect(() => {
@@ -49,9 +46,13 @@ export default function SetupForm() {
   }, [navigate]);
 
   const handleAddField = () => {
+    if (formFields.length >= 5) {
+      alert('O limite máximo é de 5 perguntas.');
+      return;
+    }
     const newField = {
       id: Date.now().toString(),
-      type: 'short_text',
+      type: 'multiple_choice',
       label: 'Nova Pergunta',
       required: false,
       options: []
@@ -195,10 +196,11 @@ export default function SetupForm() {
             </div>
             <button 
               onClick={handleAddField}
-              className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 font-semibold rounded-lg hover:bg-green-100 transition-colors"
+              disabled={formFields.length >= 5}
+              className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 font-semibold rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus size={18} />
-              Adicionar Campo
+              Adicionar Campo ({formFields.length}/5)
             </button>
           </div>
           
@@ -224,10 +226,6 @@ export default function SetupForm() {
                       onChange={(e) => handleChangeField(field.id, 'type', e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-blue-500"
                     >
-                      <option value="short_text">Texto Curto</option>
-                      <option value="long_text">Texto Longo</option>
-                      <option value="email">E-mail</option>
-                      <option value="phone">Telefone / WhatsApp</option>
                       <option value="multiple_choice">Múltipla Escolha</option>
                       <option value="dropdown">Lista Suspensa</option>
                     </select>

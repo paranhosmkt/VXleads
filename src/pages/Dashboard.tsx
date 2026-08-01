@@ -75,7 +75,7 @@ export default function Dashboard() {
   };
 
   const downloadCSV = () => {
-    const headers = ['Nome', 'Email', 'Telefone', 'Area', 'Premio', 'Codigo', 'Status', 'Data'];
+    const headers = ['Nome', 'Email', 'Telefone', 'Area', 'Premio', 'Status', 'Data'];
     const csvContent = [
       headers.join(','),
       ...leads.map(lead => [
@@ -84,7 +84,6 @@ export default function Dashboard() {
         `"${lead.phone || ''}"`,
         `"${lead.area || ''}"`,
         `"${lead.prize || ''}"`,
-        `"${lead.code || ''}"`,
         `"${lead.status || ''}"`,
         `"${lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : ''}"`
       ].join(','))
@@ -140,7 +139,7 @@ export default function Dashboard() {
   const filteredLeads = leads.filter(l => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    return (l.name?.toLowerCase().includes(term) || l.email?.toLowerCase().includes(term) || l.code?.toLowerCase().includes(term));
+    return (l.name?.toLowerCase().includes(term) || l.email?.toLowerCase().includes(term));
   });
 
   if (loading) {
@@ -378,7 +377,6 @@ export default function Dashboard() {
                   <th className="px-6 py-4 font-semibold">Contato</th>
                   <th className="px-6 py-4 font-semibold">Área</th>
                   <th className="px-6 py-4 font-semibold">Prêmio Ganho</th>
-                  <th className="px-6 py-4 font-semibold text-center">Código</th>
                   <th className="px-6 py-4 font-semibold text-center">Data</th>
                   <th className="px-6 py-4 font-semibold text-right">Status / Ação</th>
                 </tr>
@@ -398,11 +396,7 @@ export default function Dashboard() {
                       <td className="px-6 py-4 font-medium text-indigo-600">
                         {lead.prize}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="inline-block bg-gray-100 text-gray-800 font-mono px-3 py-1 rounded-lg font-bold tracking-widest">
-                          {lead.code}
-                        </span>
-                      </td>
+
                       <td className="px-6 py-4 text-center text-gray-500">
                         {lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : '-'}
                       </td>

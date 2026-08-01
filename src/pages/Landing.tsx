@@ -33,78 +33,6 @@ function FaqItem({ question, answer }: { question: string; answer: React.ReactNo
   );
 }
 
-function PartnerSimulator() {
-  const [plan, setPlan] = useState<'Starter' | 'Pro' | 'Enterprise'>('Pro');
-  const [sales, setSales] = useState(10);
-
-  const plans = {
-    Starter: 797,
-    Pro: 1297,
-    Enterprise: 3597
-  };
-
-  const planPrice = plans[plan];
-  const commission = planPrice * 0.12;
-  const total = commission * sales;
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
-
-  return (
-    <div className="bg-gray-800 p-8 rounded-2xl border border-gray-700 max-w-sm w-full relative">
-      <div className="absolute -top-4 -right-4 bg-blue-600 w-12 h-12 rounded-xl rotate-12 flex items-center justify-center shadow-lg">
-        <DollarSign size={24} className="text-white" />
-      </div>
-      <h3 className="text-2xl font-bold text-white mb-6">Simule seus Ganhos</h3>
-      
-      <div className="space-y-6 mb-8">
-        <div>
-          <label className="block text-gray-400 text-sm font-medium mb-2">Plano indicado</label>
-          <select 
-            value={plan}
-            onChange={(e) => setPlan(e.target.value as 'Starter' | 'Pro' | 'Enterprise')}
-            className="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="Starter">Starter (R$ 497,00)</option>
-            <option value="Pro">Pro (R$ 997,00)</option>
-            <option value="Enterprise">Enterprise (R$ 2.497,00)</option>
-          </select>
-        </div>
-
-        <div>
-          <div className="flex justify-between text-sm mb-2">
-            <label className="text-gray-400 font-medium">Empresas por mês</label>
-            <span className="text-white font-bold">{sales}</span>
-          </div>
-          <input 
-            type="range" 
-            min="1" 
-            max="50" 
-            value={sales}
-            onChange={(e) => setSales(Number(e.target.value))}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-          />
-        </div>
-      </div>
-      
-      <div className="space-y-3 mb-6 pt-6 border-t border-gray-700">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-gray-400">Comissão (12%)</span>
-          <span className="text-green-400 font-semibold">
-            {formatCurrency(commission)} /empresa
-          </span>
-        </div>
-      </div>
-      
-      <div className="pt-4 border-t border-gray-700 flex justify-between items-end">
-        <span className="text-gray-400">Total no mês</span>
-        <span className="text-3xl font-black text-white">{formatCurrency(total)}</span>
-      </div>
-    </div>
-  );
-}
-
 const BUBBLE_TEXTS = [
   "Ganhei!", "Eu quero!", "Uhull!", "É prêmio!", "Quero cadastrar!",
   "Como funciona?", "Que legal!", "Vou participar!"
@@ -534,7 +462,7 @@ export default function App() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-600 font-bold text-xl mb-2">5</div>
                 <h3 className="text-3xl font-bold text-gray-900">Pronto para converter leads em clientes</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  A mágica acontece: o visitante joga e se cadastra direto no estande. O seu promoter apenas valida a tela de ganhador e entrega o brinde. Após o evento, a empresa exporta uma planilha com todos os leads qualificados, prontinha para abastecer o seu CRM e guiar o time comercial no direcionamento de conteúdos e vendas.
+                  A mágica acontece: basta os usuários lerem o QR Code, assistirem o vídeo, preencherem as perguntas de qualificação e girarem a roleta para ganhar brindes. O seu promoter apenas valida a tela de ganhador e entrega o prêmio. Após o evento, você exporta uma planilha com todos os leads qualificados para o seu CRM.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -592,7 +520,7 @@ export default function App() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">{isAnnual ? "1 dispositivo (Totem/Tablet/smartphone) por evento" : "1 Dispositivo (Totem/Tablet)"}</span>
+                  <span className="text-gray-700">Dispositivos simultâneos ilimitados</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -628,7 +556,7 @@ export default function App() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700 font-medium">{isAnnual ? "Até 10 dispositivos conectados por evento" : "Até 10 dispositivos conectados"}</span>
+                  <span className="text-gray-700 font-medium">Dispositivos simultâneos ilimitados</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -669,7 +597,7 @@ export default function App() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">{isAnnual ? "Até 1.000 dispositivos simultâneos por evento" : "Até 50 dispositivos conectados"}</span>
+                  <span className="text-gray-700">Dispositivos simultâneos ilimitados</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
@@ -705,7 +633,7 @@ export default function App() {
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-300">Dispositivos personalizados</span>
+                  <span className="text-gray-300">Dispositivos simultâneos ilimitados</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
@@ -742,7 +670,7 @@ export default function App() {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Ajude empresas a vender mais e seja muito bem remunerado</h2>
             <p className="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-              Seja um consultor parceiro e receba <strong className="text-white">12% de comissão recorrente</strong> por cada empresa indicada. Leve inovação para seus clientes e construa uma nova fonte de renda.
+              Seja um consultor parceiro e receba comissão recorrente enquanto os seus clientes usarem a plataforma. Leve inovação e construa uma nova fonte de renda.
             </p>
             <ul className="space-y-4 mb-8">
               <li className="flex items-center gap-3">
@@ -763,7 +691,7 @@ export default function App() {
             </RouterLink>
           </div>
           <div className="flex-1 w-full flex justify-center lg:justify-end">
-            <PartnerSimulator />
+            <img src="https://i.ibb.co/q3SrwYM5/6eafasf-3.png" alt="Programa de Parceiros VX Leads" className="w-full max-w-md rounded-2xl shadow-2xl shadow-blue-500/20 object-cover" />
           </div>
         </div>
       </section>
@@ -801,7 +729,7 @@ export default function App() {
               question="O que significa 'Dispositivos Simultâneos' nos planos?"
               answer={
                 <>
-                  Refere-se a quantas telas diferentes você pode conectar ao mesmo tempo usando o mesmo link de captação no seu estande. Se você alugar 10 totens para colocar em pontos diferentes do seu estande, precisará do Plano Pro, que permite que o sistema rode e sincronize leads vindos dessas 10 telas simultaneamente.
+                  Agora todos os nossos planos possuem dispositivos simultâneos ilimitados. Isso significa que você pode conectar quantas telas, totens ou celulares de promotores quiser ao mesmo tempo, em qualquer plano. O limite será apenas a cota de leads de cada plano.
                 </>
               }
             />

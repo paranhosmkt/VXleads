@@ -30,12 +30,12 @@ export default function TermsOfUse() {
 
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">2. Uso e Planos</h2>
           <p>
-            Os planos (Starter, Pro, Enterprise) dão direito ao uso da plataforma de acordo com seus limites (quantidade de leads e dispositivos simultâneos). A assinatura pode ser feita na modalidade "Por Evento" ou "Anual".
+            Os planos (Starter, Pro, Enterprise) dão direito ao uso da plataforma de acordo com seus limites (quantidade de leads da cota escolhida). A assinatura pode ser feita na modalidade "Por Evento" ou "Anual".
           </p>
           
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">3. Dispositivos Simultâneos</h2>
           <p>
-            Refere-se ao número de telas que podem acessar o sistema simultaneamente usando o mesmo link de captação.
+            Atualmente, todos os planos permitem o uso de dispositivos simultâneos ilimitados, de modo que você pode acessar o mesmo link de captação em quantas telas ou celulares quiser ao mesmo tempo.
           </p>
 
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">4. Cancelamento e Reembolso</h2>
