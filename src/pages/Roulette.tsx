@@ -359,7 +359,7 @@ export default function Roulette() {
       )}
 
       <div className="flex-1 flex flex-col justify-center items-center p-4 md:p-8 relative z-10 w-full md:w-1/2 min-h-[500px]">
-        {isOwner && planType !== 'Starter' && (
+        {isOwner && (
           <div className="absolute top-4 left-4 z-40 flex flex-col gap-2">
             <button
               onClick={() => setShowShare(!showShare)}

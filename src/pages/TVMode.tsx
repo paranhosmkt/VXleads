@@ -21,8 +21,7 @@ export default function TVMode() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [character, setCharacter] = useState<any>(null);
-  const [planType, setPlanType] = useState('Starter');
-
+  
   useEffect(() => {
     const fetchCompanyData = async () => {
       if (!companyId) return;
@@ -32,8 +31,7 @@ export default function TVMode() {
           const data = companyDoc.data();
           setCompanyName(data.razaoSocial || 'Empresa');
           setCompanyLogo(data.logoUrl || null);
-          setPlanType(data.planType || 'Starter');
-          setVideoUrl(data.videoUrl || null);
+                    setVideoUrl(data.videoUrl || null);
           
           if (data.characterId) {
             const char = AVAILABLE_CHARACTERS.find(c => c.id === data.characterId);
@@ -104,15 +102,9 @@ export default function TVMode() {
           </h1>
           
           <p className="text-3xl text-gray-300 max-w-2xl leading-relaxed mb-16 drop-shadow-md">
-            {['Enterprise', 'Personalizado'].includes(planType) ? (
-              <>
-                Escaneie o QR Code ao lado, gire a roleta e <strong className="text-yellow-400">ganhe brindes exclusivos!</strong>
+                          <>
+                Escaneie o QR Code ao lado ou gire a roleta no totem e <strong className="text-yellow-400">ganhe brindes exclusivos!</strong>
               </>
-            ) : (
-              <>
-                Gire a roleta no totem e <strong className="text-yellow-400">ganhe brindes exclusivos!</strong>
-              </>
-            )}
           </p>
           
           <div className="flex items-center gap-8 bg-white/10 p-4 rounded-full backdrop-blur-md border border-white/20 w-max shadow-2xl animate-pulse">
@@ -126,15 +118,13 @@ export default function TVMode() {
 
       {/* Right Side - QR Code & Character */}
       <div className="w-1/3 flex flex-col items-center justify-center relative z-10 bg-gradient-to-l from-blue-900/40 to-transparent">
-        {['Enterprise', 'Personalizado'].includes(planType) && (
-          <div className="bg-white p-10 rounded-[3rem] shadow-2xl flex flex-col items-center transform hover:scale-105 transition-transform duration-500 border-8 border-white/50 backdrop-blur-sm relative z-20">
+                  <div className="bg-white p-10 rounded-[3rem] shadow-2xl flex flex-col items-center transform hover:scale-105 transition-transform duration-500 border-8 border-white/50 backdrop-blur-sm relative z-20">
             <div className="absolute -top-6 bg-blue-600 text-white font-black px-8 py-2 rounded-full text-xl shadow-xl uppercase tracking-widest">
               Jogue Aqui
             </div>
             <QRCodeSVG value={rouletteUrl} size={300} level="H" includeMargin={false} />
             <p className="mt-8 text-gray-500 font-bold text-xl uppercase tracking-widest">Aponte a Câmera</p>
           </div>
-        )}
           
         
         {character && (

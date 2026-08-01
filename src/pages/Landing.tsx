@@ -447,7 +447,7 @@ export default function App() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">4</div>
                 <h3 className="text-3xl font-bold text-gray-900">Copie o link gerado</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Esse link você poderá usar em um totem ou tablet no seu estande para que os visitantes girem a roleta, ganhem brindes e façam o cadastro. O sistema se instala como um PWA e está pronto para rodar, garantindo funcionamento contínuo mesmo que a internet do evento oscile.
+                  Esse link é usado para abrir a tela de captura em um tablet ou totem no seu estande, onde os usuários podem ler o QR Code, fazer o cadastro, girar a roleta e ganhar um brinde. Caso a internet tenha oscilações no evento, a roleta continua funcionando normalmente e o lead capturado é enviado automaticamente para o painel da sua empresa no VX Leads assim que a conexão retornar.
                 </p>
               </div>
               <div className="flex-1 w-full relative">

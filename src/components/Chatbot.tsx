@@ -9,7 +9,7 @@ interface Message {
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: 'Olá! Sou o assistente virtual do VX Leads. Como posso te ajudar hoje?' }
+    { role: 'model', text: 'Olá! Eu sou o Gui. Como posso ajudar com suas dúvidas sobre planos, funcionalidades ou como a roleta funciona?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);

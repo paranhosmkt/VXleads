@@ -1,17 +1,6 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
-
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -21,31 +10,31 @@ async function startServer() {
   // API routes FIRST
   app.post("/api/chat", async (req, res) => {
     try {
-      const { messages } = req.body; 
+      const { messages } = req.body;
+      const lastMessage = messages[messages.length - 1]?.text?.toLowerCase() || '';
       
-      const contents = messages.map((m: any) => ({
-        role: m.role,
-        parts: [{ text: m.text }]
-      }));
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: contents,
-        config: {
-          systemInstruction: `Você é o assistente virtual do VX Leads, uma plataforma de roletas de prêmios interativas para feiras e eventos. 
-Seu objetivo é ajudar os visitantes tirando dúvidas e captando leads.
+      let responseText = "Desculpe, não entendi. Você pode perguntar sobre nossos planos, como funciona, brindes, dashboard ou modo TV.";
 
-Sobre o VX Leads:
-- Planos: Starter (R$47/mês, 500 leads), Pro (R$97/mês, 2.000 leads), Premium (R$147/mês, 10.000 leads).
-- Funcionalidades: Dashboard em tempo real, QR Code, modo TV, personagens personalizáveis.
-- Como funciona: O visitante preenche os dados, gira a roleta pelo celular, ganha o brinde, e a empresa capta o contato no dashboard.
+      if (lastMessage.includes("crm")) {
+        responseText = "Não, o VX Leads não é um CRM. Nós somos uma ferramenta focada na **captação de leads** (atrair visitantes e coletar dados de forma interativa com a roleta). O objetivo é que você exporte os contatos capturados no nosso dashboard para utilizá-los no seu CRM de vendas.";
+      } else if (lastMessage.includes("plano") || lastMessage.includes("preço") || lastMessage.includes("valor") || lastMessage.includes("custa")) {
+        responseText = "Temos três planos disponíveis (pagos por evento ou anual):\n\n🔹 **Starter:** (até 100 leads/evento)\n🔹 **Pro:** (até 1.000 leads/evento)\n🔹 **Enterprise:** (até 10 mil leads/evento)\n\nTambém oferecemos projetos personalizados sob consulta! Todos os planos têm dispositivos simultâneos ilimitados.";
+      } else if (lastMessage.includes("funciona")) {
+        responseText = "Funciona assim: Você cria sua conta, escolhe um personagem, cadastra seus brindes e abre o link num tablet ou totem no evento. Os visitantes podem ler o QR Code ou interagir direto na tela para fazer o cadastro e girar a roleta. Os leads caem no seu dashboard em tempo real, e o sistema funciona até se a internet cair!";
+      } else if (lastMessage.includes("brinde") || lastMessage.includes("prêmio") || lastMessage.includes("premio") || lastMessage.includes("roleta")) {
+        responseText = "Você tem total liberdade para configurar os brindes e definir as chances (probabilidade) de cada um sair na roleta através do nosso painel.";
+      } else if (lastMessage.includes("dashboard") || lastMessage.includes("painel") || lastMessage.includes("lead") || lastMessage.includes("contato")) {
+        responseText = "Nosso dashboard em tempo real permite que você veja todos os contatos (leads) captados durante o evento e exporte os dados facilmente.";
+      } else if (lastMessage.includes("tv") || lastMessage.includes("tela")) {
+        responseText = "O Modo TV permite exibir a roleta em um telão no seu estande! Ele mostra os últimos ganhadores e um QR Code para os visitantes lerem e participarem.";
+      } else if (lastMessage.includes("oi") || lastMessage.includes("olá") || lastMessage.includes("ola") || lastMessage.includes("bom dia") || lastMessage.includes("boa tarde") || lastMessage.includes("boa noite")) {
+        responseText = "Olá! Como posso te ajudar? Você pode me perguntar sobre nossos planos, funcionalidades ou como a plataforma funciona.";
+      }
 
-Seja amigável, direto e persuasivo. Tente convencer o usuário a se cadastrar.
-Se o usuário quiser se cadastrar ou falar com um humano, pegue o Nome e o WhatsApp dele.`
-        }
-      });
-      
-      res.json({ text: response.text });
+      // Adicionar um pequeno atraso para parecer mais natural
+      setTimeout(() => {
+        res.json({ text: responseText });
+      }, 800);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Erro ao processar a mensagem" });
