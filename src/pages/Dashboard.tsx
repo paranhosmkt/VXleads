@@ -5,7 +5,7 @@ import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase';
 import { 
   Users, Gift, Download, Copy, ExternalLink, 
-  Search, Loader2, LogOut, CheckCircle, Database, Settings, FileSpreadsheet
+  Search, Loader2, LogOut, CheckCircle, Database, Settings, FileSpreadsheet, Target
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -157,12 +157,18 @@ export default function Dashboard() {
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-lg md:text-xl">VX</span>
+          <div className="flex items-center gap-2 md:gap-3 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="bg-blue-600 text-white p-2 md:p-2.5 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
+              <Target size={20} strokeWidth={2.5} className="md:w-[22px] md:h-[22px]" />
+            </div>
+            <div className="text-xl md:text-2xl font-black text-gray-900 tracking-tighter hidden sm:block">
+              VX<span className="text-blue-600">Leads</span>
+            </div>
           </div>
+          <div className="h-8 w-px bg-gray-200 hidden sm:block"></div>
           <div>
-            <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate max-w-[120px] md:max-w-none">{companyName}</h1>
-            <p className="text-sm text-gray-500">Painel de Controle</p>
+            <h1 className="text-base md:text-xl font-bold text-gray-900 truncate max-w-[120px] md:max-w-none">{companyName}</h1>
+            <p className="text-xs md:text-sm text-gray-500">Painel de Controle</p>
           </div>
         </div>
         

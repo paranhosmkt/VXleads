@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-import { Loader2, CheckCircle2, ChevronRight, User } from 'lucide-react';
+import { Loader2, CheckCircle2, ChevronRight, User, Target } from 'lucide-react';
 
 const AVAILABLE_CHARACTERS = [
   {
@@ -96,11 +96,11 @@ export default function SelectCharacter() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Topbar simples */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <User size={18} className="text-white" />
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
+            <Target size={22} strokeWidth={2.5} />
           </div>
-          <div className="text-xl font-black text-gray-900 tracking-tighter">
+          <div className="text-2xl font-black text-gray-900 tracking-tighter">
             VX<span className="text-blue-600">Leads</span>
           </div>
         </div>

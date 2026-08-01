@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, writeBatch, getDocs, limit, query } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-import { Loader2, Plus, Trash2, ChevronRight, Gift } from 'lucide-react';
+import { Loader2, Plus, Trash2, ChevronRight, Gift, Target } from 'lucide-react';
 
 export default function SetupPrizes() {
   const navigate = useNavigate();
@@ -202,11 +202,11 @@ export default function SetupPrizes() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Gift size={18} className="text-white" />
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
+            <Target size={22} strokeWidth={2.5} />
           </div>
-          <div className="text-xl font-black text-gray-900 tracking-tighter">
+          <div className="text-2xl font-black text-gray-900 tracking-tighter">
             VX<span className="text-blue-600">Leads</span>
           </div>
         </div>
