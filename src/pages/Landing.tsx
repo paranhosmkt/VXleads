@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import Chatbot from '../components/Chatbot';
 import React, { useRef, useEffect, useState } from 'react';
 import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, Briefcase, DollarSign, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -467,7 +468,7 @@ export default function App() {
               </div>
               <div className="flex-1 w-full relative">
                 <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-gray-100">
-                  <img src="https://i.ibb.co/GQvSchKL/5.png" alt="CRM e Conversão" className="w-full h-full object-cover" />
+                  <img src="https://i.ibb.co/7MYLRVv/VX-Leads-Personagens-2.png" alt="CRM e Conversão" className="w-full h-full object-cover" />
                 </div>
               </div>
             </div>
@@ -814,6 +815,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      <Chatbot />
     </div>
   );
 }

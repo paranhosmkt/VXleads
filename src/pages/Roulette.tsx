@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { collection, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Loader2, Share2, Copy, Check, Play, ChevronRight } from 'lucide-react';
@@ -89,12 +89,12 @@ export default function Roulette() {
           setPrizes(loadedPrizes);
         } else {
           setPrizes([
-            { id: '1', nome: '10% de Desconto' },
-            { id: '2', nome: 'Brinde Especial' },
-            { id: '3', nome: 'Frete Grátis' },
-            { id: '4', nome: 'Compre 1 Leve 2' },
+            { id: '1', nome: 'Aguardando selecionar' },
+            { id: '2', nome: 'Aguardando selecionar' },
+            { id: '3', nome: 'Aguardando selecionar' },
+            { id: '4', nome: 'Aguardando selecionar' },
           ]);
-          if (!character) setCharacter(AVAILABLE_CHARACTERS[0]);
+          // removed
         }
       } catch (err) {
         console.error(err);
@@ -117,10 +117,10 @@ export default function Roulette() {
           await fetchCompanyData(user.uid);
         } else {
           setPrizes([
-            { id: '1', nome: '10% de Desconto' },
-            { id: '2', nome: 'Brinde Especial' },
-            { id: '3', nome: 'Frete Grátis' },
-            { id: '4', nome: 'Compre 1 Leve 2' },
+            { id: '1', nome: 'Aguardando selecionar' },
+            { id: '2', nome: 'Aguardando selecionar' },
+            { id: '3', nome: 'Aguardando selecionar' },
+            { id: '4', nome: 'Aguardando selecionar' },
           ]);
           setCharacter(AVAILABLE_CHARACTERS[0]);
           setFormFields([]);
@@ -134,23 +134,35 @@ export default function Roulette() {
   const handleStart = () => {
     if (videoUrl) {
       setStep('video');
-    } else if (formFields.length > 0) {
-      setStep('form');
     } else {
-      setStep('spin');
+      setStep('form');
     }
   };
 
   const handleVideoEnd = () => {
-    if (formFields.length > 0) {
-      setStep('form');
-    } else {
-      setStep('spin');
-    }
+    setStep('form');
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (leadForm.email) {
+      setLoading(true);
+      try {
+        const actualCompanyId = companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid;
+        if (actualCompanyId) {
+          const q = query(collection(db, 'companies', actualCompanyId, 'leads'), where('email', '==', leadForm.email));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            alert('Este brinde já foi resgatado para o e-mail informado.');
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      setLoading(false);
+    }
     setStep('spin');
   };
 
@@ -191,8 +203,11 @@ export default function Roulette() {
           createdAt: serverTimestamp(),
           origin: window.location.origin
         };
-        const leadsRef = collection(db, 'leads');
-        await addDoc(leadsRef, finalLeadData);
+        const actualCompanyId = companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid;
+        if (actualCompanyId) {
+          const leadsRef = collection(db, 'companies', actualCompanyId, 'leads');
+          await addDoc(leadsRef, finalLeadData);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -246,10 +261,10 @@ export default function Roulette() {
       const textX = 50 + 35 * Math.cos((Math.PI * textAngle) / 180);
       const textY = 50 + 35 * Math.sin((Math.PI * textAngle) / 180);
       
-      let lines = [prize.nome];
+      let lines = [prize.nome || 'Aguardando'];
       const maxLen = 14;
-      if (prize.nome.length > maxLen) {
-        const words = prize.nome.split(' ');
+      if ((prize.nome || 'Aguardando').length > maxLen) {
+        const words = (prize.nome || 'Aguardando').split(' ');
         lines = [];
         let currentLine = '';
         words.forEach((word: string) => {
@@ -403,6 +418,18 @@ export default function Roulette() {
           <div className="w-full max-w-md animate-fade-in-up">
             <h2 className="text-2xl font-bold text-indigo-900 mb-6 text-center">Falta pouco!</h2>
             <form onSubmit={handleFormSubmit} className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Nome Completo</label>
+                <input required type="text" value={leadForm.name || ''} onChange={e => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">E-mail Profissional</label>
+                <input required type="email" value={leadForm.email || ''} onChange={e => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
+                <input required type="tel" value={leadForm.phone || ''} onChange={e => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
+              </div>
               {formFields.map(field => (
                 <div key={field.id}>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">{field.label}</label>
@@ -528,7 +555,7 @@ export default function Roulette() {
                       }} 
                       className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-indigo-700 transition-colors w-full flex items-center justify-center"
                     >
-                      Realizar Novo Cadastro
+                      Retirar brinde
                     </button>
                   </div>
                 )}

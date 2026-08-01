@@ -247,8 +247,8 @@ export default function SetupPrizes() {
                     type="text"
                     value={prize.name}
                     onChange={(e) => handlePrizeChange(index, 'name', e.target.value)}
-                    placeholder="Ex: Copo Personalizado"
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
+                    placeholder="Nome do Brinde"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-gray-900 placeholder-gray-400"
                   />
                 </div>
                 <div className="sm:col-span-3 space-y-2 sm:space-y-0">
@@ -258,8 +258,8 @@ export default function SetupPrizes() {
                     min="0"
                     value={prize.quantity}
                     onChange={(e) => handlePrizeChange(index, 'quantity', e.target.value)}
-                    placeholder="Ex: 100"
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-gray-900 placeholder-gray-400"
                   />
                 </div>
                 <div className="sm:col-span-1 flex justify-end sm:justify-center">
