@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Loader2, Plus, Trash2, ArrowLeft, Save, Video, LayoutList } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowLeft, Save, Video, LayoutList, Gamepad2 } from 'lucide-react';
 
 export default function SetupForm() {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ export default function SetupForm() {
   const [userId, setUserId] = useState<string | null>(null);
   
   const [videoUrl, setVideoUrl] = useState('');
+  const [gameType, setGameType] = useState('roleta');
   const [formFields, setFormFields] = useState<any[]>([
     { id: 'area', type: 'multiple_choice', label: 'Área de Atuação', required: true, options: [] },
   ]);
@@ -27,6 +28,9 @@ export default function SetupForm() {
             const data = docSnap.data();
             if (data.formFields && data.formFields.length > 0) {
               setFormFields(data.formFields);
+            }
+            if (data.gameType) {
+              setGameType(data.gameType);
             }
             if (data.videoUrl) {
               setVideoUrl(data.videoUrl);
@@ -108,10 +112,7 @@ export default function SetupForm() {
     if (!userId) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'companies', userId), {
-        videoUrl,
-        formFields
-      });
+      await updateDoc(doc(db, 'companies', userId), { videoUrl, formFields, gameType });
       alert('Configurações salvas com sucesso!');
       navigate('/dashboard');
     } catch (err) {
@@ -156,6 +157,37 @@ export default function SetupForm() {
             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
             Salvar
           </button>
+        </div>
+
+        
+        {/* Game Section */}
+        <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+              <Gamepad2 size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Seleção de Jogo</h2>
+              <p className="text-sm text-gray-500">Escolha a mecânica gamificada que será apresentada para os leads no estande.</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { id: 'roleta', name: 'Roleta da Sorte', desc: 'Clássico girar e ganhar' },
+              { id: 'raspadinha', name: 'Raspadinha', desc: 'Raspe a tela para revelar o prêmio' },
+              { id: 'caca_niquel', name: 'Slot Machine', desc: 'Estilo slot machine 3 rolos' }
+            ].map(game => (
+              <div 
+                key={game.id}
+                onClick={() => setGameType(game.id)}
+                className={`border rounded-xl p-4 cursor-pointer transition-all ${gameType === game.id ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-600/20' : 'border-gray-200 hover:border-blue-300'}`}
+              >
+                <h3 className={`font-bold ${gameType === game.id ? 'text-blue-700' : 'text-gray-900'}`}>{game.name}</h3>
+                <p className="text-xs text-gray-500 mt-1">{game.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Video Section */}

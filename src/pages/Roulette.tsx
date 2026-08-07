@@ -5,6 +5,8 @@ import { collection, getDocs, doc, getDoc, addDoc, serverTimestamp, query, where
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Loader2, Share2, Copy, Check, Play, ChevronRight } from 'lucide-react';
+import ScratchCard from '../components/ScratchCard';
+import SlotMachine from '../components/SlotMachine';
 
 const COLORS = ['#F59E0B', '#3B82F6', '#10B981', '#EC4899', '#8B5CF6', '#EF4444', '#14B8A6', '#F97316'];
 
@@ -30,10 +32,12 @@ export default function Roulette() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [selectedPrize, setSelectedPrize] = useState<any>(null);
+  const [preSelectedPrize, setPreSelectedPrize] = useState<any>(null);
 
   const [leadForm, setLeadForm] = useState<Record<string, string>>({});
   const [formFields, setFormFields] = useState<any[]>([]);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [gameType, setGameType] = useState('roleta');
   const [submittingLead, setSubmittingLead] = useState(false);
   
   const [showShare, setShowShare] = useState(false);
@@ -71,6 +75,7 @@ export default function Roulette() {
           setCompanyName(data.razaoSocial || '');
           setPlanType(data.planType || 'Starter');
           setVideoUrl(data.videoUrl || null);
+          setGameType(data.gameType || 'roleta');
 
           if (data.formFields && data.formFields.length > 0) {
             setFormFields(data.formFields);
@@ -132,15 +137,11 @@ export default function Roulette() {
   }, [companyId]);
 
   const handleStart = () => {
-    if (videoUrl) {
-      setStep('video');
-    } else {
-      setStep('form');
-    }
+    setStep('form');
   };
 
   const handleVideoEnd = () => {
-    setStep('form');
+    setStep('spin');
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -163,57 +164,71 @@ export default function Roulette() {
       }
       setLoading(false);
     }
-    setStep('spin');
+    
+    if (prizes.length > 0) {
+      const randomPrizeIndex = Math.floor(Math.random() * prizes.length);
+      setPreSelectedPrize(prizes[randomPrizeIndex]);
+    }
+    
+    if (videoUrl) {
+      setStep('video');
+    } else {
+      setStep('spin');
+    }
   };
 
-  const spin = () => {
-    if (isSpinning || prizes.length === 0) return;
-
+    const spin = () => {
+    if (isSpinning || !preSelectedPrize) return;
     setIsSpinning(true);
     setSelectedPrize(null);
 
-    const prizeCount = prizes.length;
-    const sliceAngle = 360 / prizeCount;
-    const extraSpins = 5;
-    const randomPrizeIndex = Math.floor(Math.random() * prizeCount);
-    
-    const angle_K = randomPrizeIndex * sliceAngle + sliceAngle / 2;
-    const targetRotationModulo = 360 - angle_K;
-    
-    let diff = targetRotationModulo - (rotation % 360);
-    if (diff < 0) {
-      diff += 360;
-    }
-    const finalRotation = rotation + diff + (extraSpins * 360);
-    
-    setRotation(finalRotation);
-
-    setTimeout(async () => {
-      const finalPrize = prizes[randomPrizeIndex];
-      setSelectedPrize(finalPrize);
-      setIsSpinning(false);
-      setStep('prize');
-
-      setSubmittingLead(true);
-      try {
-        const finalLeadData = {
-          ...leadForm,
-          companyId: companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid,
-          prize: finalPrize.nome,
-          createdAt: serverTimestamp(),
-          origin: window.location.origin
-        };
-        const actualCompanyId = companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid;
-        if (actualCompanyId) {
-          const leadsRef = collection(db, 'companies', actualCompanyId, 'leads');
-          await addDoc(leadsRef, finalLeadData);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setSubmittingLead(false);
+    if (gameType === 'roleta') {
+      const prizeCount = prizes.length;
+      const prizeIndex = prizes.findIndex(p => p.id === preSelectedPrize.id);
+      const sliceAngle = 360 / prizeCount;
+      const extraSpins = 5;
+      
+      const angle_K = prizeIndex * sliceAngle + sliceAngle / 2;
+      const targetRotationModulo = 360 - angle_K;
+      
+      let diff = targetRotationModulo - (rotation % 360);
+      if (diff < 0) {
+        diff += 360;
       }
-    }, 5000);
+      const finalRotation = rotation + diff + (extraSpins * 360);
+      
+      setRotation(finalRotation);
+      setTimeout(() => finishGame(), 5000);
+    } else if (gameType === 'caca_niquel') {
+      setTimeout(() => finishGame(), 3000);
+    } else {
+      finishGame(); // Called directly by ScratchCard
+    }
+  };
+
+  const finishGame = async () => {
+    setSelectedPrize(preSelectedPrize);
+    setIsSpinning(false);
+    setStep('prize');
+    setSubmittingLead(true);
+    try {
+      const finalLeadData = {
+        ...leadForm,
+        companyId: companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid,
+        prize: preSelectedPrize.nome,
+        createdAt: serverTimestamp(),
+        origin: window.location.origin
+      };
+      const actualCompanyId = companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid;
+      if (actualCompanyId) {
+        const leadsRef = collection(db, 'companies', actualCompanyId, 'leads');
+        await addDoc(leadsRef, finalLeadData);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmittingLead(false);
+    }
   };
 
   if (loading) {
@@ -232,7 +247,7 @@ export default function Roulette() {
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Plano Inativo</h2>
-          <p className="text-gray-600 mb-6">Esta roleta está temporariamente indisponível devido a pendências no plano. Por favor, acesse o painel para regularizar.</p>
+          <p className="text-gray-600 mb-6">Este jogo está temporariamente indisponível devido a pendências no plano. Por favor, acesse o painel para regularizar.</p>
           <button onClick={() => navigate('/login')} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors">
             Acessar Painel
           </button>
@@ -366,7 +381,7 @@ export default function Roulette() {
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg hover:bg-indigo-700 transition-colors"
             >
               <Share2 size={18} />
-              <span className="font-semibold text-sm">Compartilhar Roleta</span>
+              <span className="font-semibold text-sm">Compartilhar Jogo</span>
             </button>
             {showShare && (
               <div className="bg-white p-4 rounded-xl shadow-xl border border-gray-200 animate-fade-in-up w-72">
@@ -485,7 +500,7 @@ export default function Roulette() {
                 type="submit"
                 className="mt-6 w-full bg-indigo-600 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
               >
-                Girar a Roleta
+                Avançar
                 <ChevronRight size={20} />
               </button>
             </form>
@@ -498,35 +513,65 @@ export default function Roulette() {
               Gire e <span className="text-yellow-500">Ganhe!</span>
             </h1>
             
-            <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] md:w-[450px] md:h-[450px] mx-auto">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-30 filter drop-shadow-md"> 
-                 <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[40px] border-t-yellow-400"></div>
-              </div>
-              <div 
-                className="w-full h-full rounded-full border-8 border-indigo-100 bg-indigo-50 cursor-pointer overflow-hidden p-2"
-                onClick={step === 'spin' ? spin : undefined}
-              >
-                <div 
-                  className="w-full h-full rounded-full overflow-hidden shadow-2xl relative"
-                  style={{ 
-                    transform: `rotate(${rotation}deg)`, 
-                    transition: 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)' 
-                  }}
-                >
-                  {renderWheel()}
+            {gameType === 'roleta' && (
+              <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] md:w-[450px] md:h-[450px] mx-auto">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-30 filter drop-shadow-md"> 
+                   <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[40px] border-t-yellow-400"></div>
                 </div>
-              </div>
-              
-              {step === 'spin' && (
-                <button 
-                  onClick={spin}
-                  disabled={isSpinning}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-yellow-400 rounded-full border-4 border-white shadow-xl flex items-center justify-center font-black text-indigo-900 text-xl z-20 hover:scale-110 transition-transform disabled:opacity-80 disabled:hover:scale-100 uppercase tracking-wider"
+                <div 
+                  className="w-full h-full rounded-full border-8 border-indigo-100 bg-indigo-50 cursor-pointer overflow-hidden p-2"
+                  onClick={step === 'spin' ? spin : undefined}
                 >
-                  Girar
-                </button>
-              )}
-            </div>
+                  <div 
+                    className="w-full h-full rounded-full overflow-hidden shadow-2xl relative"
+                    style={{ 
+                      transform: `rotate(${rotation}deg)`, 
+                      transition: 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)' 
+                    }}
+                  >
+                    {renderWheel()}
+                  </div>
+                </div>
+                
+                {step === 'spin' && (
+                  <button 
+                    onClick={spin}
+                    disabled={isSpinning}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-yellow-400 rounded-full border-4 border-white shadow-xl flex items-center justify-center font-black text-indigo-900 text-xl z-20 hover:scale-110 transition-transform disabled:opacity-80 disabled:hover:scale-100 uppercase tracking-wider"
+                  >
+                    Girar
+                  </button>
+                )}
+              </div>
+            )}
+
+            {gameType === 'raspadinha' && (
+              <div className="relative w-[300px] h-[300px] sm:w-[350px] sm:h-[350px] mx-auto flex items-center justify-center">
+                 {step === 'spin' ? (
+                   <ScratchCard prizeText={preSelectedPrize?.nome || 'Prêmio'} onComplete={() => finishGame()} />
+                 ) : (
+                   <div className="bg-yellow-400 w-full h-full flex items-center justify-center p-6 text-center rounded-2xl shadow-2xl border-8 border-gray-400">
+                     <span className="text-indigo-900 font-black text-3xl drop-shadow-sm">{selectedPrize?.nome}</span>
+                   </div>
+                 )}
+              </div>
+            )}
+
+            {gameType === 'caca_niquel' && (
+              <div className="relative w-full max-w-lg mx-auto bg-red-600 rounded-3xl border-8 border-red-800 p-6 shadow-2xl">
+                <SlotMachine isSpinning={isSpinning} prizeText={selectedPrize?.nome} />
+                
+                {step === 'spin' && (
+                  <button 
+                    onClick={spin}
+                    disabled={isSpinning}
+                    className="mt-8 mx-auto block px-12 py-4 bg-yellow-400 rounded-full shadow-xl font-black text-red-900 text-2xl hover:scale-105 transition-transform disabled:opacity-80 disabled:hover:scale-100 uppercase tracking-widest"
+                  >
+                    {isSpinning ? 'Girando...' : 'Jogar'}
+                  </button>
+                )}
+              </div>
+            )}
             
             {step === 'prize' && selectedPrize && (
               <div className="mt-12 bg-white p-8 rounded-3xl shadow-2xl animate-fade-in-up text-center max-w-md w-full border-4 border-yellow-400 relative">
@@ -572,8 +617,8 @@ export default function Roulette() {
                <p className="text-gray-800 font-bold text-base md:text-lg leading-snug">
                  {step === 'intro' ? 'Pronto para uma experiência incrível?' :
                   step === 'video' ? 'Assista ao nosso vídeo rapidinho!' :
-                  step === 'form' ? 'Preencha os dados para girar a roleta!' :
-                  'Toque na roleta ao lado para testar a sua sorte! 🎁'}
+                  step === 'form' ? 'Preencha os dados para participar!' :
+                  'Toque ao lado para testar a sua sorte! 🎁'}
                </p>
                <div className="absolute -bottom-4 right-12 w-8 h-8 bg-white transform rotate-45"></div>
              </div>

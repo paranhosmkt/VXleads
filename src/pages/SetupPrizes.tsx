@@ -76,7 +76,7 @@ export default function SetupPrizes() {
     const validPrizes = prizes.filter(p => p.name.trim() !== '' && p.quantity !== '' && Number(p.quantity) >= 0);
     
     if (validPrizes.length < 2) {
-      setError('Adicione pelo menos 2 brindes válidos para a roleta funcionar.');
+      setError('Adicione pelo menos 2 brindes válidos para os jogos funcionarem.');
       return;
     }
 
@@ -211,14 +211,14 @@ export default function SetupPrizes() {
           </div>
         </div>
         <div className="text-sm font-medium text-gray-500">
-          Configuração da Roleta
+          Configuração dos Prêmios
         </div>
       </header>
 
       <main className="flex-1 max-w-4xl w-full mx-auto p-6 py-12 flex flex-col">
         <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Quais serão os brindes da sua roleta?
+            Quais serão os brindes dos seus jogos?
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Adicione os prêmios que os visitantes poderão ganhar. A quantidade será reduzida automaticamente conforme os promoters validarem as entregas.
@@ -286,13 +286,6 @@ export default function SetupPrizes() {
             </button>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="w-full sm:w-auto px-8 py-4 bg-gray-200 text-gray-600 font-bold rounded-xl transition-all shadow-sm hover:bg-gray-300 flex items-center justify-center gap-2"
-              >
-                Pular Etapa (Dev)
-              </button>
               <button
                 onClick={handleSave}
                 disabled={saving}

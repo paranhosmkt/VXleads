@@ -470,13 +470,6 @@ export default function Register() {
                   </>
                 )}
               </button>
-              <button
-                type="button"
-                onClick={() => navigate('/selecionar-personagem')}
-                className="w-full md:w-auto mt-4 px-10 py-4 bg-gray-200 text-gray-600 text-lg font-bold rounded-xl transition-all shadow-sm hover:bg-gray-300 flex items-center justify-center gap-2"
-              >
-                Pular Etapa (Dev)
-              </button>
               <p className="text-sm text-gray-500 mt-4 text-center max-w-md">
                 Ao concluir o cadastro, você concorda com nossos Termos de Serviço e Política de Privacidade.
               </p>

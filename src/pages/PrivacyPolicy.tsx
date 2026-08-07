@@ -25,7 +25,7 @@ export default function PrivacyPolicy() {
           
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">1. Coleta de Dados</h2>
           <p>
-            Coletamos informações inseridas por você na plataforma, incluindo dados da empresa e dos visitantes do estande que participam da roleta.
+            Coletamos informações inseridas por você na plataforma, incluindo dados da empresa e dos visitantes do estande que participam dos jogos.
           </p>
 
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">2. Finalidade Comercial</h2>
@@ -45,7 +45,7 @@ export default function PrivacyPolicy() {
           
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">5. Direitos do Titular</h2>
           <p>
-            Conforme a LGPD, o titular dos dados possui o direito de solicitar a exclusão de suas informações da nossa base a qualquer momento, o que será repassado ao cliente administrador da roleta para que efetue o bloqueio comercial.
+            Conforme a LGPD, o titular dos dados possui o direito de solicitar a exclusão de suas informações da nossa base a qualquer momento, o que será repassado ao cliente administrador do painel para que efetue o bloqueio comercial.
           </p>
           
           <p className="mt-12 text-sm text-gray-500">

@@ -115,7 +115,7 @@ export default function SelectCharacter() {
             Escolha quem vai representar sua marca
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Este personagem aparecerá na roleta interagindo com seus visitantes e comemorando as vitórias. Dê um nome que combine com a sua empresa!
+            Este personagem aparecerá nos jogos interagindo com seus visitantes e comemorando as vitórias. Dê um nome que combine com a sua empresa!
           </p>
         </div>
 
@@ -209,13 +209,6 @@ export default function SelectCharacter() {
                     <ChevronRight size={20} />
                   </>
                 )}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/configurar-brindes')}
-                className="w-full mt-4 py-4 bg-gray-200 text-gray-600 text-lg font-bold rounded-xl transition-all shadow-sm hover:bg-gray-300 flex items-center justify-center gap-2"
-              >
-                Pular Etapa (Dev)
               </button>
             </div>
           </div>

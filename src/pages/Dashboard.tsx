@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { 
   Users, Gift, Download, Copy, ExternalLink, 
-  Search, Loader2, LogOut, CheckCircle, Database, Settings, FileSpreadsheet, Target
+  Search, Loader2, LogOut, CheckCircle, Database, Settings, FileSpreadsheet, Target, Edit2, Trash2, X
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -132,6 +132,39 @@ export default function Dashboard() {
     }
   };
 
+
+  const [editingLead, setEditingLead] = useState<any>(null);
+
+  const handleDeleteLead = async (leadId: string) => {
+    if (!userId) return;
+    if (!window.confirm("Tem certeza que deseja excluir este lead?")) return;
+    try {
+      await deleteDoc(doc(db, 'companies', userId, 'leads', leadId));
+      setLeads(leads.filter(l => l.id !== leadId));
+    } catch (error) {
+      console.error("Erro ao excluir", error);
+      alert("Erro ao excluir lead.");
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId || !editingLead) return;
+    try {
+      await updateDoc(doc(db, 'companies', userId, 'leads', editingLead.id), {
+        name: editingLead.name || '',
+        email: editingLead.email || '',
+        phone: editingLead.phone || '',
+        area: editingLead.area || ''
+      });
+      setLeads(leads.map(l => l.id === editingLead.id ? editingLead : l));
+      setEditingLead(null);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar alterações.");
+    }
+  };
+
   const totalLeads = leads.length;
   const prizesAvailable = prizes.reduce((acc, p) => acc + (p.quantidadeAtual || 0), 0);
   const prizesDelivered = leads.filter(l => l.status === 'resgatado').length;
@@ -201,7 +234,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-50 text-purple-700 font-semibold rounded-lg hover:bg-purple-100 transition-colors"
           >
             <ExternalLink size={18} />
-            <span className="hidden md:inline">Modo TV</span>
+            <span className="hidden md:inline">Imprimir QR Code</span>
           </button>
           
           <button 
@@ -209,7 +242,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
           >
             <ExternalLink size={18} />
-            <span className="hidden md:inline">Abrir Roleta</span>
+            <span className="hidden md:inline">Abrir Jogo</span>
           </button>
           
           <button 
@@ -228,7 +261,7 @@ export default function Dashboard() {
           <div className="bg-red-50 border border-red-200 p-6 rounded-2xl flex items-center justify-between gap-4">
             <div>
               <h2 className="text-red-800 font-bold text-lg mb-1">Seu plano está inativo</h2>
-              <p className="text-red-600 text-sm">O acesso à roleta pelos seus clientes está bloqueado. Regularize sua assinatura para voltar a capturar leads.</p>
+              <p className="text-red-600 text-sm">O acesso ao jogo pelos seus clientes está bloqueado. Regularize sua assinatura para voltar a capturar leads.</p>
             </div>
             <button className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap">
               Regularizar Plano
@@ -406,10 +439,10 @@ export default function Dashboard() {
                       <td className="px-6 py-4 text-center text-gray-500">
                         {lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : '-'}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                         <button
                           onClick={() => toggleLeadStatus(lead.id, lead.status)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors shrink-0 ${
                             lead.status === 'resgatado' 
                               ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
                               : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
@@ -420,6 +453,20 @@ export default function Dashboard() {
                           ) : (
                             <>Pendente (Marcar)</>
                           )}
+                        </button>
+                        <button
+                          onClick={() => setEditingLead(lead)}
+                          className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
+                          title="Editar lead"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteLead(lead.id)}
+                          className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors shrink-0"
+                          title="Excluir lead"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -436,6 +483,74 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Edit Modal */}
+      {editingLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Editar Lead</h2>
+              <button onClick={() => setEditingLead(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Nome</label>
+                <input 
+                  type="text" 
+                  value={editingLead.name || ''} 
+                  onChange={e => setEditingLead({...editingLead, name: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">E-mail</label>
+                <input 
+                  type="email" 
+                  value={editingLead.email || ''} 
+                  onChange={e => setEditingLead({...editingLead, email: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Telefone</label>
+                <input 
+                  type="text" 
+                  value={editingLead.phone || ''} 
+                  onChange={e => setEditingLead({...editingLead, phone: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Área / Outros</label>
+                <input 
+                  type="text" 
+                  value={editingLead.area || ''} 
+                  onChange={e => setEditingLead({...editingLead, area: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
+                />
+              </div>
+              
+              <div className="pt-4 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingLead(null)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

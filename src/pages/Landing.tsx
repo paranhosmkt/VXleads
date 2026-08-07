@@ -176,7 +176,7 @@ export default function App() {
           ctx.font = 'bold 24px system-ui, sans-serif';
           ctx.fillStyle = '#94a3b8';
           ctx.textAlign = 'center';
-          ctx.fillText('Simulador de Roleta', canvas.width / 2, canvas.height / 2);
+          ctx.fillText('Simulador de Jogos', canvas.width / 2, canvas.height / 2);
         }
       });
     }
@@ -215,7 +215,7 @@ export default function App() {
             Transforme seu estande em uma <span className="text-blue-600">máquina de atrair clientes</span>
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-xl mb-10 text-left leading-relaxed">
-            Engaje mais visitantes, capte leads qualificados e multiplique os resultados da sua marca em feiras e eventos. A única plataforma no Brasil que une roleta gamificada, captura offline e integração nativa com os principais CRMs.
+            Engaje mais visitantes, capte leads qualificados e multiplique os resultados da sua marca em feiras e eventos. A única plataforma no Brasil que une jogos interativos, gamificação, captura offline e integração nativa com os principais CRMs.
           </p>
           <RouterLink to="/cadastro" className="px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30 cursor-pointer inline-block">
             Quero revolucionar meu estande
@@ -460,9 +460,9 @@ export default function App() {
               <div className="bg-blue-100 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 mb-6">
                 <Star size={24} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Roleta Gamificada</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Jogos Interativos</h3>
               <p className="text-gray-600 leading-relaxed">
-                Ative o gatilho da recompensa. Visitantes adoram girar a roleta e preenchem dados reais com muito mais facilidade.
+                Ative o gatilho da recompensa. Visitantes adoram jogar e ganhar brindes, preenchendo dados reais com muito mais facilidade em roletas, raspadinhas e slot machines.
               </p>
             </div>
           </div>
@@ -480,7 +480,7 @@ export default function App() {
           <div className="text-center mb-20">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Como Funciona</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Implementar a roleta gamificada no seu estande é simples e rápido. Veja o passo a passo.
+              Implementar a gamificação no seu estande é simples e rápido. Veja o passo a passo.
             </p>
           </div>
 
@@ -523,7 +523,7 @@ export default function App() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">3</div>
                 <h3 className="text-3xl font-bold text-gray-900">Adicione os brindes</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Digite nos campos os prêmios e brindes que irão compor a sua roleta. Defina a quantidade de cada item em estoque para que você tenha total controle das entregas e não tenha surpresas durante o evento.
+                  Digite nos campos os prêmios e brindes que irão compor os seus jogos. Defina a quantidade de cada item em estoque para que você tenha total controle das entregas e não tenha surpresas durante o evento.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -539,7 +539,7 @@ export default function App() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">4</div>
                 <h3 className="text-3xl font-bold text-gray-900">Copie o link gerado</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  Esse link é usado para abrir a tela de captura em um tablet ou totem no seu estande, onde os usuários podem ler o QR Code, fazer o cadastro, girar a roleta e ganhar um brinde. Caso a internet tenha oscilações no evento, a roleta continua funcionando normalmente e o lead capturado é enviado automaticamente para o painel da sua empresa no VX Leads assim que a conexão retornar.
+                  Esse link é usado para abrir a tela de captura em um tablet ou totem no seu estande, onde os usuários podem ler o QR Code, fazer o cadastro, jogar e ganhar um brinde. Caso a internet tenha oscilações no evento, o jogo continua funcionando normalmente e o lead capturado é enviado automaticamente para o painel da sua empresa no VX Leads assim que a conexão retornar.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -555,7 +555,7 @@ export default function App() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-600 font-bold text-xl mb-2">5</div>
                 <h3 className="text-3xl font-bold text-gray-900">Pronto para converter leads em clientes</h3>
                 <p className="text-lg text-gray-600 leading-relaxed">
-                  A mágica acontece: basta os usuários lerem o QR Code, assistirem o vídeo, preencherem as perguntas de qualificação e girarem a roleta para ganhar brindes. O seu promoter apenas valida a tela de ganhador e entrega o prêmio. Após o evento, você exporta uma planilha com todos os leads qualificados para o seu CRM.
+                  A mágica acontece: basta os usuários lerem o QR Code, fazerem o cadastro, assistirem o seu vídeo de pitch, preencherem as perguntas de qualificação e jogarem para ganhar brindes. O seu promoter apenas valida a tela de ganhador e entrega o prêmio. Após o evento, você exporta uma planilha com todos os leads qualificados para o seu CRM.
                 </p>
               </div>
               <div className="flex-1 w-full relative">
@@ -819,7 +819,7 @@ export default function App() {
               question="O VX Leads é um software ou um totem físico?"
               answer={
                 <>
-                  O VX Leads é uma <strong>plataforma de software (SaaS)</strong>. Nós fornecemos o sistema web, o painel de controle e a roleta gamificada virtual. <strong>O totem ou tablet físico não está incluso nos planos</strong>. Nossa plataforma pode ser acessada através de um link em qualquer dispositivo touch screen com navegador de internet (tablets, smartphones, totens ou telas interativas) que você já possua ou alugue com fornecedores locais.
+                  O VX Leads é uma <strong>plataforma de software (SaaS)</strong>. Nós fornecemos o sistema web, o painel de controle e os jogos gamificados virtuais. <strong>O totem ou tablet físico não está incluso nos planos</strong>. Nossa plataforma pode ser acessada através de um link em qualquer dispositivo touch screen com navegador de internet (tablets, smartphones, totens ou telas interativas) que você já possua ou alugue com fornecedores locais.
                 </>
               }
             />

@@ -25,7 +25,7 @@ export default function TermsOfUse() {
           
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">1. Do Objeto</h2>
           <p>
-            O VX Leads é um software como serviço (SaaS) que fornece uma plataforma web, painel de controle e roleta gamificada para captação de leads. <strong>Nenhum hardware (totens, tablets) está incluso</strong> na prestação do serviço.
+            O VX Leads é um software como serviço (SaaS) que fornece uma plataforma web, painel de controle e jogos interativos para captação de leads. <strong>Nenhum hardware (totens, tablets) está incluso</strong> na prestação do serviço.
           </p>
 
           <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">2. Uso e Planos</h2>
