@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { collection, getDocs, doc, getDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Loader2, Share2, Copy, Check, Play, ChevronRight } from 'lucide-react';
+import { Loader2, Share2, Copy, Check, Play, ChevronRight, QrCode, X } from 'lucide-react';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
 
@@ -39,6 +40,9 @@ export default function Roulette() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [gameType, setGameType] = useState('roleta');
   const [submittingLead, setSubmittingLead] = useState(false);
+  const [scannedFromBadge, setScannedFromBadge] = useState(false);
+  const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
   
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -144,6 +148,64 @@ export default function Roulette() {
     setStep('spin');
   };
 
+  const handleQRScan = async (result: string) => {
+    let parsedData = { name: '', email: '', phone: '' };
+    let isOpenData = false;
+
+    if (result.startsWith('BEGIN:VCARD')) {
+      isOpenData = true;
+      const lines = result.split(/[\r\n]+/);
+      for (const line of lines) {
+        if (line.startsWith('FN:')) parsedData.name = line.substring(3).trim();
+        else if (line.startsWith('N:') && !parsedData.name) {
+          const parts = line.substring(2).split(';');
+          parsedData.name = parts.filter(Boolean).join(' ').trim();
+        }
+        else if (line.startsWith('EMAIL') && line.includes(':')) {
+           parsedData.email = line.split(':')[1].trim();
+        }
+        else if (line.startsWith('TEL') && line.includes(':')) {
+           parsedData.phone = line.split(':')[1].replace(/\D/g, '').trim();
+        }
+      }
+    } else if (result.startsWith('MECARD:')) {
+      isOpenData = true;
+      const parts = result.substring(7).split(';');
+      for (const part of parts) {
+        if (part.startsWith('N:')) parsedData.name = part.substring(2).trim();
+        else if (part.startsWith('EMAIL:')) parsedData.email = part.substring(6).trim();
+        else if (part.startsWith('TEL:')) parsedData.phone = part.substring(4).replace(/\D/g, '').trim();
+      }
+    } else if (result.trim().startsWith('{')) {
+      try {
+        const data = JSON.parse(result);
+        isOpenData = true;
+        parsedData.name = data.name || data.nome || data.n || '';
+        parsedData.email = data.email || data.e || '';
+        parsedData.phone = (data.phone || data.telefone || data.tel || '').toString().replace(/\D/g, '');
+      } catch (e) {
+        // Not a valid JSON
+      }
+    } else if (result.includes('@') && !result.startsWith('http') && result.length < 100) {
+      isOpenData = true;
+      parsedData.email = result.trim();
+    }
+
+    if (isOpenData) {
+      setLeadForm({
+        ...leadForm,
+        name: parsedData.name || '',
+        email: parsedData.email || '',
+        phone: parsedData.phone || ''
+      });
+      setShowScanner(false);
+      setScannedFromBadge(true);
+    } else {
+      alert('Conecte a API do evento para buscar os dados deste crachá. \n\nCódigo lido: ' + result.substring(0, 30) + (result.length > 30 ? '...' : ''));
+      setShowScanner(false);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (leadForm.email) {
@@ -206,6 +268,27 @@ export default function Roulette() {
     }
   };
 
+  
+  const handleRedeemPrize = async () => {
+    if (createdLeadId) {
+      try {
+        const actualCompanyId = companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid;
+        if (actualCompanyId) {
+          await updateDoc(doc(db, 'companies', actualCompanyId, 'leads', createdLeadId), {
+            status: 'resgatado'
+          });
+        }
+      } catch(e) {
+        console.error("Error updating status", e);
+      }
+    }
+    setSelectedPrize(null);
+    setLeadForm({});
+    setScannedFromBadge(false);
+    setCreatedLeadId(null);
+    setStep('intro');
+  };
+
   const finishGame = async () => {
     setSelectedPrize(preSelectedPrize);
     setIsSpinning(false);
@@ -217,12 +300,14 @@ export default function Roulette() {
         companyId: companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid,
         prize: preSelectedPrize.nome,
         createdAt: serverTimestamp(),
-        origin: window.location.origin
+        origin: window.location.origin,
+        status: 'pending'
       };
       const actualCompanyId = companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid;
       if (actualCompanyId) {
         const leadsRef = collection(db, 'companies', actualCompanyId, 'leads');
-        await addDoc(leadsRef, finalLeadData);
+        const docRef = await addDoc(leadsRef, finalLeadData);
+        setCreatedLeadId(docRef.id);
       }
     } catch (err) {
       console.error(err);
@@ -248,7 +333,10 @@ export default function Roulette() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Plano Inativo</h2>
           <p className="text-gray-600 mb-6">Este jogo está temporariamente indisponível devido a pendências no plano. Por favor, acesse o painel para regularizar.</p>
-          <button onClick={() => navigate('/login')} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors">
+          <button 
+            onClick={() => window.open('/painel', '_self')}
+            className="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-red-700 transition-colors"
+          >
             Acessar Painel
           </button>
         </div>
@@ -269,8 +357,12 @@ export default function Roulette() {
       const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
       const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
       
-      const largeArcFlag = sliceAngle > 180 ? 1 : 0;
-      const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+      const pathData = [
+        `M 50 50`,
+        `L ${x1} ${y1}`,
+        `A 50 50 0 ${sliceAngle > 180 ? 1 : 0} 1 ${x2} ${y2}`,
+        `Z`
+      ].join(' ');
       
       const textAngle = startAngle + sliceAngle / 2;
       const textX = 50 + 35 * Math.cos((Math.PI * textAngle) / 180);
@@ -282,7 +374,7 @@ export default function Roulette() {
         const words = (prize.nome || 'Aguardando').split(' ');
         lines = [];
         let currentLine = '';
-        words.forEach((word: string) => {
+        words.forEach((word) => {
           if ((currentLine + ' ' + word).length <= maxLen) {
             currentLine += (currentLine === '' ? '' : ' ') + word;
           } else {
@@ -292,7 +384,6 @@ export default function Roulette() {
         });
         if (currentLine) lines.push(currentLine);
       }
-      
       if (lines.length > 3) {
         lines = lines.slice(0, 3);
         lines[2] = lines[2].substring(0, maxLen - 2) + '...';
@@ -305,146 +396,126 @@ export default function Roulette() {
             x={textX} 
             y={textY} 
             fill="white" 
-            fontSize="4" 
-            fontWeight="bold"
+            fontSize="3" 
+            fontWeight="bold" 
             textAnchor="middle" 
-            alignmentBaseline="middle"
-            transform={`rotate(${textAngle}, ${textX}, ${textY})`}
-            style={{ textShadow: '0px 1px 2px rgba(0,0,0,0.5)' }}
+            transform={`rotate(${textAngle + 90} ${textX} ${textY})`}
           >
-            {lines.map((line: string, idx: number) => {
-               const yOffset = (idx - (lines.length - 1) / 2) * 1.2;
-               return (
-                 <tspan key={idx} x={textX} dy={idx === 0 ? `${yOffset}em` : '1.2em'}>
-                   {line}
-                 </tspan>
-               );
-            })}
+            {lines.map((line, idx) => (
+              <tspan key={idx} x={textX} dy={idx === 0 ? `-${(lines.length - 1) * 1.5}` : '3.5'}>
+                {line}
+              </tspan>
+            ))}
           </text>
         </g>
       );
     });
 
     return (
-      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-2xl" style={{ transform: 'rotate(-90deg)' }}>
-        {slices}
-        <circle cx="50" cy="50" r="8" fill="white" stroke="#E5E7EB" strokeWidth="2" />
-        <circle cx="50" cy="50" r="3" fill="#4B5563" />
+      <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+        <circle cx="50" cy="50" r="50" fill="#f8fafc" />
+        <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: '50px 50px', transition: isSpinning ? 'transform 5s cubic-bezier(0.2, 0.8, 0.1, 1)' : 'none' }}>
+          {slices}
+        </g>
+        <circle cx="50" cy="50" r="3" fill="white" className="shadow-sm" />
       </svg>
     );
   };
 
-  const copyShareLink = () => {
-    const link = window.location.origin + `/roleta/${companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid}`;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
-    <div className="min-h-screen bg-white flex flex-col md:flex-row overflow-hidden relative">
+    <div className="min-h-screen bg-white flex overflow-hidden relative flex-col items-center justify-center">
+      {/* The main layout wrapper */}
       
-      {step === 'video' && videoUrl && (
-        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
-          {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
-            <iframe 
-              className="w-full h-full max-w-5xl aspect-video"
-              src={`https://www.youtube.com/embed/${videoUrl.split('v=')[1]?.split('&')[0] || videoUrl.split('/').pop()}?autoplay=1&controls=0&showinfo=0&rel=0`} 
-              frameBorder="0" 
-              allow="autoplay; encrypted-media" 
-              allowFullScreen
-            ></iframe>
-          ) : (
-            <video 
-              autoPlay 
-              className="w-full h-full max-w-5xl object-contain"
-              onEnded={handleVideoEnd}
-            >
-              <source src={videoUrl} type="video/mp4" />
-            </video>
-          )}
-          
-          <button 
-            onClick={handleVideoEnd}
-            className="absolute top-8 right-8 bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-full backdrop-blur-md transition-colors font-semibold"
-          >
-            Pular Vídeo
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 flex flex-col justify-center items-center p-4 md:p-8 relative z-10 w-full md:w-1/2 min-h-[500px]">
-        {isOwner && (
-          <div className="absolute top-4 left-4 z-40 flex flex-col gap-2">
-            <button
-              onClick={() => setShowShare(!showShare)}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Share2 size={18} />
-              <span className="font-semibold text-sm">Compartilhar Jogo</span>
-            </button>
-            {showShare && (
-              <div className="bg-white p-4 rounded-xl shadow-xl border border-gray-200 animate-fade-in-up w-72">
-                <p className="text-xs text-gray-500 mb-2 font-medium">Link do Totem (Dispositivos ilimitados no plano atual)</p>
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="text" 
-                    readOnly 
-                    value={window.location.origin + `/roleta/${companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid}`}
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600 outline-none"
-                  />
-                  <button 
-                    onClick={copyShareLink}
-                    className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {companyLogo && (
-          <div className="mb-6 h-20 w-auto flex items-center justify-center">
-            <img src={companyLogo} alt={companyName} className="max-h-full max-w-full object-contain filter drop-shadow-sm" />
-          </div>
-        )}
-
+      <div className="flex flex-col justify-center items-center p-4 md:p-8 relative z-10 w-full max-w-4xl mx-auto min-h-[500px]">
+        {/* Intro step */}
         {step === 'intro' && (
-          <div className="text-center animate-fade-in-up max-w-md w-full">
-            <h1 className="text-4xl md:text-5xl font-black text-indigo-900 mb-6 tracking-tight">
-              Bem-vindo(a)!
+          <div className="animate-fade-in-up text-center w-full max-w-xl">
+            {companyLogo && (
+              <img src={companyLogo} alt={companyName} className="h-16 md:h-20 mx-auto mb-8 object-contain" />
+            )}
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-indigo-900 mb-6 tracking-tight leading-tight">
+              Bem-vindo à Roleta de Prêmios
             </h1>
-            <p className="text-gray-600 text-lg mb-8">
-              Participe da nossa experiência interativa e concorra a brindes exclusivos.
+            <p className="text-lg md:text-xl text-gray-600 mb-10">
+              Preencha seus dados para girar a roleta e concorrer a brindes incríveis!
             </p>
             <button 
-              onClick={handleStart}
-              className="w-full bg-yellow-400 text-indigo-900 text-xl font-black uppercase tracking-wider py-5 rounded-2xl shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-3"
+              onClick={() => setStep('form')}
+              className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg md:text-xl rounded-2xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:-translate-y-1 transition-all w-full md:w-auto"
             >
-              <Play size={24} fill="currentColor" />
-              Começar
+              Participar Agora
             </button>
           </div>
         )}
 
+        {/* Video step */}
+        {step === 'video' && videoUrl && (
+          <div className="animate-fade-in-up w-full max-w-3xl aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl relative">
+            <ReactPlayer
+              url={videoUrl}
+              width="100%"
+              height="100%"
+              playing={true}
+              controls={true}
+              onEnded={handleVideoEnd}
+            />
+            <button 
+              onClick={handleVideoEnd}
+              className="absolute top-4 right-4 bg-black/50 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black/70 backdrop-blur-sm transition-colors"
+            >
+              Pular vídeo
+            </button>
+          </div>
+        )}
+
+        {/* Form step */}
         {step === 'form' && (
-          <div className="w-full max-w-md animate-fade-in-up">
-            <h2 className="text-2xl font-bold text-indigo-900 mb-6 text-center">Falta pouco!</h2>
+          <div className="animate-fade-in-up w-full max-w-md">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-black text-indigo-900 mb-2">Seus Dados</h2>
+              <p className="text-gray-600">Preencha para liberar o jogo</p>
+            </div>
+            
             <form onSubmit={handleFormSubmit} className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Nome Completo</label>
-                <input required type="text" value={leadForm.name || ''} onChange={e => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">E-mail Profissional</label>
-                <input required type="email" value={leadForm.email || ''} onChange={e => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
-                <input required type="tel" value={leadForm.phone || ''} onChange={e => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors border border-indigo-200"
+              >
+                <QrCode size={20} />
+                Ler QR Code do Crachá
+              </button>
+              
+              {!scannedFromBadge ? (
+                <>
+                  <div className="relative flex items-center py-2">
+                    <div className="flex-grow border-t border-gray-200"></div>
+                    <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">ou preencha manualmente</span>
+                    <div className="flex-grow border-t border-gray-200"></div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Nome Completo</label>
+                    <input required type="text" value={leadForm.name || ''} onChange={e => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">E-mail Profissional</label>
+                    <input required type="email" value={leadForm.email || ''} onChange={e => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
+                    <input required type="tel" value={leadForm.phone || ''} onChange={e => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow" />
+                  </div>
+                </>
+              ) : (
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center gap-3 text-emerald-700">
+                  <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                  <div>
+                    <p className="font-bold">Informações lidas do crachá!</p>
+                    {formFields.length > 0 && <p className="text-sm">Por favor, responda as perguntas abaixo para continuar.</p>}
+                  </div>
+                </div>
+              )}
+              
               {formFields.map(field => (
                 <div key={field.id}>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">{field.label}</label>
@@ -456,39 +527,10 @@ export default function Roulette() {
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow"
                       rows={3}
                     />
-                  ) : field.type === 'multiple_choice' ? (
-                    <div className="space-y-3">
-                      {field.options?.map((opt: string, i: number) => (
-                        <label key={i} className="flex items-center gap-3 cursor-pointer p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                          <input 
-                            type="radio" 
-                            name={field.id}
-                            value={opt}
-                            required={field.required}
-                            checked={leadForm[field.id] === opt}
-                            onChange={(e) => setLeadForm({...leadForm, [field.id]: e.target.value})}
-                            className="w-4 h-4 text-indigo-600 focus:ring-indigo-600"
-                          />
-                          <span className="text-gray-700 font-medium">{opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ) : field.type === 'dropdown' ? (
-                    <select
-                      required={field.required}
-                      value={leadForm[field.id] || ''}
-                      onChange={(e) => setLeadForm({...leadForm, [field.id]: e.target.value})}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none"
-                    >
-                      <option value="">Selecione...</option>
-                      {field.options?.map((opt: string, i: number) => (
-                        <option key={i} value={opt}>{opt}</option>
-                      ))}
-                    </select>
                   ) : (
                     <input 
                       required={field.required}
-                      type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : 'text'}
+                      type={field.type === 'number' ? 'number' : 'text'}
                       value={leadForm[field.id] || ''}
                       onChange={(e) => setLeadForm({...leadForm, [field.id]: e.target.value})}
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none transition-shadow"
@@ -496,12 +538,13 @@ export default function Roulette() {
                   )}
                 </div>
               ))}
+              
               <button 
-                type="submit"
-                className="mt-6 w-full bg-indigo-600 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl transition-all shadow-lg shadow-indigo-600/30 flex justify-center items-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Avançar
-                <ChevronRight size={20} />
+                {loading ? <Loader2 className="animate-spin w-6 h-6" /> : 'Confirmar e Jogar'}
               </button>
             </form>
           </div>
@@ -515,29 +558,32 @@ export default function Roulette() {
             
             {gameType === 'roleta' && (
               <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] md:w-[450px] md:h-[450px] mx-auto">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-30 filter drop-shadow-md"> 
-                   <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[40px] border-t-yellow-400"></div>
-                </div>
-                <div 
-                  className="w-full h-full rounded-full border-8 border-indigo-100 bg-indigo-50 cursor-pointer overflow-hidden p-2"
-                  onClick={step === 'spin' ? spin : undefined}
-                >
-                  <div 
-                    className="w-full h-full rounded-full overflow-hidden shadow-2xl relative"
-                    style={{ 
-                      transform: `rotate(${rotation}deg)`, 
-                      transition: 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)' 
-                    }}
-                  >
-                    {renderWheel()}
-                  </div>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-6 z-30 filter drop-shadow-md">
+                  <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 50L0 15C0 15 5.5 0 20 0C34.5 0 40 15 40 15L20 50Z" fill="#EF4444"/>
+                    <path d="M20 40L8 15C8 15 12 5 20 5C28 5 32 15 32 15L20 40Z" fill="#DC2626"/>
+                  </svg>
                 </div>
                 
+                <div className="w-full h-full rounded-full border-[12px] md:border-[16px] border-indigo-900 shadow-2xl relative overflow-hidden bg-indigo-900 ring-4 ring-yellow-400">
+                  {renderWheel()}
+                  
+                  <div className="absolute inset-0 rounded-full shadow-[inset_0_0_30px_rgba(0,0,0,0.5)] pointer-events-none"></div>
+                  
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                    <div className="w-16 h-16 md:w-24 md:h-24 bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-indigo-100">
+                      <div className="w-10 h-10 md:w-16 md:h-16 bg-indigo-600 rounded-full flex items-center justify-center">
+                        <Gift className="text-white w-5 h-5 md:w-8 md:h-8" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {step === 'spin' && (
                   <button 
                     onClick={spin}
                     disabled={isSpinning}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 bg-yellow-400 rounded-full border-4 border-white shadow-xl flex items-center justify-center font-black text-indigo-900 text-xl z-20 hover:scale-110 transition-transform disabled:opacity-80 disabled:hover:scale-100 uppercase tracking-wider"
+                    className="absolute -bottom-8 md:-bottom-12 left-1/2 -translate-x-1/2 bg-yellow-400 hover:bg-yellow-300 text-indigo-900 font-black text-xl md:text-2xl px-10 md:px-14 py-4 md:py-5 rounded-full shadow-[0_8px_0_#b45309,0_15px_20px_rgba(0,0,0,0.4)] active:shadow-[0_0px_0_#b45309,0_0px_0_rgba(0,0,0,0.4)] active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed z-30 uppercase tracking-widest border-2 border-yellow-200"
                   >
                     Girar
                   </button>
@@ -565,9 +611,9 @@ export default function Roulette() {
                   <button 
                     onClick={spin}
                     disabled={isSpinning}
-                    className="mt-8 mx-auto block px-12 py-4 bg-yellow-400 rounded-full shadow-xl font-black text-red-900 text-2xl hover:scale-105 transition-transform disabled:opacity-80 disabled:hover:scale-100 uppercase tracking-widest"
+                    className="mt-6 w-full bg-yellow-400 hover:bg-yellow-300 text-red-900 font-black text-2xl py-4 rounded-xl shadow-[0_6px_0_#b45309] active:shadow-[0_0px_0_#b45309] active:translate-y-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
                   >
-                    {isSpinning ? 'Girando...' : 'Jogar'}
+                    Girar
                   </button>
                 )}
               </div>
@@ -593,14 +639,10 @@ export default function Roulette() {
                       Prêmio registrado com sucesso no sistema.
                     </p>
                     <button 
-                      onClick={() => {
-                        setSelectedPrize(null);
-                        setLeadForm({});
-                        setStep('intro');
-                      }} 
+                      onClick={handleRedeemPrize} 
                       className="px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-indigo-700 transition-colors w-full flex items-center justify-center"
                     >
-                      Retirar brinde
+                      Resgatar agora
                     </button>
                   </div>
                 )}
@@ -610,22 +652,24 @@ export default function Roulette() {
         )}
       </div>
 
-      <div className="flex-1 flex justify-center items-end bg-indigo-50 relative z-0 mt-8 md:mt-0 p-4 md:p-8 w-full md:w-1/2 min-h-[300px]">
-        {character && (
-          <div className="relative max-w-2xl w-full flex justify-center pb-4 md:pb-0">
-             <div className="absolute -top-28 md:-top-40 left-1/2 -translate-x-[80%] md:-translate-x-[70%] bg-white p-5 rounded-3xl rounded-br-none shadow-xl max-w-[220px] md:max-w-[280px] z-20 transform -rotate-2 animate-bounce-slow">
-               <p className="text-gray-800 font-bold text-base md:text-lg leading-snug">
-                 {step === 'intro' ? 'Pronto para uma experiência incrível?' :
-                  step === 'video' ? 'Assista ao nosso vídeo rapidinho!' :
-                  step === 'form' ? 'Preencha os dados para participar!' :
-                  'Toque ao lado para testar a sua sorte! 🎁'}
-               </p>
-               <div className="absolute -bottom-4 right-12 w-8 h-8 bg-white transform rotate-45"></div>
-             </div>
-             <img src={character.imageUrl} alt={character.name} className="w-[90%] md:w-[80%] max-w-md mx-auto h-auto object-contain relative z-10 drop-shadow-xl" />
+      {showScanner && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden relative shadow-2xl">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 className="font-bold text-gray-800">Ler QR Code</h3>
+                <button onClick={() => setShowScanner(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="w-full aspect-square bg-black flex items-center justify-center">
+                <Scanner onScan={(result) => result && result[0] && handleQRScan(result[0].rawValue)} />
+              </div>
+              <div className="p-5 text-center text-sm text-gray-500">
+                Aponte a câmera para o QR Code do crachá do visitante
+              </div>
+            </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

@@ -5,10 +5,12 @@ import { doc, getDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase
 import { auth, db } from '../lib/firebase';
 import { 
   Users, Gift, Download, Copy, ExternalLink, 
-  Search, Loader2, LogOut, CheckCircle, Database, Settings, FileSpreadsheet, Target, Edit2, Trash2, X
+  Search, Loader2, LogOut, CheckCircle, Database, Settings, FileSpreadsheet, Target, Edit2, Trash2, X, QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -16,12 +18,15 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   
   const [companyName, setCompanyName] = useState('');
+  const [formFields, setFormFields] = useState<any[]>([]);
   const [planStatus, setPlanStatus] = useState('active');
+  const [discountWon, setDiscountWon] = useState<string | null>(null);
   const [leads, setLeads] = useState<any[]>([]);
   const [prizes, setPrizes] = useState<any[]>([]);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -31,7 +36,9 @@ export default function Dashboard() {
           const companyDoc = await getDoc(doc(db, 'companies', user.uid));
           if (companyDoc.exists()) {
             setCompanyName(companyDoc.data().razaoSocial || 'Sua Empresa');
+            setFormFields(companyDoc.data().formFields || []);
             setPlanStatus(companyDoc.data().planStatus || 'active');
+            setDiscountWon(companyDoc.data().discountWon || null);
           }
           
           // Buscar leads
@@ -75,19 +82,24 @@ export default function Dashboard() {
   };
 
   const downloadCSV = () => {
-    const headers = ['Nome', 'Email', 'Telefone', 'Area', 'Premio', 'Status', 'Data'];
+    
+    
+    const headers = ['Nome', 'Email', 'Telefone', ...formFields.map(f => f.label), 'Premio', 'Status', 'Data', 'Horario'];
     const csvContent = [
       headers.join(','),
       ...leads.map(lead => [
         `"${lead.name || ''}"`,
         `"${lead.email || ''}"`,
         `"${lead.phone || ''}"`,
-        `"${lead.area || ''}"`,
+        ...formFields.map(f => `"${(lead[f.id] || '').toString().replace(/"/g, '""')}"`),
         `"${lead.prize || ''}"`,
         `"${lead.status || ''}"`,
-        `"${lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : ''}"`
+        `"${lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : ''}"`,
+        `"${lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : ''}"`
       ].join(','))
     ].join('\n');
+
+
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -101,15 +113,21 @@ export default function Dashboard() {
     
     doc.text(`Relatório de Leads - ${companyName}`, 14, 15);
     
-    const tableColumn = ['Nome', 'Email', 'Telefone', 'Prêmio', 'Status', 'Data'];
+    
+    
+    const tableColumn = ['Nome', 'Email', 'Telefone', ...formFields.map(f => f.label), 'Prêmio', 'Status', 'Data', 'Horário'];
     const tableRows = leads.map(lead => [
       lead.name || '',
       lead.email || '',
       lead.phone || '',
+      ...formFields.map(f => lead[f.id] || ''),
       lead.prize || '',
       lead.status === 'resgatado' ? 'Resgatado' : 'Pendente',
-      lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : ''
+      lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : '',
+      lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : ''
     ]);
+
+    
 
     autoTable(doc, {
       head: [tableColumn],
@@ -135,6 +153,23 @@ export default function Dashboard() {
 
   const [editingLead, setEditingLead] = useState<any>(null);
 
+  
+  const handleDeleteAllLeads = async () => {
+    if (!userId) return;
+    if (!window.confirm("ATENÇÃO: Você tem certeza que deseja excluir TODOS os leads? Esta ação não pode ser desfeita.")) return;
+    try {
+      const leadsRef = collection(db, 'companies', userId, 'leads');
+      const leadsSnapshot = await getDocs(leadsRef);
+      const deletePromises = leadsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      setLeads([]);
+      alert("Todos os leads foram excluídos com sucesso.");
+    } catch (error) {
+      console.error("Erro ao excluir todos os leads", error);
+      alert("Erro ao excluir leads.");
+    }
+  };
+
   const handleDeleteLead = async (leadId: string) => {
     if (!userId) return;
     if (!window.confirm("Tem certeza que deseja excluir este lead?")) return;
@@ -155,8 +190,7 @@ export default function Dashboard() {
         name: editingLead.name || '',
         email: editingLead.email || '',
         phone: editingLead.phone || '',
-        area: editingLead.area || ''
-      });
+        });
       setLeads(leads.map(l => l.id === editingLead.id ? editingLead : l));
       setEditingLead(null);
     } catch (err) {
@@ -168,6 +202,12 @@ export default function Dashboard() {
   const totalLeads = leads.length;
   const prizesAvailable = prizes.reduce((acc, p) => acc + (p.quantidadeAtual || 0), 0);
   const prizesDelivered = leads.filter(l => l.status === 'resgatado').length;
+  const prizesPending = totalLeads - prizesDelivered;
+  const chartData = [
+    { name: 'Resgatados', value: prizesDelivered, fill: '#10b981' },
+    { name: 'Pendentes', value: prizesPending, fill: '#f59e0b' }
+  ];
+
   
   const filteredLeads = leads.filter(l => {
     if (!searchTerm) return true;
@@ -213,13 +253,6 @@ export default function Dashboard() {
             <Settings size={18} />
             <span className="hidden md:inline">Brindes</span>
           </button>
-          <button 
-            onClick={() => navigate('/selecionar-personagem')}
-            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <Settings size={18} />
-            <span className="hidden md:inline">Personagem</span>
-          </button>
 
           <button 
             onClick={() => navigate('/configurar-experiencia')}
@@ -230,11 +263,11 @@ export default function Dashboard() {
           </button>
 
           <button 
-            onClick={() => window.open(window.location.origin + `/tv/${userId}`, '_blank')}
+            onClick={() => setShowQRModal(true)}
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-50 text-purple-700 font-semibold rounded-lg hover:bg-purple-100 transition-colors"
           >
-            <ExternalLink size={18} />
-            <span className="hidden md:inline">Imprimir QR Code</span>
+            <QrCode size={18} />
+            <span className="hidden md:inline">QR Code</span>
           </button>
           
           <button 
@@ -269,11 +302,28 @@ export default function Dashboard() {
           </div>
         )}
 
+        
+        {discountWon && (
+          <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-up">
+            <div className="flex items-center gap-4">
+              <div className="bg-emerald-100 p-3 rounded-xl text-emerald-700">
+                <Gift size={24} />
+              </div>
+              <div>
+                <h2 className="text-emerald-800 font-bold text-lg mb-1">Prêmio de Boas-Vindas!</h2>
+                <p className="text-emerald-600 text-sm">Você tem {discountWon} garantido na sua primeira contratação.</p>
+              </div>
+            </div>
+            <button className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20 whitespace-nowrap">
+              Utilizar Desconto
+            </button>
+          </div>
+        )}
         {/* URL Link Card */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Link do seu Totem</h2>
-            <p className="text-sm text-gray-500">Use este link no dispositivo que ficará no estande para as pessoas jogarem.</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Link do Tablet</h2>
+            <p className="text-sm text-gray-500">Use este link no tablet que ficará no estande para capturar os leads e rodar o jogo.</p>
           </div>
           <div className="flex w-full md:w-auto items-center gap-2">
             <input 
@@ -291,6 +341,51 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        
+        {/* Gráfico de Proporção */}
+        {totalLeads > 0 && (
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-6 items-center">
+            <div className="w-full md:w-1/3">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Status dos Brindes</h2>
+              <p className="text-sm text-gray-500 mb-4">Proporção entre brindes já resgatados e pendentes de retirada.</p>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center bg-emerald-50 px-4 py-2 rounded-lg">
+                  <span className="text-emerald-700 font-medium text-sm">Resgatados</span>
+                  <span className="text-emerald-700 font-bold">{prizesDelivered}</span>
+                </div>
+                <div className="flex justify-between items-center bg-amber-50 px-4 py-2 rounded-lg">
+                  <span className="text-amber-700 font-medium text-sm">Pendentes</span>
+                  <span className="text-amber-700 font-bold">{prizesPending}</span>
+                </div>
+              </div>
+            </div>
+            <div className="w-full md:w-2/3 h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => [`${value} brindes`, 'Quantidade']}
+                    contentStyle={{ borderRadius: '0.5rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend verticalAlign="bottom" height={36}/>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -384,6 +479,15 @@ export default function Dashboard() {
               </div>
               
               <div className="flex items-center gap-2 w-full md:w-auto">
+                
+                <button 
+                  onClick={handleDeleteAllLeads}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 font-medium rounded-xl hover:bg-red-100 transition-colors"
+                  title="Excluir Todos os Leads"
+                >
+                  <Trash2 size={18} />
+                  Limpar
+                </button>
                 <button 
                   onClick={downloadCSV}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
@@ -414,10 +518,13 @@ export default function Dashboard() {
               <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Contato</th>
-                  <th className="px-6 py-4 font-semibold">Área</th>
-                  <th className="px-6 py-4 font-semibold">Prêmio Ganho</th>
+                  {formFields.map(field => (
+                    <th key={field.id} className="px-6 py-4 font-semibold">{field.label}</th>
+                  ))}
+                  <th className="px-6 py-4 font-semibold">Prêmio</th>
                   <th className="px-6 py-4 font-semibold text-center">Data</th>
-                  <th className="px-6 py-4 font-semibold text-right">Status / Ação</th>
+                  <th className="px-6 py-4 font-semibold text-center">Horário</th>
+                  <th className="px-6 py-4 font-semibold text-right">Status do brinde</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -431,13 +538,19 @@ export default function Dashboard() {
                           <span>{lead.phone}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{lead.area}</td>
+                      {formFields.map(field => (
+                        <td key={field.id} className="px-6 py-4 text-gray-600">
+                          {lead[field.id] || '-'}
+                        </td>
+                      ))}
                       <td className="px-6 py-4 font-medium text-indigo-600">
                         {lead.prize}
                       </td>
-
                       <td className="px-6 py-4 text-center text-gray-500">
                         {lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleDateString('pt-BR') : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-center text-gray-500">
+                        {lead.createdAt?.toDate ? lead.createdAt.toDate().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '-'}
                       </td>
                       <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                         <button
@@ -473,7 +586,7 @@ export default function Dashboard() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={6 + formFields.length} className="px-6 py-12 text-center text-gray-500">
                       Nenhum lead encontrado.
                     </td>
                   </tr>
@@ -522,15 +635,7 @@ export default function Dashboard() {
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Área / Outros</label>
-                <input 
-                  type="text" 
-                  value={editingLead.area || ''} 
-                  onChange={e => setEditingLead({...editingLead, area: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
-                />
-              </div>
+              
               
               <div className="pt-4 flex justify-end gap-3">
                 <button 
@@ -548,6 +653,60 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-10 w-full max-w-md relative shadow-2xl flex flex-col items-center text-center">
+            <button 
+              onClick={() => setShowQRModal(false)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-full p-2 transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+              <QrCode size={32} />
+            </div>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">QR Code do Jogo</h2>
+            <p className="text-gray-500 mb-8 max-w-[280px]">
+              Use este QR Code em flyers, tótens ou telas para que os visitantes joguem pelo próprio celular.
+            </p>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8 inline-block">
+              <QRCodeSVG value={rouletteLink} size={220} level="H" includeMargin={false} />
+            </div>
+
+            <button 
+              onClick={() => {
+                const svg = document.querySelector('.bg-white.p-6 > svg');
+                if (svg) {
+                  const svgData = new XMLSerializer().serializeToString(svg);
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+                  const img = new Image();
+                  img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    const pngFile = canvas.toDataURL('image/png');
+                    const downloadLink = document.createElement('a');
+                    downloadLink.download = 'qrcode-jogo.png';
+                    downloadLink.href = pngFile;
+                    downloadLink.click();
+                  };
+                  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+            >
+              <Download size={20} />
+              Baixar QR Code
+            </button>
           </div>
         </div>
       )}

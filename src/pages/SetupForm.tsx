@@ -13,6 +13,7 @@ export default function SetupForm() {
   
   const [videoUrl, setVideoUrl] = useState('');
   const [gameType, setGameType] = useState('roleta');
+  const [isOnboarding, setIsOnboarding] = useState(false);
   const [formFields, setFormFields] = useState<any[]>([
     { id: 'area', type: 'multiple_choice', label: 'Área de Atuação', required: true, options: [] },
   ]);
@@ -26,6 +27,11 @@ export default function SetupForm() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
+            
+            if (!data.onboardingCompleted) {
+              setIsOnboarding(true);
+            }
+
             if (data.formFields && data.formFields.length > 0) {
               setFormFields(data.formFields);
             }
@@ -113,8 +119,13 @@ export default function SetupForm() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'companies', userId), { videoUrl, formFields, gameType });
-      alert('Configurações salvas com sucesso!');
-      navigate('/dashboard');
+      
+      if (isOnboarding) {
+        navigate('/configurar-brindes');
+      } else {
+        alert('Configurações salvas com sucesso!');
+        navigate('/dashboard');
+      }
     } catch (err) {
       console.error("Erro ao salvar", err);
       alert('Erro ao salvar as configurações.');
@@ -138,14 +149,18 @@ export default function SetupForm() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate('/dashboard')}
-              className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
+            {!isOnboarding && (
+              <button 
+                onClick={() => navigate('/dashboard')}
+                className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            )}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Configurar Experiência</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isOnboarding ? 'Passo 2: Configurar Experiência' : 'Configurar Experiência'}
+              </h1>
               <p className="text-gray-500">Personalize o formulário e o vídeo do seu estande.</p>
             </div>
           </div>
@@ -154,8 +169,8 @@ export default function SetupForm() {
             disabled={saving}
             className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-70"
           >
-            {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            Salvar
+            {saving ? <Loader2 size={18} className="animate-spin" /> : (isOnboarding ? <span className="font-bold">Próximo Passo</span> : <Save size={18} />)}
+            {isOnboarding ? null : 'Salvar'}
           </button>
         </div>
 

@@ -1,15 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, Building2, MapPin, User, Mail, Phone, Lock, FileText, ChevronLeft, Loader2, XCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 export default function Register() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(1);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const planFromUrl = params.get('plan');
+    if (planFromUrl) {
+      setSelectedPlan(planFromUrl);
+    }
+  }, [location.search]);
+  const [discount, setDiscount] = useState<string | null>(null);
+  useEffect(() => {
+    const saved = localStorage.getItem('vxleads_discount_won');
+    if (saved) setDiscount(saved);
+  }, []);
+
   const [formData, setFormData] = useState({
     razaoSocial: '',
     cnpj: '',
@@ -28,6 +45,22 @@ export default function Register() {
     confirmacaoSenha: '',
     logoDataUrl: ''
   });
+
+  const getDiscountValue = () => {
+    if (!discount) return 0;
+    const match = discount.match(/\d+/);
+    return match ? parseInt(match[0]) : 0;
+  };
+  const discountValue = getDiscountValue();
+  
+  const calculatePrice = (basePrice: number) => {
+    if (discountValue === 0) return basePrice;
+    return basePrice * (1 - discountValue / 100);
+  };
+
+  const formatPrice = (price: number) => {
+    return price.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -92,7 +125,10 @@ export default function Register() {
         email: formData.email,
         telefone: formData.telefone,
         logoDataUrl: formData.logoDataUrl,
-        createdAt: serverTimestamp()
+        onboardingCompleted: false,
+        createdAt: serverTimestamp(),
+        discountWon: localStorage.getItem('vxleads_discount_won') || null,
+        plan: selectedPlan
       };
       await setDoc(doc(db, 'companies', user.uid), companyData);
       
@@ -100,7 +136,7 @@ export default function Register() {
       await sendEmailVerification(user);
       
       alert('Cadastro realizado com sucesso! Um e-mail de confirmação foi enviado para você.');
-      navigate('/selecionar-personagem');
+      navigate('/configurar-experiencia');
     } catch (err: any) {
       console.error('Erro ao cadastrar:', err);
       if (err.code === 'auth/email-already-in-use') {
@@ -115,12 +151,162 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+      
+      {step === 1 && (
+        <div className="max-w-5xl mx-auto">
+          <div className="mb-8 flex items-center justify-between">
+            <Link to="/login" className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors">
+              <ChevronLeft size={20} />
+              <span className="font-medium">Voltar</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-600 p-2 rounded-lg">
+                <Target className="text-white" size={24} />
+              </div>
+              <span className="text-xl font-black tracking-tight text-gray-900">VX Leads</span>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden p-8 sm:p-12">
+            <div className="text-center mb-10">
+              <h1 className="text-3xl font-extrabold text-gray-900 mb-4">Escolha seu Plano</h1>
+              <p className="text-gray-600 max-w-2xl mx-auto mb-6">
+                Selecione o plano que melhor atende às necessidades da sua empresa. Você poderá alterar depois se precisar.
+              </p>
+              {discount && (
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl inline-flex items-center gap-3 animate-fade-in-up">
+                  <div className="bg-emerald-100 p-2 rounded-lg text-emerald-700">
+                    <Target size={20} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-emerald-800 font-bold">Você tem um prêmio garantido!</p>
+                    <p className="text-emerald-600 text-sm">{discount} válido para a sua primeira contratação.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+              {/* Starter */}
+              <div 
+                className={`border-2 rounded-2xl p-6 cursor-pointer transition-all ${selectedPlan === 'starter' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-blue-300'}`}
+                onClick={() => setSelectedPlan('starter')}
+              >
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Starter</h3>
+                <p className="text-gray-500 text-sm mb-4">Para pequenos estandes e ativações pontuais.</p>
+                <div className="text-2xl font-black text-gray-900 mb-4">
+                  {discountValue > 0 ? (
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-400 line-through font-normal">R$ 797</span>
+                      <span className="text-emerald-600">R$ {formatPrice(calculatePrice(797))} <span className="text-sm font-medium text-gray-500">/evento</span></span>
+                    </div>
+                  ) : (
+                    <>R$ 797 <span className="text-sm font-medium text-gray-500">/evento</span></>
+                  )}
+                </div>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>• Captação de até 500 Leads</li>
+                  <li>• 1 Jogo Interativo (Roleta)</li>
+                  <li>• Suporte por E-mail</li>
+                </ul>
+              </div>
+              
+              {/* Pro */}
+              <div 
+                className={`border-2 rounded-2xl p-6 cursor-pointer transition-all relative ${selectedPlan === 'pro' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-blue-300'}`}
+                onClick={() => setSelectedPlan('pro')}
+              >
+                <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Mais Popular</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Pro</h3>
+                <p className="text-gray-500 text-sm mb-4">Para feiras médias e geração constante de leads.</p>
+                <div className="text-2xl font-black text-gray-900 mb-4">
+                  {discountValue > 0 ? (
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-400 line-through font-normal">R$ 1.497</span>
+                      <span className="text-emerald-600">R$ {formatPrice(calculatePrice(1497))} <span className="text-sm font-medium text-gray-500">/evento</span></span>
+                    </div>
+                  ) : (
+                    <>R$ 1.497 <span className="text-sm font-medium text-gray-500">/evento</span></>
+                  )}
+                </div>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>• Captação de até 2.000 Leads</li>
+                  <li>• 3 Jogos Interativos</li>
+                  <li>• Suporte via WhatsApp</li>
+                </ul>
+              </div>
+              
+              {/* Enterprise */}
+              <div 
+                className={`border-2 rounded-2xl p-6 cursor-pointer transition-all ${selectedPlan === 'enterprise' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-blue-300'}`}
+                onClick={() => setSelectedPlan('enterprise')}
+              >
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Enterprise</h3>
+                <p className="text-gray-500 text-sm mb-4">Para grandes congressos e operações em escala.</p>
+                <div className="text-2xl font-black text-gray-900 mb-4">
+                  {discountValue > 0 ? (
+                    <div className="flex flex-col">
+                      <span className="text-sm text-gray-400 line-through font-normal">R$ 2.997</span>
+                      <span className="text-emerald-600">R$ {formatPrice(calculatePrice(2997))} <span className="text-sm font-medium text-gray-500">/evento</span></span>
+                    </div>
+                  ) : (
+                    <>R$ 2.997 <span className="text-sm font-medium text-gray-500">/evento</span></>
+                  )}
+                </div>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>• Captação Ilimitada</li>
+                  <li>• Todos os Jogos + Personalizados</li>
+                  <li>• Suporte 24/7 no Evento</li>
+                </ul>
+              </div>
+              
+              {/* Personalizado */}
+              <div 
+                className={`border-2 rounded-2xl p-6 cursor-pointer transition-all ${selectedPlan === 'personalizado' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-blue-300'}`}
+                onClick={() => setSelectedPlan('personalizado')}
+              >
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Personalizado</h3>
+                <p className="text-gray-500 text-sm mb-4">Projeto sob medida para sua necessidade.</p>
+                <div className="text-2xl font-black text-gray-900 mb-4">Sob Consulta</div>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>• Leads personalizados</li>
+                  <li>• Dispositivos simultâneos ilimitados</li>
+                  <li>• Integração CRM / Webhook</li>
+                  <li>• Suporte 24/7 no Evento</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <a 
+                href="https://wa.me/5511999999999?text=Ol%C3%A1,%20gostaria%20de%20falar%20com%20um%20consultor%20sobre%20os%20planos%20da%20VX%20Leads" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all flex items-center gap-2 w-full sm:w-auto justify-center"
+              >
+                Converse com um consultor
+              </a>
+              <button 
+                onClick={() => setStep(2)}
+                disabled={!selectedPlan}
+                className={`px-8 py-3 rounded-xl font-bold text-white transition-all w-full sm:w-auto ${selectedPlan ? 'bg-blue-600 hover:bg-blue-700 shadow-lg' : 'bg-gray-300 cursor-not-allowed'}`}
+              >
+                Continuar para Dados da Empresa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+  
+      {step === 2 && (
+        <div className="max-w-4xl mx-auto">
+        
+        
         <div className="mb-8 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors">
+          <button type="button" onClick={() => setStep(1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors">
             <ChevronLeft size={20} />
-            <span className="font-medium">Voltar para o site</span>
-          </Link>
+            <span className="font-medium">Voltar para Planos</span>
+          </button>
           <div className="flex items-center gap-2">
             <div className="bg-blue-600 p-2 rounded-lg">
               <Target className="text-white" size={24} />
@@ -477,6 +663,7 @@ export default function Register() {
           </form>
         </div>
       </div>
+      )}
     </div>
   );
 }

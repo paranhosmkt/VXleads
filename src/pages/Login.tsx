@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Target, Mail, Lock, ChevronLeft, Loader2, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -24,9 +25,25 @@ export default function Login() {
     setLoading(true);
     
     try {
-      await signInWithEmailAndPassword(auth, formData.email, formData.senha);
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.senha);
+      const user = userCredential.user;
+      
+      const companyRef = doc(db, 'companies', user.uid);
+      const companySnap = await getDoc(companyRef);
+      
+      let onboardingCompleted = true;
+      if (companySnap.exists()) {
+        const data = companySnap.data();
+        onboardingCompleted = data.onboardingCompleted !== false; // defaults to true if undefined
+      }
+
       alert('Login realizado com sucesso!');
-      navigate('/dashboard');
+      
+      if (!onboardingCompleted) {
+        navigate('/configurar-experiencia');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error('Erro ao fazer login:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {

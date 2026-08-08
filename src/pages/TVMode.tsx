@@ -8,12 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
-const AVAILABLE_CHARACTERS = [
-  { id: 'gui', name: 'Gui', imageUrl: 'https://i.ibb.co/N6nCj3Fw/6eafasf-2.png' },
-  { id: 'ana', name: 'Ana', imageUrl: 'https://i.ibb.co/rwx062S1/Mascote-2-2.png' },
-  { id: 'carlos', name: 'Carlos', imageUrl: 'https://i.ibb.co/n8v2wPnn/Mascote-3-2.png' },
-  { id: 'bia', name: 'Bia', imageUrl: 'https://i.ibb.co/ZzkZ26hM/Mascote-4-2.png' }
-];
+
 
 const DraggableElement = ({ 
   id, 
@@ -26,6 +21,7 @@ const DraggableElement = ({
   const item = layout[id] || { x: 0, y: 0, visible: true };
   const [pos, setPos] = useState({ x: item.x || 0, y: item.y || 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const elRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     setPos({ x: item.x || 0, y: item.y || 0 });
@@ -39,16 +35,38 @@ const DraggableElement = ({
     const startX = e.clientX - pos.x;
     const startY = e.clientY - pos.y;
 
+    const rect = elRef.current?.getBoundingClientRect();
+    const parentWidth = window.innerWidth;
+    const parentHeight = window.innerHeight;
+
     const handleMouseMove = (e: MouseEvent) => {
-      setPos({ x: e.clientX - startX, y: e.clientY - startY });
+      let newX = e.clientX - startX;
+      let newY = e.clientY - startY;
+
+      if (rect) {
+        const minX = pos.x - rect.left;
+        const maxX = pos.x + parentWidth - rect.right;
+        const minY = pos.y - rect.top;
+        const maxY = pos.y + parentHeight - rect.bottom;
+
+        if (newX < minX) newX = minX;
+        if (newX > maxX) newX = maxX;
+        if (newY < minY) newY = minY;
+        if (newY > maxY) newY = maxY;
+      }
+
+      setPos({ x: newX, y: newY });
     };
 
     const handleMouseUp = (e: MouseEvent) => {
       setIsDragging(false);
-      setLayout((prev: any) => ({
-        ...prev,
-        [id]: { ...prev[id], x: e.clientX - startX, y: e.clientY - startY }
-      }));
+      setPos((currentPos) => {
+        setLayout((prev: any) => ({
+          ...prev,
+          [id]: { ...prev[id], x: currentPos.x, y: currentPos.y }
+        }));
+        return currentPos;
+      });
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -66,6 +84,7 @@ const DraggableElement = ({
 
   return (
     <div 
+      ref={elRef}
       style={{ 
         transform: `translate(${pos.x}px, ${pos.y}px)`, 
         opacity: item.visible ? 1 : 0.4,
@@ -116,14 +135,14 @@ export default function TVMode() {
   // States
   const [companyName, setCompanyName] = useState('');
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [character, setCharacter] = useState<any>(null);
+  
 
   // Customization states
   const [title, setTitle] = useState('Bem-vindo(a) ao\nestande da {companyName}');
   const [subtitle, setSubtitle] = useState('Escaneie o QR Code ao lado, jogue e ganhe brindes exclusivos!');
   const [bgColor, setBgColor] = useState('#111827');
   const [bgImageUrl, setBgImageUrl] = useState('');
-  const [textColor, setTextColor] = useState('#ffffff');
+  
   const [layout, setLayout] = useState<any>(DEFAULT_LAYOUT);
   const [saving, setSaving] = useState(false);
 
@@ -145,22 +164,14 @@ export default function TVMode() {
           setCompanyLogo(data.logoUrl || data.logoDataUrl || null);
           
           if (data.qrSettings) {
-             setTitle(data.qrSettings.title || 'Bem-vindo(a) ao\nestande da {companyName}');
-             setSubtitle(data.qrSettings.subtitle || 'Escaneie o QR Code ao lado, jogue e ganhe brindes exclusivos!');
              setBgColor(data.qrSettings.bgColor || '#111827');
              setBgImageUrl(data.qrSettings.bgImageUrl || '');
-             setTextColor(data.qrSettings.textColor || '#ffffff');
              if (data.qrSettings.layout) {
                 setLayout({ ...DEFAULT_LAYOUT, ...data.qrSettings.layout });
              }
           }
 
-          if (data.personagemId) {
-            const char = AVAILABLE_CHARACTERS.find(c => c.id === data.personagemId);
-            setCharacter(char || AVAILABLE_CHARACTERS[0]);
-          } else {
-            setCharacter(AVAILABLE_CHARACTERS[0]);
-          }
+          
         }
       } catch (error) {
         console.error("Erro ao buscar dados", error);
@@ -178,7 +189,7 @@ export default function TVMode() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'companies', companyId), {
-        qrSettings: { title, subtitle, bgColor, bgImageUrl, textColor, layout }
+        qrSettings: { bgColor, bgImageUrl, layout }
       });
       setShowSettings(false);
     } catch (err) {
@@ -274,6 +285,17 @@ export default function TVMode() {
               <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Imagem de Fundo (URL)</label>
               <input type="text" value={bgImageUrl} onChange={(e) => setBgImageUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
             </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Fonte Principal</label>
+              <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none">
+                <option value="Inter">Inter</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Playfair Display">Playfair Display</option>
+              </select>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Cor do Texto</label>
               <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-full h-10 rounded-lg cursor-pointer" />
@@ -299,46 +321,16 @@ export default function TVMode() {
           backgroundColor: bgColor,
           backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : 'none',
           backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          backgroundPosition: 'center',
+          fontFamily: fontFamily
         }}
       >
         <div className="absolute inset-0 bg-black/40 z-0"></div>
 
-        <div className="flex-1 flex items-center p-6 sm:p-10 lg:p-16 z-10 w-full pointer-events-none mt-16 lg:mt-0">
-          <div className="max-w-4xl pointer-events-auto w-full" style={{ color: textColor }}>
-            {companyLogo && (
-              <DraggableElement id="logo" layout={layout} setLayout={setLayout} isOwner={isOwner} className="inline-block mb-8 lg:mb-12">
-                <div className="bg-white/10 p-4 lg:p-6 rounded-2xl lg:rounded-3xl backdrop-blur-md border border-white/20 shadow-2xl">
-                  <img src={companyLogo} alt={companyName} className="h-20 lg:h-32 object-contain filter drop-shadow-lg pointer-events-none" crossOrigin="anonymous" />
-                </div>
-              </DraggableElement>
-            )}
-            
-            <DraggableElement id="title" layout={layout} setLayout={setLayout} isOwner={isOwner}>
-              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black mb-6 lg:mb-8 leading-[1.1] tracking-tight drop-shadow-2xl whitespace-pre-line pointer-events-none">
-                {title.replace('{companyName}', companyName)}
-              </h1>
-            </DraggableElement>
-            
-            <DraggableElement id="subtitle" layout={layout} setLayout={setLayout} isOwner={isOwner}>
-              <p className="text-xl sm:text-2xl lg:text-3xl max-w-2xl leading-relaxed mb-10 lg:mb-16 drop-shadow-md opacity-90 pointer-events-none">
-                {subtitle}
-              </p>
-            </DraggableElement>
-            
-            <DraggableElement id="badge" layout={layout} setLayout={setLayout} isOwner={isOwner} className="w-max">
-              <div className="flex items-center gap-4 lg:gap-8 bg-white/10 p-3 lg:p-4 rounded-full backdrop-blur-md border border-white/20 shadow-2xl pointer-events-none">
-                <div className="bg-blue-600 text-white px-6 py-3 lg:px-8 lg:py-4 rounded-full font-bold text-lg lg:text-2xl">
-                  100% Grátis
-                </div>
-                <p className="text-base lg:text-xl font-medium pr-4 lg:pr-8">Participe agora mesmo</p>
-              </div>
-            </DraggableElement>
-          </div>
-        </div>
+        
 
         {/* Right Side - QR Code & Character */}
-        <div className="w-full lg:w-1/3 min-h-[500px] flex flex-col items-center justify-center relative z-10 bg-gradient-to-t lg:bg-gradient-to-l from-blue-900/40 to-transparent pointer-events-none pb-12 lg:pb-0">
+        <div className="w-full min-h-screen flex flex-col items-center justify-center relative z-10 pointer-events-none pb-12 lg:pb-0">
           <div className="flex flex-col items-center group pointer-events-auto relative z-20">
             <DraggableElement id="qrcode" layout={layout} setLayout={setLayout} isOwner={isOwner}>
               <div ref={qrRef} className="bg-white p-6 lg:p-10 rounded-[2rem] lg:rounded-[3rem] shadow-2xl flex flex-col items-center border-4 lg:border-8 border-white/50 backdrop-blur-sm relative z-20 pointer-events-none">
@@ -358,11 +350,7 @@ export default function TVMode() {
             )}
           </div>
             
-          {character && (
-            <DraggableElement id="character" layout={layout} setLayout={setLayout} isOwner={isOwner} className="absolute bottom-0 right-0 transform translate-x-1/4 translate-y-1/4 w-[300px] sm:w-[400px] lg:w-[600px] z-10 opacity-90 drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] pointer-events-auto">
-              <img src={character.imageUrl} alt="Character" className="w-full h-auto pointer-events-none" crossOrigin="anonymous" />
-            </DraggableElement>
-          )}
+          
         </div>
       </div>
     </div>

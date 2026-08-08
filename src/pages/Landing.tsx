@@ -4,8 +4,9 @@
  */
 
 import Chatbot from '../components/Chatbot';
+import InteractiveDemo from '../components/InteractiveDemo';
 import React, { useRef, useEffect, useState } from 'react';
-import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, Briefcase, DollarSign, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone } from 'lucide-react';
+import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, Briefcase, DollarSign, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone, PlaySquare, Gamepad2, Gift, QrCode } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link as RouterLink } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from 'recharts';
@@ -23,22 +24,22 @@ const conversionData = [
 function FaqItem({ question, answer }: { question: string; answer: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden transition-all duration-200">
+    <div className="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden transition-all duration-200">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left p-6 md:p-8 flex items-center justify-between gap-4 focus:outline-none"
+        className="w-full text-left p-3 md:p-4 flex items-center justify-between gap-3 focus:outline-none"
       >
-        <div className="flex items-center gap-4">
-          <HelpCircle className="text-blue-600 shrink-0" size={24} />
-          <h3 className="text-xl font-bold text-gray-900">{question}</h3>
+        <div className="flex items-center gap-3">
+          <HelpCircle className="text-blue-600 shrink-0" size={18} />
+          <h3 className="text-base font-bold text-gray-900">{question}</h3>
         </div>
-        <ChevronDown className={`text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} size={24} />
+        <ChevronDown className={`text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} size={18} />
       </button>
       <div 
-        className={`px-6 md:px-8 pb-6 md:pb-8 pt-0 transition-all duration-300 ${isOpen ? 'opacity-100 max-h-[500px]' : 'opacity-0 max-h-0 overflow-hidden pb-0'}`}
+        className={`px-3 md:px-4 pb-3 md:pb-4 pt-0 transition-all duration-300 ${isOpen ? 'opacity-100 max-h-[500px]' : 'opacity-0 max-h-0 overflow-hidden pb-0'}`}
       >
-        <div className="pl-10">
-          <p className="text-gray-600 leading-relaxed">{answer}</p>
+        <div className="pl-7">
+          <p className="text-gray-600 leading-relaxed text-sm">{answer}</p>
         </div>
       </div>
     </div>
@@ -359,6 +360,11 @@ export default function App() {
       </motion.section>
 
     
+      {/* Interactive Demo Section */}
+      <section className="relative z-10 px-6">
+        <InteractiveDemo />
+      </section>
+
       {/* CRM Conversion Curve Section */}
       <motion.section className="px-6 py-24 bg-indigo-900 border-t border-indigo-800 text-white overflow-hidden relative"
         initial={{ opacity: 0, y: 30 }}
@@ -437,7 +443,7 @@ export default function App() {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Software 100% SaaS</h3>
               <p className="text-gray-600 leading-relaxed">
-                Nossa plataforma é independente de hardware. Use seu próprio tablet, smartphone ou alugue um totem com o seu fornecedor de preferência.
+                Nossa plataforma é independente de hardware. Use seu próprio tablet ou smartphone com o seu fornecedor de preferência.
               </p>
             </div>
 
@@ -482,90 +488,113 @@ export default function App() {
         transition={{ duration: 0.6 }}
       >
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center mb-20">
+          <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Como Funciona</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Implementar a gamificação no seu estande é simples e rápido. Veja o passo a passo.
+              Veja como é simples usar o VX Leads no seu estande.
             </p>
           </div>
 
-          <div className="space-y-24">
-            {/* Tópico 01 */}
-            <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
-              <div className="flex-1 space-y-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">1</div>
-                <h3 className="text-3xl font-bold text-gray-900">Faça seu cadastro</h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Cadastrar é fácil, basta clicar no botão cadastrar e preencher o formulário curto com nome da empresa, e-mail, telefone, CNPJ e setor de atuação. Suba sua logomarca e uma breve descrição para que seus leads conheçam melhor a sua marca. Em seguida, confirme seu e-mail, crie uma senha segura e guarde-a com cuidado.
-                </p>
+          <div className="grid md:grid-cols-2 gap-16 lg:gap-24">
+            {/* Expositor */}
+            <div className="space-y-10">
+              <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                  <Briefcase size={24} />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Passos para o Expositor</h3>
               </div>
-              <div className="flex-1 w-full relative">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-gray-100">
-                  <img src="https://i.ibb.co/bR8FfZKG/1.png" alt="Dashboard de Cadastro" className="w-full h-full object-cover" />
+              
+              <div className="space-y-8">
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">1</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Faça seu cadastro</h4>
+                    <p className="text-gray-600 leading-relaxed">Crie sua conta rapidamente e configure os dados da sua empresa e do evento.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">2</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Adicione seu vídeo de pitch</h4>
+                    <p className="text-gray-600 leading-relaxed">Cole o link de um vídeo curto (cerca de 15 segundos) para apresentar sua empresa aos visitantes antes de jogarem.</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">3</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Adicione os brindes</h4>
+                    <p className="text-gray-600 leading-relaxed">Cadastre os prêmios que serão sorteados e defina o estoque de cada um para ter controle total.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">4</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Copie o link gerado</h4>
+                    <p className="text-gray-600 leading-relaxed">Abra o link exclusivo no tablet que ficará no seu estande. É por ele que os promotores farão as abordagens.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">5</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Exporte os Leads</h4>
+                    <p className="text-gray-600 leading-relaxed">Você pode conectar diretamente com seu CRM ou exportar a planilha para o seu time de vendas em tempo real.</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Tópico 02 */}
-            <div className="flex flex-col md:flex-row-reverse items-center gap-12 lg:gap-20">
-              <div className="flex-1 space-y-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">2</div>
-                <h3 className="text-3xl font-bold text-gray-900">Selecione seu personagem</h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Escolha o avatar que melhor representará sua marca no VX Leads. Ele será o rosto da sua campanha e você pode ficar à vontade para usá-lo nas suas redes sociais para gerar ainda mais engajamento com o seu público.
-                </p>
-              </div>
-              <div className="flex-1 w-full relative">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-gray-100">
-                  <img src="https://i.ibb.co/bR5HNqTB/2.png" alt="Seleção de Personagem" className="w-full h-full object-cover" />
+            {/* Visitante */}
+            <div className="space-y-10">
+              <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+                <div className="p-3 bg-green-50 text-green-600 rounded-xl">
+                  <Target size={24} />
                 </div>
+                <h3 className="text-2xl font-bold text-gray-900">Passos para o Visitante</h3>
               </div>
-            </div>
-
-            {/* Tópico 03 */}
-            <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
-              <div className="flex-1 space-y-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">3</div>
-                <h3 className="text-3xl font-bold text-gray-900">Adicione os brindes</h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Digite nos campos os prêmios e brindes que irão compor os seus jogos. Defina a quantidade de cada item em estoque para que você tenha total controle das entregas e não tenha surpresas durante o evento.
-                </p>
-              </div>
-              <div className="flex-1 w-full relative">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-gray-100">
-                  <img src="https://i.ibb.co/ccPm3YRt/3.png" alt="Configuração de Brindes" className="w-full h-full object-cover" />
+              
+              <div className="space-y-8">
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-50 text-green-600 font-bold flex items-center justify-center border border-green-100">1</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Leitura do Crachá</h4>
+                    <p className="text-gray-600 leading-relaxed">
+                      O promoter escaneia o QR Code do crachá do visitante com o tablet de forma rápida e prática, se não for possível conectar com os dados do crachá ele pode preencher manualmente nome, e-mail, whatsapp e área de atuação.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Tópico 04 */}
-            <div className="flex flex-col md:flex-row-reverse items-center gap-12 lg:gap-20">
-              <div className="flex-1 space-y-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-2">4</div>
-                <h3 className="text-3xl font-bold text-gray-900">Copie o link gerado</h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  Esse link é usado para abrir a tela de captura em um tablet ou totem no seu estande, onde os usuários podem ler o QR Code, fazer o cadastro, jogar e ganhar um brinde. Caso a internet tenha oscilações no evento, o jogo continua funcionando normalmente e o lead capturado é enviado automaticamente para o painel da sua empresa no VX Leads assim que a conexão retornar.
-                </p>
-              </div>
-              <div className="flex-1 w-full relative">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-gray-100">
-                  <img src="https://i.ibb.co/848TH62h/4.png" alt="Link Gerado no Tablet" className="w-full h-full object-cover" />
+                
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-50 text-green-600 font-bold flex items-center justify-center border border-green-100">2</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Vídeo Institucional (Opcional)</h4>
+                    <p className="text-gray-600 leading-relaxed">
+                      O visitante assiste a um breve vídeo sobre a sua empresa antes de liberar o jogo, gerando{' '}
+                      <span className="relative inline-block group cursor-help text-green-700 font-medium underline decoration-dotted underline-offset-4">
+                        brand awareness
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 text-white text-sm rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 font-normal text-center leading-relaxed">
+                          Consciência de marca: aumenta o reconhecimento e familiaridade do público com a sua empresa.
+                          <svg className="absolute top-full left-1/2 -translate-x-1/2 text-gray-900" width="16" height="8" viewBox="0 0 16 8" fill="currentColor">
+                            <path d="M8 8L0 0H16L8 8Z" />
+                          </svg>
+                        </span>
+                      </span>.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Tópico 05 */}
-            <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
-              <div className="flex-1 space-y-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-600 font-bold text-xl mb-2">5</div>
-                <h3 className="text-3xl font-bold text-gray-900">Pronto para converter leads em clientes</h3>
-                <p className="text-lg text-gray-600 leading-relaxed">
-                  A mágica acontece: basta os usuários lerem o QR Code, fazerem o cadastro, assistirem o seu vídeo de pitch, preencherem as perguntas de qualificação e jogarem para ganhar brindes. O seu promoter apenas valida a tela de ganhador e entrega o prêmio. Após o evento, você exporta uma planilha com todos os leads qualificados para o seu CRM.
-                </p>
-              </div>
-              <div className="flex-1 w-full relative">
-                <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-gray-100">
-                  <img src="https://i.ibb.co/7MYLRVv/VX-Leads-Personagens-2.png" alt="CRM e Conversão" className="w-full h-full object-cover" />
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-50 text-green-600 font-bold flex items-center justify-center border border-green-100">3</div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Hora de Jogar e Ganhar!</h4>
+                    <p className="text-gray-600 leading-relaxed">
+                      Ele interage com o jogo, ganha um brinde na hora e sai satisfeito, enquanto você se conecta com ele e aumenta as chances de venda.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -634,7 +663,7 @@ export default function App() {
                   <span className="text-gray-700">Exportação CSV</span>
                 </li>
               </ul>
-              <RouterLink to="/cadastro" className="w-full block text-center py-3.5 px-6 font-semibold text-blue-600 bg-blue-50 border-2 border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
+              <RouterLink to="/cadastro?plan=starter" className="w-full block text-center py-3.5 px-6 font-semibold text-blue-600 bg-blue-50 border-2 border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
                 Começar com Starter
               </RouterLink>
             </div>
@@ -678,7 +707,7 @@ export default function App() {
                   <span className="text-gray-700">Suporte via WhatsApp</span>
                 </li>
               </ul>
-              <RouterLink to="/cadastro" className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
+              <RouterLink to="/cadastro?plan=pro" className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
                 Assinar Plano Pro
               </RouterLink>
             </div>
@@ -715,8 +744,8 @@ export default function App() {
                   <span className="text-gray-700">Suporte 24/7 no Evento</span>
                 </li>
               </ul>
-              <RouterLink to="/cadastro" className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
-                Assinar Plano
+              <RouterLink to="/cadastro?plan=enterprise" className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
+                Assinar Plano Enterprise
               </RouterLink>
             </div>
 
@@ -819,12 +848,12 @@ export default function App() {
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-3">
             <FaqItem 
-              question="O VX Leads é um software ou um totem físico?"
+              question="O VX Leads é um software ou um equipamento físico?"
               answer={
                 <>
-                  O VX Leads é uma <strong>plataforma de software (SaaS)</strong>. Nós fornecemos o sistema web, o painel de controle e os jogos gamificados virtuais. <strong>O totem ou tablet físico não está incluso nos planos</strong>. Nossa plataforma pode ser acessada através de um link em qualquer dispositivo touch screen com navegador de internet (tablets, smartphones, totens ou telas interativas) que você já possua ou alugue com fornecedores locais.
+                  O VX Leads é uma <strong>plataforma de software (SaaS)</strong>. Nós fornecemos o sistema web, o painel de controle e os jogos gamificados virtuais. <strong>O tablet físico não está incluso nos planos</strong>. Nossa plataforma pode ser acessada através de um link em qualquer dispositivo touch screen com navegador de internet (tablets ou smartphones) que você já possua ou alugue com fornecedores locais.
                 </>
               }
             />

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, writeBatch, getDocs, limit, query } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, getDoc, limit, query } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-import { Loader2, Plus, Trash2, ChevronRight, Gift, Target } from 'lucide-react';
+import { Loader2, Plus, Trash2, ChevronRight, Gift, Target, ArrowLeft, Save } from 'lucide-react';
 
 export default function SetupPrizes() {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export default function SetupPrizes() {
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   
+  const [isOnboarding, setIsOnboarding] = useState(false);
   const [prizes, setPrizes] = useState<any[]>([{ name: '', quantity: '' }, { name: '', quantity: '' }]);
   const [prizesToDelete, setPrizesToDelete] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -19,6 +20,19 @@ export default function SetupPrizes() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserId(user.uid);
+        
+        try {
+          const companyRef = doc(db, 'companies', user.uid);
+          const companySnap = await getDoc(companyRef);
+          if (companySnap.exists()) {
+            const companyData = companySnap.data();
+            if (!companyData.onboardingCompleted) {
+              setIsOnboarding(true);
+            }
+          }
+        } catch (err) {
+          console.error("Erro ao carregar dados da empresa", err);
+        }
         
         // Check if already has prizes
         try {
@@ -202,7 +216,7 @@ export default function SetupPrizes() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(isOnboarding ? '#' : '/')}>
           <div className="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
             <Target size={22} strokeWidth={2.5} />
           </div>
@@ -210,8 +224,16 @@ export default function SetupPrizes() {
             VX<span className="text-blue-600">Leads</span>
           </div>
         </div>
-        <div className="text-sm font-medium text-gray-500">
-          Configuração dos Prêmios
+        <div className="text-sm font-medium text-gray-500 flex items-center gap-2">
+          {!isOnboarding && (
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className="mr-4 p-2 text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
+          {isOnboarding ? 'Passo 3: Configuração dos Prêmios' : 'Configuração dos Prêmios'}
         </div>
       </header>
 
@@ -302,8 +324,8 @@ export default function SetupPrizes() {
                   </>
                 ) : (
                   <>
-                    Finalizar Configuração
-                    <ChevronRight size={20} />
+                    {isOnboarding ? 'Finalizar Configuração' : 'Salvar Brindes'}
+                    {isOnboarding ? <ChevronRight size={20} /> : <Save size={20} />}
                   </>
                 )}
               </button>
