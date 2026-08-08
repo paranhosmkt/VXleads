@@ -217,9 +217,14 @@ export default function App() {
           <p className="text-lg md:text-xl text-gray-600 max-w-xl mb-10 text-left leading-relaxed">
             Engaje mais visitantes, capte leads qualificados e multiplique os resultados da sua marca em feiras e eventos. A única plataforma no Brasil que une jogos interativos, gamificação, captura offline e integração nativa com os principais CRMs.
           </p>
-          <RouterLink to="/cadastro" className="px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30 cursor-pointer inline-block">
+          <RouterLink to="/cadastro" className="px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30 cursor-pointer inline-block mb-6">
             Quero revolucionar meu estande
           </RouterLink>
+          <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 max-w-xl text-left">
+            <p className="text-sm text-gray-600 leading-relaxed">
+              <strong>Nota:</strong> O VX Leads pode ser complementar ao qrcode oficial do evento. Nosso foco é atrair visitantes no estande com gamificação, gerenciar brindes e qualificar leads, podendo ser integrado com o sistema da feira quando permitido.
+            </p>
+          </div>
         </div>
         
         <div className="flex-1 w-full max-w-2xl lg:max-w-none flex justify-center">
@@ -838,6 +843,15 @@ export default function App() {
               answer={
                 <>
                   Agora todos os nossos planos possuem dispositivos simultâneos ilimitados. Isso significa que você pode conectar quantas telas, totens ou celulares de promotores quiser ao mesmo tempo, em qualquer plano. O limite será apenas a cota de leads de cada plano.
+                </>
+              }
+            />
+
+            <FaqItem 
+              question="O VX Leads substitui o QR Code do crachá do evento?"
+              answer={
+                <>
+                  <strong>Não.</strong> O QR Code do crachá do evento geralmente é uma ferramenta oficial da feira para troca de contatos e CRM interno. O VX Leads é uma ferramenta <strong>complementar</strong> focada em atrair visitantes para o seu estande através de gamificação, gerenciar a distribuição de brindes e qualificar esses leads. Quando a plataforma do evento permitir, nós podemos conectar o nosso leitor ao sistema deles para facilitar ainda mais o cadastro.
                 </>
               }
             />
