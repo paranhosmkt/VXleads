@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -10,14 +10,20 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useTranslation } from 'react-i18next';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isVerifying, setIsVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   
   const [companyName, setCompanyName] = useState('');
+  const [currentPlan, setCurrentPlan] = useState('starter');
+  const [currentCycle, setCurrentCycle] = useState('event');
   const [formFields, setFormFields] = useState<any[]>([]);
   const [planStatus, setPlanStatus] = useState('active');
   const [discountWon, setDiscountWon] = useState<string | null>(null);
@@ -29,6 +35,32 @@ export default function Dashboard() {
   const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
+    const checkSession = async (uid: string) => {
+      const params = new URLSearchParams(location.search);
+      const sessionId = params.get('session_id');
+      if (sessionId) {
+        setIsVerifying(true);
+        try {
+          const res = await fetch('/api/verify-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+          });
+          const data = await res.json();
+          if (data.status === 'paid') {
+            await updateDoc(doc(db, 'companies', uid), { planStatus: 'active' });
+            setPlanStatus('active');
+          }
+          // Remove session_id from URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) {
+          console.error('Error verifying session:', e);
+        } finally {
+          setIsVerifying(false);
+        }
+      }
+    };
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserId(user.uid);
@@ -36,8 +68,11 @@ export default function Dashboard() {
           const companyDoc = await getDoc(doc(db, 'companies', user.uid));
           if (companyDoc.exists()) {
             setCompanyName(companyDoc.data().razaoSocial || 'Sua Empresa');
+            setCurrentPlan(companyDoc.data().plan || 'starter');
+            setCurrentCycle(companyDoc.data().cycle || 'event');
             setFormFields(companyDoc.data().formFields || []);
-            setPlanStatus(companyDoc.data().planStatus || 'active');
+            setPlanStatus(companyDoc.data().planStatus || 'pending');
+            await checkSession(user.uid);
             setDiscountWon(companyDoc.data().discountWon || null);
           }
           
@@ -215,7 +250,7 @@ export default function Dashboard() {
     return (l.name?.toLowerCase().includes(term) || l.email?.toLowerCase().includes(term));
   });
 
-  if (loading) {
+  if (loading || isVerifying) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
@@ -224,6 +259,56 @@ export default function Dashboard() {
   }
 
   const rouletteLink = window.location.origin + `/roleta/${userId}`;
+
+  if (planStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+        <Target className="w-16 h-16 text-blue-600 mb-6" />
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('dashboard.pending_payment')}</h2>
+        <p className="text-gray-600 max-w-md mb-8">
+          Seu plano ainda não está ativo. Por favor, conclua o pagamento para liberar as funcionalidades do painel.
+        </p>
+        <div className="flex gap-4">
+          
+          <button
+            onClick={() => {
+              const STRIPE_LINKS: Record<string, Record<string, string>> = {
+                starter: {
+                  event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
+                  annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
+                },
+                pro: {
+                  event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
+                  annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
+                },
+                enterprise: {
+                  event: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02',
+                  annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
+                }
+              };
+              
+              const paymentUrl = STRIPE_LINKS[currentPlan]?.[currentCycle] || STRIPE_LINKS[currentPlan]?.['event'];
+              if (paymentUrl) {
+                window.location.href = `${paymentUrl}?client_reference_id=${userId}`;
+              } else {
+                alert('Plano não encontrado.');
+              }
+            }}
+            className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg hover:shadow-blue-600/30"
+          >
+            Pagar Agora
+          </button>
+
+          <button
+            onClick={() => auth.signOut().then(() => navigate('/'))}
+            className="px-8 py-3 bg-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-300 transition-colors"
+          >
+            Sair
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -241,7 +326,7 @@ export default function Dashboard() {
           <div className="h-8 w-px bg-gray-200 hidden sm:block"></div>
           <div>
             <h1 className="text-base md:text-xl font-bold text-gray-900 truncate max-w-[120px] md:max-w-none">{companyName}</h1>
-            <p className="text-xs md:text-sm text-gray-500">Painel de Controle</p>
+            <p className="text-xs md:text-sm text-gray-500">{t('dashboard.control_panel')}</p>
           </div>
         </div>
         
@@ -251,7 +336,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
           >
             <Settings size={18} />
-            <span className="hidden md:inline">Brindes</span>
+            <span className="hidden md:inline">{t('dashboard.gifts')}</span>
           </button>
 
           <button 
@@ -259,7 +344,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
           >
             <Settings size={18} />
-            <span className="hidden md:inline">Experiência</span>
+            <span className="hidden md:inline">{t('dashboard.experience')}</span>
           </button>
 
           <button 
@@ -267,7 +352,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-50 text-purple-700 font-semibold rounded-lg hover:bg-purple-100 transition-colors"
           >
             <QrCode size={18} />
-            <span className="hidden md:inline">QR Code</span>
+            <span className="hidden md:inline">{t('dashboard.qrcode')}</span>
           </button>
           
           <button 
@@ -275,7 +360,7 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-3 md:px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors"
           >
             <ExternalLink size={18} />
-            <span className="hidden md:inline">Abrir Jogo</span>
+            <span className="hidden md:inline">{t('dashboard.open_game')}</span>
           </button>
           
           <button 
@@ -293,12 +378,39 @@ export default function Dashboard() {
         {planStatus === 'inactive' && (
           <div className="bg-red-50 border border-red-200 p-6 rounded-2xl flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-red-800 font-bold text-lg mb-1">Seu plano está inativo</h2>
-              <p className="text-red-600 text-sm">O acesso ao jogo pelos seus clientes está bloqueado. Regularize sua assinatura para voltar a capturar leads.</p>
+              <h2 className="text-red-800 font-bold text-lg mb-1">{t('dashboard.inactive_plan')}</h2>
+              <p className="text-red-600 text-sm">{t('dashboard.inactive_desc')}</p>
             </div>
-            <button className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap">
+            
+            <button 
+              onClick={() => {
+                const STRIPE_LINKS: Record<string, Record<string, string>> = {
+                  starter: {
+                    event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
+                    annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
+                  },
+                  pro: {
+                    event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
+                    annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
+                  },
+                  enterprise: {
+                    event: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02',
+                    annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
+                  }
+                };
+                
+                const paymentUrl = STRIPE_LINKS[currentPlan]?.[currentCycle] || STRIPE_LINKS[currentPlan]?.['event'];
+                if (paymentUrl) {
+                  window.location.href = `${paymentUrl}?client_reference_id=${userId}`;
+                } else {
+                  alert('Plano não encontrado.');
+                }
+              }}
+              className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+            >
               Regularizar Plano
             </button>
+
           </div>
         )}
 
@@ -310,8 +422,8 @@ export default function Dashboard() {
                 <Gift size={24} />
               </div>
               <div>
-                <h2 className="text-emerald-800 font-bold text-lg mb-1">Prêmio de Boas-Vindas!</h2>
-                <p className="text-emerald-600 text-sm">Você tem {discountWon} garantido na sua primeira contratação.</p>
+                <h2 className="text-emerald-800 font-bold text-lg mb-1">{t('dashboard.welcome_prize')}</h2>
+                <p className="text-emerald-600 text-sm">{t('dashboard.welcome_desc', { discount: discountWon })}</p>
               </div>
             </div>
             <button className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20 whitespace-nowrap">
@@ -322,8 +434,8 @@ export default function Dashboard() {
         {/* URL Link Card */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Link do Tablet</h2>
-            <p className="text-sm text-gray-500">Use este link no tablet que ficará no estande para capturar os leads e rodar o jogo.</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">{t('dashboard.tablet_link')}</h2>
+            <p className="text-sm text-gray-500">{t('dashboard.tablet_desc')}</p>
           </div>
           <div className="flex w-full md:w-auto items-center gap-2">
             <input 
@@ -347,15 +459,15 @@ export default function Dashboard() {
         {totalLeads > 0 && (
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-6 items-center">
             <div className="w-full md:w-1/3">
-              <h2 className="text-lg font-bold text-gray-900 mb-2">Status dos Brindes</h2>
-              <p className="text-sm text-gray-500 mb-4">Proporção entre brindes já resgatados e pendentes de retirada.</p>
+              <h2 className="text-lg font-bold text-gray-900 mb-2">{t('dashboard.gift_status')}</h2>
+              <p className="text-sm text-gray-500 mb-4">{t('dashboard.gift_status_desc')}</p>
               <div className="space-y-3">
                 <div className="flex justify-between items-center bg-emerald-50 px-4 py-2 rounded-lg">
-                  <span className="text-emerald-700 font-medium text-sm">Resgatados</span>
+                  <span className="text-emerald-700 font-medium text-sm">{t('dashboard.redeemed')}</span>
                   <span className="text-emerald-700 font-bold">{prizesDelivered}</span>
                 </div>
                 <div className="flex justify-between items-center bg-amber-50 px-4 py-2 rounded-lg">
-                  <span className="text-amber-700 font-medium text-sm">Pendentes</span>
+                  <span className="text-amber-700 font-medium text-sm">{t('dashboard.pending_gifts')}</span>
                   <span className="text-amber-700 font-bold">{prizesPending}</span>
                 </div>
               </div>
@@ -394,7 +506,7 @@ export default function Dashboard() {
               <Users size={28} />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Total de Leads</p>
+              <p className="text-sm font-medium text-gray-500">{t('dashboard.total_leads')}</p>
               <p className="text-3xl font-bold text-gray-900">{totalLeads}</p>
             </div>
           </div>
@@ -404,7 +516,7 @@ export default function Dashboard() {
               <CheckCircle size={28} />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Brindes Entregues</p>
+              <p className="text-sm font-medium text-gray-500">{t('dashboard.gifts_delivered')}</p>
               <p className="text-3xl font-bold text-gray-900">{prizesDelivered}</p>
             </div>
           </div>
@@ -414,7 +526,7 @@ export default function Dashboard() {
               <Gift size={28} />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Brindes Disponíveis (Estoque)</p>
+              <p className="text-sm font-medium text-gray-500">{t('dashboard.gifts_available')}</p>
               <p className="text-3xl font-bold text-gray-900">{prizesAvailable}</p>
             </div>
           </div>
@@ -428,7 +540,7 @@ export default function Dashboard() {
                 <Database size={20} className="text-blue-600" />
                 Integração API com CRM
               </h2>
-              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600">Fechar</button>
+              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600">{t('dashboard.close')}</button>
             </div>
             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
               <p className="text-sm text-gray-600 mb-4">
@@ -437,13 +549,13 @@ export default function Dashboard() {
               </p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Endpoint</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t('dashboard.endpoint')}</label>
                   <code className="block bg-gray-900 text-gray-100 p-3 rounded-lg text-sm font-mono overflow-x-auto">
                     https://api.vxleads.com.br/v1/webhook/{userId}
                   </code>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Token de Acesso</label>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t('dashboard.access_token')}</label>
                   <div className="flex gap-2">
                     <input 
                       type="password" 
@@ -464,7 +576,7 @@ export default function Dashboard() {
         {/* Leads Table */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h2 className="text-xl font-bold text-gray-900">Leads Capturados</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('dashboard.captured_leads')}</h2>
             
             <div className="flex flex-col md:flex-row items-center gap-3">
               <div className="relative w-full md:w-64">
@@ -517,14 +629,14 @@ export default function Dashboard() {
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-gray-50 text-gray-500 uppercase tracking-wider text-xs">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Contato</th>
+                  <th className="px-6 py-4 font-semibold">{t('dashboard.contact')}</th>
                   {formFields.map(field => (
                     <th key={field.id} className="px-6 py-4 font-semibold">{field.label}</th>
                   ))}
-                  <th className="px-6 py-4 font-semibold">Prêmio</th>
-                  <th className="px-6 py-4 font-semibold text-center">Data</th>
-                  <th className="px-6 py-4 font-semibold text-center">Horário</th>
-                  <th className="px-6 py-4 font-semibold text-right">Status do brinde</th>
+                  <th className="px-6 py-4 font-semibold">{t('dashboard.prize')}</th>
+                  <th className="px-6 py-4 font-semibold text-center">{t('dashboard.date')}</th>
+                  <th className="px-6 py-4 font-semibold text-center">{t('dashboard.time')}</th>
+                  <th className="px-6 py-4 font-semibold text-right">{t('dashboard.prize_status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -564,7 +676,7 @@ export default function Dashboard() {
                           {lead.status === 'resgatado' ? (
                             <><CheckCircle size={14} /> Resgatado</>
                           ) : (
-                            <>Pendente (Marcar)</>
+                            <>{t('dashboard.mark_pending')}</>
                           )}
                         </button>
                         <button
@@ -602,14 +714,14 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Editar Lead</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('dashboard.edit_lead')}</h2>
               <button onClick={() => setEditingLead(null)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nome</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">{t('dashboard.name')}</label>
                 <input 
                   type="text" 
                   value={editingLead.name || ''} 
@@ -618,7 +730,7 @@ export default function Dashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">E-mail</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">{t('dashboard.email')}</label>
                 <input 
                   type="email" 
                   value={editingLead.email || ''} 
@@ -627,7 +739,7 @@ export default function Dashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Telefone</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">{t('dashboard.phone')}</label>
                 <input 
                   type="text" 
                   value={editingLead.phone || ''} 
@@ -672,7 +784,7 @@ export default function Dashboard() {
               <QrCode size={32} />
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">QR Code do Jogo</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard.game_qrcode')}</h2>
             <p className="text-gray-500 mb-8 max-w-[280px]">
               Use este QR Code em flyers, tótens ou telas para que os visitantes joguem pelo próprio celular.
             </p>

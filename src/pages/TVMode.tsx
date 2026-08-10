@@ -142,6 +142,8 @@ export default function TVMode() {
   const [subtitle, setSubtitle] = useState('Escaneie o QR Code ao lado, jogue e ganhe brindes exclusivos!');
   const [bgColor, setBgColor] = useState('#111827');
   const [bgImageUrl, setBgImageUrl] = useState('');
+  const [fontFamily, setFontFamily] = useState('Inter');
+  const [textColor, setTextColor] = useState('#FFFFFF');
   
   const [layout, setLayout] = useState<any>(DEFAULT_LAYOUT);
   const [saving, setSaving] = useState(false);

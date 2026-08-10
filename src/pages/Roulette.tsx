@@ -4,8 +4,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Loader2, Share2, Copy, Check, Play, ChevronRight, QrCode, X } from 'lucide-react';
+import { Loader2, Share2, Copy, Check, Play, ChevronRight, QrCode, X, Gift } from 'lucide-react';
 import { Scanner } from '@yudiel/react-qr-scanner';
+import ReactPlayerRaw from 'react-player';
+const ReactPlayer = ReactPlayerRaw as any;
 import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
 

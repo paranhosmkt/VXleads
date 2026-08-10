@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageSquare, X, Send, Bot } from 'lucide-react';
 
 interface Message {
@@ -7,6 +8,7 @@ interface Message {
 }
 
 export default function Chatbot() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'model', text: 'Olá! Eu sou o Gui. Como posso ajudar com suas dúvidas sobre planos, funcionalidades ou como a roleta funciona?' }
@@ -75,7 +77,7 @@ export default function Chatbot() {
                 <img src="https://i.ibb.co/gZ733fNV/Animated-character-presenting-ro-2-K-202607292208.jpg" alt="Gui" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h3 className="font-bold">Fale com o Gui</h3>
+                <h3 className="font-bold">{t('chatbot.title')}</h3>
                 <p className="text-xs text-indigo-100 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
                   Online agora

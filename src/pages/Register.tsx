@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Target, Building2, MapPin, User, Mail, Phone, Lock, FileText, ChevronLeft, Loader2, XCircle } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 export default function Register() {
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -13,13 +16,14 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedCycle, setSelectedCycle] = useState<'event' | 'annual'>('event');
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const planFromUrl = params.get('plan');
-    if (planFromUrl) {
-      setSelectedPlan(planFromUrl);
-    }
+    const cycleFromUrl = params.get('cycle');
+    if (planFromUrl) setSelectedPlan(planFromUrl);
+    if (cycleFromUrl === 'annual' || cycleFromUrl === 'event') setSelectedCycle(cycleFromUrl as 'event' | 'annual');
   }, [location.search]);
   const [discount, setDiscount] = useState<string | null>(null);
   useEffect(() => {
@@ -59,7 +63,20 @@ export default function Register() {
   };
 
   const formatPrice = (price: number) => {
-    return price.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const lang = i18n.language.split('-')[0];
+    let currency = 'BRL';
+    let locale = 'pt-BR';
+    if (lang === 'en') {
+      currency = 'USD';
+      locale = 'en-US';
+      // simple conversion for demo
+      price = price / 5;
+    } else if (lang === 'es') {
+      currency = 'EUR';
+      locale = 'es-ES';
+      price = price / 5.5;
+    }
+    return new Intl.NumberFormat(locale, { style: 'currency', currency, minimumFractionDigits: 0 }).format(price);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -92,12 +109,12 @@ export default function Register() {
     }
 
     if (formData.senha !== formData.confirmacaoSenha) {
-      setError('As senhas não coincidem.');
+      setError(t('register.error_pass_match'));
       return;
     }
 
     if (formData.senha.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.');
+      setError(t('register.error_weak'));
       return;
     }
 
@@ -128,19 +145,49 @@ export default function Register() {
         onboardingCompleted: false,
         createdAt: serverTimestamp(),
         discountWon: localStorage.getItem('vxleads_discount_won') || null,
-        plan: selectedPlan
+        plan: selectedPlan,
+        cycle: selectedCycle,
+        planStatus: 'pending'
       };
       await setDoc(doc(db, 'companies', user.uid), companyData);
       
       // 3. Enviar e-mail de verificação
       await sendEmailVerification(user);
       
-      alert('Cadastro realizado com sucesso! Um e-mail de confirmação foi enviado para você.');
-      navigate('/configurar-experiencia');
+      
+      if (selectedPlan && selectedPlan !== 'personalizado') {
+        const STRIPE_LINKS: Record<string, Record<string, string>> = {
+          starter: {
+            event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
+            annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
+          },
+          pro: {
+            event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
+            annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
+          },
+          enterprise: {
+            event: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02',
+            annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
+          }
+        };
+
+        const paymentUrl = STRIPE_LINKS[selectedPlan]?.[selectedCycle];
+        if (paymentUrl) {
+          window.location.href = `${paymentUrl}?prefilled_email=${encodeURIComponent(formData.email)}&client_reference_id=${user.uid}`;
+          return;
+        } else {
+          alert('Plano não encontrado para pagamento.');
+        }
+      } else {
+
+        alert(t('register.success_contact'));
+      }
+      
+      navigate('/dashboard');
     } catch (err: any) {
       console.error('Erro ao cadastrar:', err);
       if (err.code === 'auth/email-already-in-use') {
-        setError('Este e-mail já está em uso.');
+        setError(t('register.error_in_use'));
       } else {
         setError('Ocorreu um erro ao realizar o cadastro. Tente novamente.');
       }
@@ -157,7 +204,7 @@ export default function Register() {
           <div className="mb-8 flex items-center justify-between">
             <Link to="/login" className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors">
               <ChevronLeft size={20} />
-              <span className="font-medium">Voltar</span>
+              <span className="font-medium">{t('register2.back')}</span>
             </Link>
             <div className="flex items-center gap-2">
               <div className="bg-blue-600 p-2 rounded-lg">
@@ -165,11 +212,12 @@ export default function Register() {
               </div>
               <span className="text-xl font-black tracking-tight text-gray-900">VX Leads</span>
             </div>
+            <LanguageSwitcher />
           </div>
           
           <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden p-8 sm:p-12">
             <div className="text-center mb-10">
-              <h1 className="text-3xl font-extrabold text-gray-900 mb-4">Escolha seu Plano</h1>
+              <h1 className="text-3xl font-extrabold text-gray-900 mb-4">{t('register2.choose_plan')}</h1>
               <p className="text-gray-600 max-w-2xl mx-auto mb-6">
                 Selecione o plano que melhor atende às necessidades da sua empresa. Você poderá alterar depois se precisar.
               </p>
@@ -179,7 +227,7 @@ export default function Register() {
                     <Target size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="text-emerald-800 font-bold">Você tem um prêmio garantido!</p>
+                    <p className="text-emerald-800 font-bold">{t('register2.prize_guaranteed')}</p>
                     <p className="text-emerald-600 text-sm">{discount} válido para a sua primeira contratação.</p>
                   </div>
                 </div>
@@ -193,15 +241,15 @@ export default function Register() {
                 onClick={() => setSelectedPlan('starter')}
               >
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Starter</h3>
-                <p className="text-gray-500 text-sm mb-4">Para pequenos estandes e ativações pontuais.</p>
+                <p className="text-gray-500 text-sm mb-4">{t('register2.starter_desc')}</p>
                 <div className="text-2xl font-black text-gray-900 mb-4">
                   {discountValue > 0 ? (
                     <div className="flex flex-col">
-                      <span className="text-sm text-gray-400 line-through font-normal">R$ 797</span>
-                      <span className="text-emerald-600">R$ {formatPrice(calculatePrice(797))} <span className="text-sm font-medium text-gray-500">/evento</span></span>
+                      <span className="text-sm text-gray-400 line-through font-normal">{formatPrice(selectedCycle === 'annual' ? 4997 : 797)}</span>
+                      <span className="text-emerald-600">{formatPrice(calculatePrice(selectedCycle === 'annual' ? 4997 : 797))} <span className="text-sm font-medium text-gray-500">{selectedCycle === 'annual' ? '/ano' : '/evento'}</span></span>
                     </div>
                   ) : (
-                    <>R$ 797 <span className="text-sm font-medium text-gray-500">/evento</span></>
+                    <>{formatPrice(selectedCycle === 'annual' ? 4997 : 797)} <span className="text-sm font-medium text-gray-500">{selectedCycle === 'annual' ? '/ano' : '/evento'}</span></>
                   )}
                 </div>
                 <ul className="space-y-2 text-sm text-gray-600">
@@ -216,17 +264,17 @@ export default function Register() {
                 className={`border-2 rounded-2xl p-6 cursor-pointer transition-all relative ${selectedPlan === 'pro' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-blue-300'}`}
                 onClick={() => setSelectedPlan('pro')}
               >
-                <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Mais Popular</div>
+                <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">{t('register2.most_popular')}</div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Pro</h3>
-                <p className="text-gray-500 text-sm mb-4">Para feiras médias e geração constante de leads.</p>
+                <p className="text-gray-500 text-sm mb-4">{t('register2.pro_desc')}</p>
                 <div className="text-2xl font-black text-gray-900 mb-4">
                   {discountValue > 0 ? (
                     <div className="flex flex-col">
-                      <span className="text-sm text-gray-400 line-through font-normal">R$ 1.497</span>
-                      <span className="text-emerald-600">R$ {formatPrice(calculatePrice(1497))} <span className="text-sm font-medium text-gray-500">/evento</span></span>
+                      <span className="text-sm text-gray-400 line-through font-normal">{formatPrice(selectedCycle === 'annual' ? 8997 : 1497)}</span>
+                      <span className="text-emerald-600">{formatPrice(calculatePrice(selectedCycle === 'annual' ? 8997 : 1497))} <span className="text-sm font-medium text-gray-500">{selectedCycle === 'annual' ? '/ano' : '/evento'}</span></span>
                     </div>
                   ) : (
-                    <>R$ 1.497 <span className="text-sm font-medium text-gray-500">/evento</span></>
+                    <>{formatPrice(selectedCycle === 'annual' ? 8997 : 1497)} <span className="text-sm font-medium text-gray-500">{selectedCycle === 'annual' ? '/ano' : '/evento'}</span></>
                   )}
                 </div>
                 <ul className="space-y-2 text-sm text-gray-600">
@@ -242,15 +290,15 @@ export default function Register() {
                 onClick={() => setSelectedPlan('enterprise')}
               >
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Enterprise</h3>
-                <p className="text-gray-500 text-sm mb-4">Para grandes congressos e operações em escala.</p>
+                <p className="text-gray-500 text-sm mb-4">{t('register2.enterprise_desc')}</p>
                 <div className="text-2xl font-black text-gray-900 mb-4">
                   {discountValue > 0 ? (
                     <div className="flex flex-col">
-                      <span className="text-sm text-gray-400 line-through font-normal">R$ 2.997</span>
-                      <span className="text-emerald-600">R$ {formatPrice(calculatePrice(2997))} <span className="text-sm font-medium text-gray-500">/evento</span></span>
+                      <span className="text-sm text-gray-400 line-through font-normal">{formatPrice(selectedCycle === 'annual' ? 24997 : 2997)}</span>
+                      <span className="text-emerald-600">{formatPrice(calculatePrice(selectedCycle === 'annual' ? 24997 : 2997))} <span className="text-sm font-medium text-gray-500">{selectedCycle === 'annual' ? '/ano' : '/evento'}</span></span>
                     </div>
                   ) : (
-                    <>R$ 2.997 <span className="text-sm font-medium text-gray-500">/evento</span></>
+                    <>{formatPrice(selectedCycle === 'annual' ? 24997 : 2997)} <span className="text-sm font-medium text-gray-500">{selectedCycle === 'annual' ? '/ano' : '/evento'}</span></>
                   )}
                 </div>
                 <ul className="space-y-2 text-sm text-gray-600">
@@ -265,9 +313,9 @@ export default function Register() {
                 className={`border-2 rounded-2xl p-6 cursor-pointer transition-all ${selectedPlan === 'personalizado' ? 'border-blue-600 bg-blue-50 shadow-md' : 'border-gray-200 hover:border-blue-300'}`}
                 onClick={() => setSelectedPlan('personalizado')}
               >
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Personalizado</h3>
-                <p className="text-gray-500 text-sm mb-4">Projeto sob medida para sua necessidade.</p>
-                <div className="text-2xl font-black text-gray-900 mb-4">Sob Consulta</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{t('register2.custom')}</h3>
+                <p className="text-gray-500 text-sm mb-4">{t('register2.custom_desc')}</p>
+                <div className="text-2xl font-black text-gray-900 mb-4">{t('register2.on_request')}</div>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li>• Leads personalizados</li>
                   <li>• Dispositivos simultâneos ilimitados</li>
@@ -305,14 +353,15 @@ export default function Register() {
         <div className="mb-8 flex items-center justify-between">
           <button type="button" onClick={() => setStep(1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors">
             <ChevronLeft size={20} />
-            <span className="font-medium">Voltar para Planos</span>
+            <span className="font-medium">{t('register2.back_to_plans')}</span>
           </button>
           <div className="flex items-center gap-2">
             <div className="bg-blue-600 p-2 rounded-lg">
               <Target className="text-white" size={24} />
             </div>
             <span className="text-xl font-black tracking-tight text-gray-900">VX Leads</span>
-          </div>
+            </div>
+            <LanguageSwitcher />
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
@@ -320,7 +369,7 @@ export default function Register() {
             <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-blue-500/10 blur-2xl"></div>
             <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-32 h-32 rounded-full bg-blue-500/10 blur-2xl"></div>
             
-            <h1 className="text-3xl font-extrabold text-white mb-2 relative z-10">Crie sua Conta Empresarial</h1>
+            <h1 className="text-3xl font-extrabold text-white mb-2 relative z-10">{t('register2.create_account')}</h1>
             <p className="text-gray-400 relative z-10 max-w-xl mx-auto">
               Preencha os dados da sua empresa. As informações abaixo serão utilizadas para emissão automática de Notas Fiscais.
             </p>
@@ -349,7 +398,7 @@ export default function Register() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Logomarca (Opcional - até 2MB)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register2.logo_optional')}</label>
                   <div className="flex items-center gap-4">
                     {formData.logoDataUrl && (
                       <img src={formData.logoDataUrl} alt="Logo preview" className="w-16 h-16 object-contain border border-gray-200 rounded-lg p-1 bg-white" />
@@ -363,7 +412,7 @@ export default function Register() {
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Razão Social</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.razao_social')}</label>
                   <input
                     type="text"
                     name="razaoSocial"
@@ -371,12 +420,12 @@ export default function Register() {
                     value={formData.razaoSocial}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="Nome completo da empresa"
+                    placeholder={t('register.razao_ph')}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">CNPJ</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.cnpj')}</label>
                   <input
                     type="text"
                     name="cnpj"
@@ -384,12 +433,12 @@ export default function Register() {
                     value={formData.cnpj}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="00.000.000/0000-00"
+                    placeholder={t('register.cnpj_ph')}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Inscrição Estadual</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register2.ie')}</label>
                   <input
                     type="text"
                     name="inscricaoEstadual"
@@ -411,7 +460,7 @@ export default function Register() {
               
               <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">CEP</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.cep')}</label>
                   <input
                     type="text"
                     name="cep"
@@ -419,12 +468,12 @@ export default function Register() {
                     value={formData.cep}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="00000-000"
+                    placeholder={t('register.cep_ph')}
                   />
                 </div>
                 
                 <div className="md:col-span-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Logradouro</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.logradouro')}</label>
                   <input
                     type="text"
                     name="endereco"
@@ -432,12 +481,12 @@ export default function Register() {
                     value={formData.endereco}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="Rua, Avenida, etc."
+                    placeholder={t('register.logradouro_ph')}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Número</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.numero')}</label>
                   <input
                     type="text"
                     name="numero"
@@ -445,24 +494,24 @@ export default function Register() {
                     value={formData.numero}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="Ex: 123"
+                    placeholder={t('register.numero_ph')}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Complemento</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.complemento')}</label>
                   <input
                     type="text"
                     name="complemento"
                     value={formData.complemento}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="Sala, Andar, etc."
+                    placeholder={t('register.complemento_ph')}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Bairro</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.bairro')}</label>
                   <input
                     type="text"
                     name="bairro"
@@ -470,12 +519,12 @@ export default function Register() {
                     value={formData.bairro}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="Bairro"
+                    placeholder={t('register.bairro_ph')}
                   />
                 </div>
 
                 <div className="md:col-span-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Cidade</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.cidade')}</label>
                   <input
                     type="text"
                     name="cidade"
@@ -483,12 +532,12 @@ export default function Register() {
                     value={formData.cidade}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="Cidade"
+                    placeholder={t('register.cidade_ph')}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Estado</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">{t('register.estado')}</label>
                   <select
                     name="estado"
                     required
@@ -496,7 +545,7 @@ export default function Register() {
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800 appearance-none"
                   >
-                    <option value="">Selecione o Estado</option>
+                    <option value="">{t('register.estado_ph')}</option>
                     <option value="AC">Acre</option>
                     <option value="AL">Alagoas</option>
                     <option value="AP">Amapá</option>
@@ -565,7 +614,7 @@ export default function Register() {
                     value={formData.telefone}
                     onChange={handleChange}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-colors outline-none text-gray-800"
-                    placeholder="(00) 00000-0000"
+                    placeholder={t('register.phone_ph')}
                   />
                 </div>
 
@@ -628,8 +677,8 @@ export default function Register() {
                 className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               />
               <label htmlFor="terms" className="text-sm text-gray-600 leading-relaxed">
-                Eu li e concordo com os{' '}
-                <Link to="/termos-de-uso" target="_blank" className="text-blue-600 hover:underline">Termos de Uso</Link>
+                {t('register.terms_prefix')} {' '}
+                <Link to="/termos-de-uso" target="_blank" className="text-blue-600 hover:underline">{t('register.terms_link')}</Link>
                 {' '}e a{' '}
                 <Link to="/politica-de-privacidade" target="_blank" className="text-blue-600 hover:underline">Política de Privacidade</Link>, 
                 incluindo a coleta e uso dos meus dados para fins comerciais e conformidade com a LGPD.

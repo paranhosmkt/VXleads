@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ScratchCard from './ScratchCard';
@@ -14,6 +15,7 @@ const PRIZES = [
 const COLORS = ['#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
 
 export default function InteractiveDemo() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [gameType, setGameType] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -128,16 +130,16 @@ export default function InteractiveDemo() {
         <div className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-indigo-950 font-black text-sm md:text-base border-2 border-yellow-300 mb-6 uppercase tracking-widest shadow-[0_0_30px_rgba(250,204,21,0.5)] animate-pulse">
           <Gift size={20} className="mr-2 inline" /> Teste agora e ganhe um desconto real
         </div>
-        <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-yellow-200 mb-4 drop-shadow-sm">Veja como funciona a Gamificação</h2>
-        <p className="text-indigo-200 text-lg">Jogue um dos nossos jogos abaixo e ganhe um desconto real para usar na contratação do seu plano VX Leads. *Válido para a 1ª contratação da empresa.</p>
+        <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-yellow-200 mb-4 drop-shadow-sm">{t('demo.title')}</h2>
+        <p className="text-indigo-200 text-lg">{t('demo.subtitle')}</p>
       </div>
 
       <div className="relative z-10 flex flex-col items-center">
         {alreadyWon && !wonPrize && !gameType && (
           <div className="bg-yellow-400 text-indigo-900 p-8 rounded-2xl text-center shadow-xl w-full max-w-md animate-fade-in-up">
-            <h3 className="text-2xl font-black mb-2">Você já ganhou!</h3>
+            <h3 className="text-2xl font-black mb-2">{t('demo.already_won')}</h3>
             <p className="text-4xl font-black mb-6">{alreadyWon}</p>
-            <p className="text-sm font-medium opacity-80 mb-6">O prêmio é válido para a primeira contratação da sua empresa e não é acumulativo.</p>
+            <p className="text-sm font-medium opacity-80 mb-6">{t('demo.already_won_desc')}</p>
             <button onClick={() => navigate('/cadastro')} className="w-full bg-indigo-900 text-white font-bold py-4 rounded-xl hover:bg-indigo-800 transition-colors">
               Cadastrar e Garantir Desconto
             </button>
@@ -150,22 +152,22 @@ export default function InteractiveDemo() {
               <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-500/40 transition-colors">
                 <Target className="text-blue-400" size={32} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Roleta Premiada</h3>
-              <p className="text-indigo-300 text-sm">Gire a roleta clássica e descubra seu desconto.</p>
+              <h3 className="text-xl font-bold text-white mb-2">{t('demo.roulette_title')}</h3>
+              <p className="text-indigo-300 text-sm">{t('demo.roulette_desc')}</p>
             </button>
             <button onClick={() => startGame('raspadinha')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group">
               <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-emerald-500/40 transition-colors">
                 <Ticket className="text-emerald-400" size={32} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Raspadinha</h3>
-              <p className="text-indigo-300 text-sm">Raspe a tela para revelar seu desconto.</p>
+              <h3 className="text-xl font-bold text-white mb-2">{t('demo.scratch_title')}</h3>
+              <p className="text-indigo-300 text-sm">{t('demo.scratch_desc')}</p>
             </button>
             <button onClick={() => startGame('caca_niquel')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group">
               <div className="w-16 h-16 bg-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-pink-500/40 transition-colors">
                 <Zap className="text-pink-400" size={32} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Caça-Níquel</h3>
-              <p className="text-indigo-300 text-sm">Aperte o botão e torça para os símbolos alinharem.</p>
+              <h3 className="text-xl font-bold text-white mb-2">{t('demo.slot_title')}</h3>
+              <p className="text-indigo-300 text-sm">{t('demo.slot_desc')}</p>
             </button>
           </div>
         )}
@@ -197,7 +199,7 @@ export default function InteractiveDemo() {
                   const chosen = validPrizes[Math.floor(Math.random() * validPrizes.length)];
                   finishGame(chosen, true);
                 }} />
-                <p className="text-center text-indigo-200 mt-6">Passe o dedo ou mouse sobre a área acima</p>
+                <p className="text-center text-indigo-200 mt-6">{t('demo.scratch_instruction')}</p>
               </div>
             )}
 
@@ -216,9 +218,9 @@ export default function InteractiveDemo() {
 
         {wonPrize && (
           <div className="bg-yellow-400 text-indigo-900 p-8 rounded-2xl text-center shadow-xl w-full max-w-md animate-fade-in-up mt-8">
-            <h3 className="text-2xl font-black mb-2">Parabéns, você ganhou!</h3>
+            <h3 className="text-2xl font-black mb-2">{t('demo.won_title')}</h3>
             <p className="text-4xl font-black mb-6 text-indigo-700">{wonPrize.nome}</p>
-            <p className="text-sm font-medium opacity-80 mb-6">Prêmio registrado no seu navegador. Válido para a primeira contratação da sua empresa.</p>
+            <p className="text-sm font-medium opacity-80 mb-6">{t('demo.won_desc')}</p>
             <button onClick={() => navigate('/cadastro')} className="w-full bg-indigo-900 text-white font-bold py-4 rounded-xl hover:bg-indigo-800 transition-colors shadow-lg">
               Cadastrar e Garantir Desconto
             </button>

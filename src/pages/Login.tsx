@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 export default function Login() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function Login() {
     } catch (err: any) {
       console.error('Erro ao fazer login:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('E-mail ou senha incorretos.');
+        setError(t('login.error_invalid'));
       } else {
         setError('Ocorreu um erro ao realizar o login. Tente novamente mais tarde.');
       }
@@ -62,7 +63,7 @@ export default function Login() {
         <div className="mb-8">
           <Link to="/" className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors w-fit">
             <ChevronLeft size={20} />
-            <span className="font-medium">Voltar para o site</span>
+            <span className="font-medium">{t('login.back')}</span>
           </Link>
         </div>
 
@@ -71,8 +72,8 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/10 mb-4">
               <Target size={32} className="text-blue-500" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">Acesse sua conta</h1>
-            <p className="text-gray-400">Entre para gerenciar seus leads e eventos</p>
+            <h1 className="text-2xl font-bold text-white mb-2">{t('login.title')}</h1>
+            <p className="text-gray-400">{t('login.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -104,7 +105,7 @@ export default function Login() {
                   value={formData.email}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all outline-none"
-                  placeholder="seu@email.com"
+                  placeholder={t('login.email_ph')}
                 />
               </div>
             </div>

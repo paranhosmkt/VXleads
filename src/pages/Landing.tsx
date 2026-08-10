@@ -9,6 +9,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, Briefcase, DollarSign, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone, PlaySquare, Gamepad2, Gift, QrCode } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link as RouterLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from 'recharts';
 
 
@@ -130,7 +132,8 @@ function FloatingBubbles() {
   );
 }
 
-export default function App() {
+export default function Landing() {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isAnnual, setIsAnnual] = useState(false);
 
@@ -200,9 +203,12 @@ export default function App() {
             VX<span className="text-blue-600">Leads</span>
           </div>
         </div>
-        <RouterLink to="/login" className="px-5 py-2.5 text-sm font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shadow-sm cursor-pointer inline-block">
-          Login
-        </RouterLink>
+        <div className="flex items-center gap-4">
+          <LanguageSwitcher />
+          <RouterLink to="/login" className="px-5 py-2.5 text-sm font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shadow-sm cursor-pointer inline-block">
+            {t('nav.login')}
+          </RouterLink>
+        </div>
       </header>
 
       {/* Hero Section */}
@@ -213,17 +219,17 @@ export default function App() {
       >
         <div className="flex-1 flex flex-col items-start w-full">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 max-w-2xl leading-[1.15] tracking-tight mb-6 text-left">
-            Transforme seu estande em uma <span className="text-blue-600">máquina de atrair clientes</span>
+            {t('hero.title1')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{t('hero.title2')}</span> {t('hero.title3')}
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-xl mb-10 text-left leading-relaxed">
-            Engaje mais visitantes, capte leads qualificados e multiplique os resultados da sua marca em feiras e eventos. A única plataforma no Brasil que une jogos interativos, gamificação, captura offline e integração nativa com os principais CRMs.
+            {t('hero.subtitle')}
           </p>
           <RouterLink to="/cadastro" className="px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30 cursor-pointer inline-block mb-6">
             Quero revolucionar meu estande
           </RouterLink>
           <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 max-w-xl text-left">
             <p className="text-sm text-gray-600 leading-relaxed">
-              <strong>Nota:</strong> O VX Leads pode ser complementar ao qrcode oficial do evento. Nosso foco é atrair visitantes no estande com gamificação, gerenciar brindes e qualificar leads, podendo ser integrado com o sistema da feira quando permitido.
+              <span dangerouslySetInnerHTML={{ __html: t('landing.integration_note') }} />
             </p>
           </div>
         </div>
@@ -247,7 +253,7 @@ export default function App() {
         transition={{ duration: 0.6 }}
       >
         <div className="max-w-7xl mx-auto w-full text-center">
-          <p className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-8">Integração nativa com os principais CRMs do mercado</p>
+          <p className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-8">{t('landing.integration_title')}</p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 grayscale opacity-60">
             <div className="text-2xl font-bold tracking-tight text-gray-900">RD Station</div>
             <div className="text-2xl font-bold tracking-tight text-gray-900">HubSpot</div>
@@ -267,7 +273,7 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">O Fim dos Estandes Vazios</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">{t('landing.problem_solution.title')}</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Veja por que a abordagem tradicional não funciona mais e como a gamificação muda o jogo.
             </p>
@@ -281,7 +287,7 @@ export default function App() {
                 <div className="bg-red-100 p-2 rounded-lg text-red-600">
                   <XCircle size={24} strokeWidth={2.5} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Os problemas de sempre</h3>
+                <h3 className="text-2xl font-bold text-gray-900">{t('landing.problem_solution.problems_title')}</h3>
               </div>
               
               <ul className="space-y-8">
@@ -290,8 +296,8 @@ export default function App() {
                     <UserX size={20} />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Público Passivo</h4>
-                    <p className="text-gray-600 leading-relaxed">Visitantes ignoram seu estande em pavilhões barulhentos e concorridos.</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{t('landing.problem_solution.p1_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.problem_solution.p1_desc')}</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
@@ -299,8 +305,8 @@ export default function App() {
                     <Database size={20} />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Dados Perdidos</h4>
-                    <p className="text-gray-600 leading-relaxed">Brindes são entregues sem cadastro ou com dados falsos e ilegíveis.</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{t('landing.problem_solution.p2_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.problem_solution.p2_desc')}</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
@@ -308,8 +314,8 @@ export default function App() {
                     <TrendingDown size={20} />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Baixa conversão pós-evento</h4>
-                    <p className="text-gray-600 leading-relaxed">Muitos cartões de visita e contatos diretos no whatsapp podem se perder e muitas vezes os leads esfriam.</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{t('landing.problem_solution.p3_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.problem_solution.p3_desc')}</p>
                   </div>
                 </li>
               </ul>
@@ -322,7 +328,7 @@ export default function App() {
                 <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
                   <CheckCircle2 size={24} strokeWidth={2.5} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">A Solução VX Leads</h3>
+                <h3 className="text-2xl font-bold text-gray-900">{t('landing.problem_solution.solutions_title')}</h3>
               </div>
               
               <ul className="space-y-8">
@@ -331,8 +337,8 @@ export default function App() {
                     <Zap size={20} />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Atração Ativa</h4>
-                    <p className="text-gray-600 leading-relaxed">A gamificação cria filas de espera, curiosidade e engajamento genuíno.</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{t('landing.problem_solution.s1_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.problem_solution.s1_desc')}</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
@@ -340,8 +346,8 @@ export default function App() {
                     <ShieldCheck size={20} />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Dados Qualificados</h4>
-                    <p className="text-gray-600 leading-relaxed">O brinde só é liberado após a validação de um cadastro digital completo.</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{t('landing.problem_solution.s2_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.problem_solution.s2_desc')}</p>
                   </div>
                 </li>
                 <li className="flex gap-4">
@@ -349,8 +355,8 @@ export default function App() {
                     <ListOrdered size={20} />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Leads Organizados</h4>
-                    <p className="text-gray-600 leading-relaxed">Planilha com os leads organizados e prontos para o seu CRM e seu time fazer contato e direcionar conteúdos.</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{t('landing.problem_solution.s3_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.problem_solution.s3_desc')}</p>
                   </div>
                 </li>
               </ul>
@@ -379,13 +385,13 @@ export default function App() {
               <TrendingDown size={16} className="mr-2 inline" /> O Tempo é Inimigo da Conversão
             </div>
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 tracking-tight leading-tight">
-              A Queda de Conversão <br/><span className="text-blue-400">Pós-Evento</span>
+              {t('landing.conversion.title1')} <br/><span className="text-blue-400">{t('landing.conversion.title2')}</span>
             </h2>
             <p className="text-lg md:text-xl text-indigo-200 leading-relaxed max-w-xl">
-              Segundo pesquisas de <strong>Inside Sales Benchmarks</strong>, a probabilidade de venda despenca drasticamente com o passar dos dias. No dia do evento, a chance é de <strong>95%</strong>, mas cai para apenas <strong>12% no dia 10</strong>.
+              <span dangerouslySetInnerHTML={{ __html: t('landing.conversion.p1') }} />
             </p>
             <p className="text-lg text-indigo-300 leading-relaxed max-w-xl">
-              Com o <strong>VX Leads</strong>, o seu lead entra no dashboard em tempo real. Você pode agir enquanto o lead ainda está aquecido, reduzindo o tempo de resposta e multiplicando as chances de fechamento usando seu próprio CRM.
+              <span dangerouslySetInnerHTML={{ __html: t('landing.conversion.p2') }} />
             </p>
           </div>
           
@@ -415,7 +421,7 @@ export default function App() {
               </ResponsiveContainer>
             </div>
             <div className="text-center text-xs text-indigo-400 mt-6 flex items-center justify-center gap-1.5">
-              <span>Fonte: Dados baseados no Inside Sales Benchmarks</span>
+              <span>{t('landing.conversion.source')}</span>
             </div>
           </div>
         </div>
@@ -430,7 +436,7 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Por que escolher a VX Leads?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">{t('landing.features.title')}</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               A única plataforma do mercado desenhada especificamente para resolver os maiores gargalos da captação em feiras.
             </p>
@@ -441,7 +447,7 @@ export default function App() {
               <div className="bg-blue-100 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 mb-6">
                 <MonitorSmartphone size={24} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Software 100% SaaS</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">{t('landing.features.f1_title')}</h3>
               <p className="text-gray-600 leading-relaxed">
                 Nossa plataforma é independente de hardware. Use seu próprio tablet ou smartphone com o seu fornecedor de preferência.
               </p>
@@ -451,7 +457,7 @@ export default function App() {
               <div className="bg-blue-100 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 mb-6">
                 <WifiOff size={24} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Funcionamento Offline</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">{t('landing.features.f2_title')}</h3>
               <p className="text-gray-600 leading-relaxed">
                 A internet da feira caiu? Sem problemas. O aplicativo (PWA) salva os leads localmente e sincroniza quando a conexão voltar.
               </p>
@@ -461,7 +467,7 @@ export default function App() {
               <div className="bg-blue-100 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 mb-6">
                 <Link size={24} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Integração Direta</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">{t('landing.features.f3_title')}</h3>
               <p className="text-gray-600 leading-relaxed">
                 Pare de exportar planilhas. Envie leads em tempo real via Webhook nativo para RD Station, HubSpot, Salesforce e mais.
               </p>
@@ -471,7 +477,7 @@ export default function App() {
               <div className="bg-blue-100 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 mb-6">
                 <Star size={24} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Jogos Interativos</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">{t('landing.features.f4_title')}</h3>
               <p className="text-gray-600 leading-relaxed">
                 Ative o gatilho da recompensa. Visitantes adoram jogar e ganhar brindes, preenchendo dados reais com muito mais facilidade em roletas, raspadinhas e slot machines.
               </p>
@@ -489,7 +495,7 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Como Funciona</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">{t('landing.how_it_works.title')}</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Veja como é simples usar o VX Leads no seu estande.
             </p>
@@ -502,47 +508,47 @@ export default function App() {
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                   <Briefcase size={24} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Passos para o Expositor</h3>
+                <h3 className="text-2xl font-bold text-gray-900">{t('landing.how_it_works.exhibitor_title')}</h3>
               </div>
               
               <div className="space-y-8">
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">1</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Faça seu cadastro</h4>
-                    <p className="text-gray-600 leading-relaxed">Crie sua conta rapidamente e configure os dados da sua empresa e do evento.</p>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.e1_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.how_it_works.e1_desc')}</p>
                   </div>
                 </div>
 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">2</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Adicione seu vídeo de pitch</h4>
-                    <p className="text-gray-600 leading-relaxed">Cole o link de um vídeo curto (cerca de 15 segundos) para apresentar sua empresa aos visitantes antes de jogarem.</p>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.e2_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.how_it_works.e2_desc')}</p>
                   </div>
                 </div>
                 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">3</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Adicione os brindes</h4>
-                    <p className="text-gray-600 leading-relaxed">Cadastre os prêmios que serão sorteados e defina o estoque de cada um para ter controle total.</p>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.e3_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.how_it_works.e3_desc')}</p>
                   </div>
                 </div>
 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">4</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Copie o link gerado</h4>
-                    <p className="text-gray-600 leading-relaxed">Abra o link exclusivo no tablet que ficará no seu estande. É por ele que os promotores farão as abordagens.</p>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.e4_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.how_it_works.e4_desc')}</p>
                   </div>
                 </div>
 
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center border border-blue-100">5</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Exporte os Leads</h4>
-                    <p className="text-gray-600 leading-relaxed">Você pode conectar diretamente com seu CRM ou exportar a planilha para o seu time de vendas em tempo real.</p>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.e5_title')}</h4>
+                    <p className="text-gray-600 leading-relaxed">{t('landing.how_it_works.e5_desc')}</p>
                   </div>
                 </div>
               </div>
@@ -554,14 +560,14 @@ export default function App() {
                 <div className="p-3 bg-green-50 text-green-600 rounded-xl">
                   <Target size={24} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Passos para o Visitante</h3>
+                <h3 className="text-2xl font-bold text-gray-900">{t('landing.how_it_works.visitor_title')}</h3>
               </div>
               
               <div className="space-y-8">
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-50 text-green-600 font-bold flex items-center justify-center border border-green-100">1</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Leitura do Crachá</h4>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.v1_title')}</h4>
                     <p className="text-gray-600 leading-relaxed">
                       O promoter escaneia o QR Code do crachá do visitante com o tablet de forma rápida e prática, se não for possível conectar com os dados do crachá ele pode preencher manualmente nome, e-mail, whatsapp e área de atuação.
                     </p>
@@ -571,7 +577,7 @@ export default function App() {
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-50 text-green-600 font-bold flex items-center justify-center border border-green-100">2</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Vídeo Institucional (Opcional)</h4>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.v2_title')}</h4>
                     <p className="text-gray-600 leading-relaxed">
                       O visitante assiste a um breve vídeo sobre a sua empresa antes de liberar o jogo, gerando{' '}
                       <span className="relative inline-block group cursor-help text-green-700 font-medium underline decoration-dotted underline-offset-4">
@@ -590,7 +596,7 @@ export default function App() {
                 <div className="flex gap-6">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-50 text-green-600 font-bold flex items-center justify-center border border-green-100">3</div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">Hora de Jogar e Ganhar!</h4>
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">{t('landing.how_it_works.v3_title')}</h4>
                     <p className="text-gray-600 leading-relaxed">
                       Ele interage com o jogo, ganha um brinde na hora e sai satisfeito, enquanto você se conecta com ele e aumenta as chances de venda.
                     </p>
@@ -611,7 +617,7 @@ export default function App() {
       >
         <div className="max-w-7xl mx-auto w-full">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Planos que cabem no seu evento</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight">{t('pricing.title')}</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Escolha a melhor opção para transformar seu estande em uma máquina de captação de leads.
             </p>
@@ -638,8 +644,8 @@ export default function App() {
             {/* Starter Plan */}
             <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
-                <p className="text-gray-500 min-h-[48px]">Para pequenos estandes e ativações pontuais.</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('pricing.starter.name')}</h3>
+                <p className="text-gray-500 min-h-[48px]">{t('pricing.starter.desc')}</p>
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-gray-900">{isAnnual ? "R$ 4.997" : "R$ 797"}</span>
                   <span className="text-gray-500 font-medium">{isAnnual ? "/ano" : "/evento"}</span>
@@ -648,22 +654,22 @@ export default function App() {
               <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Até {isAnnual ? "2.400" : "100"} leads</span>
+                  <span className="text-gray-700">{isAnnual ? t('pricing.starter.leads_annual') : t('pricing.starter.leads')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Dispositivos simultâneos ilimitados</span>
+                  <span className="text-gray-700">{t('pricing.features.unlimited_devices')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Modo Offline</span>
+                  <span className="text-gray-700">{t('pricing.features.offline')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Exportação CSV</span>
+                  <span className="text-gray-700">{t('pricing.features.csv')}</span>
                 </li>
               </ul>
-              <RouterLink to="/cadastro?plan=starter" className="w-full block text-center py-3.5 px-6 font-semibold text-blue-600 bg-blue-50 border-2 border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
+              <RouterLink to={`/cadastro?plan=starter&cycle=${isAnnual ? "annual" : "event"}`} className="w-full block text-center py-3.5 px-6 font-semibold text-blue-600 bg-blue-50 border-2 border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
                 Começar com Starter
               </RouterLink>
             </div>
@@ -674,8 +680,8 @@ export default function App() {
                 Mais Popular
               </div>
               <div className="mb-8 mt-2">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro</h3>
-                <p className="text-gray-500 min-h-[48px]">Para feiras regionais e médias empresas.</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('pricing.pro.name')}</h3>
+                <p className="text-gray-500 min-h-[48px]">{t('pricing.pro.desc')}</p>
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-gray-900">{isAnnual ? "R$ 8.997" : "R$ 1.297"}</span>
                   <span className="text-gray-500 font-medium">{isAnnual ? "/ano" : "/evento"}</span>
@@ -684,30 +690,30 @@ export default function App() {
               <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Até {isAnnual ? "24.000" : "1.000"} leads</span>
+                  <span className="text-gray-700">{isAnnual ? t('pricing.pro.leads_annual') : t('pricing.pro.leads')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700 font-medium">Dispositivos simultâneos ilimitados</span>
+                  <span className="text-gray-700 font-medium">{t('pricing.features.unlimited_devices')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Modo Offline</span>
+                  <span className="text-gray-700">{t('pricing.features.offline')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Gestão de Estoque</span>
+                  <span className="text-gray-700">{t('pricing.features.stock')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Integração com CRM</span>
+                  <span className="text-gray-700">{t('pricing.features.crm')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Suporte via WhatsApp</span>
+                  <span className="text-gray-700">{t('pricing.features.support_whatsapp')}</span>
                 </li>
               </ul>
-              <RouterLink to="/cadastro?plan=pro" className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
+              <RouterLink to={`/cadastro?plan=pro&cycle=${isAnnual ? "annual" : "event"}`} className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
                 Assinar Plano Pro
               </RouterLink>
             </div>
@@ -715,8 +721,8 @@ export default function App() {
             {/* Enterprise Plan */}
             <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
-                <p className="text-gray-500 min-h-[48px]">Para grandes marcas e feiras maiores.</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('pricing.enterprise.name')}</h3>
+                <p className="text-gray-500 min-h-[48px]">{t('pricing.enterprise.desc')}</p>
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-4xl font-extrabold text-gray-900">{isAnnual ? "R$ 24.997" : "R$ 3.597"}</span>
                   <span className="text-gray-500 font-medium">{isAnnual ? "/ano" : "/evento"}</span>
@@ -725,26 +731,26 @@ export default function App() {
               <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Até {isAnnual ? "240.000" : "10 mil"} Leads</span>
+                  <span className="text-gray-700">{isAnnual ? t('pricing.enterprise.leads_annual') : t('pricing.enterprise.leads')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Dispositivos simultâneos ilimitados</span>
+                  <span className="text-gray-700">{t('pricing.features.unlimited_devices')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Modo Offline</span>
+                  <span className="text-gray-700">{t('pricing.features.offline')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700 font-medium">Integração CRM / Webhook</span>
+                  <span className="text-gray-700 font-medium">{t('pricing.features.crm')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-700">Suporte 24/7 no Evento</span>
+                  <span className="text-gray-700">{t('pricing.features.support_247')}</span>
                 </li>
               </ul>
-              <RouterLink to="/cadastro?plan=enterprise" className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
+              <RouterLink to={`/cadastro?plan=enterprise&cycle=${isAnnual ? "annual" : "event"}`} className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
                 Assinar Plano Enterprise
               </RouterLink>
             </div>
@@ -752,36 +758,36 @@ export default function App() {
             {/* Personalizado Plan */}
             <div className="bg-gray-900 rounded-2xl p-8 shadow-sm border border-gray-800 flex flex-col h-full hover:shadow-md transition-shadow">
               <div className="mb-8">
-                <h3 className="text-2xl font-bold text-white mb-2">Personalizado</h3>
-                <p className="text-gray-400 min-h-[48px]">Projeto sob medida para sua necessidade.</p>
+                <h3 className="text-2xl font-bold text-white mb-2">{t('pricing.custom.name')}</h3>
+                <p className="text-gray-400 min-h-[48px]">{t('pricing.custom.desc')}</p>
                 <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-3xl font-extrabold text-white">Sob Consulta</span>
+                  <span className="text-3xl font-extrabold text-white">{t('pricing.custom.price')}</span>
                 </div>
               </div>
               <ul className="space-y-4 mb-8 flex-1">
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-300">Leads personalizados</span>
+                  <span className="text-gray-300">{t('pricing.features.custom_leads')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-300">Dispositivos simultâneos ilimitados</span>
+                  <span className="text-gray-300">{t('pricing.features.unlimited_devices')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-300">Interface personalizada</span>
+                  <span className="text-gray-300">{t('pricing.features.custom_interface')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-300">Modo Offline</span>
+                  <span className="text-gray-300">{t('pricing.features.offline')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-300 font-medium">Integrações completas</span>
+                  <span className="text-gray-300 font-medium">{t('pricing.features.full_integrations')}</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
-                  <span className="text-gray-300">Suporte 24/7 dedicado</span>
+                  <span className="text-gray-300">{t('pricing.features.support_dedicated')}</span>
                 </li>
               </ul>
               <RouterLink to="/cadastro" className="w-full block text-center py-3.5 px-6 font-semibold text-gray-900 bg-white rounded-xl hover:bg-gray-100 transition-colors">
@@ -803,24 +809,24 @@ export default function App() {
           <div className="flex-1">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-400 font-semibold text-sm mb-6">
               <Briefcase size={18} />
-              <span>Programa de Parceiros VX Leads</span>
+              <span>{t('landing.partners.tag')}</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Ajude empresas a vender mais e seja muito bem remunerado</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">{t('landing.partners.title')}</h2>
             <p className="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
               Seja um consultor parceiro e receba comissão recorrente enquanto os seus clientes usarem a plataforma. Leve inovação e construa uma nova fonte de renda.
             </p>
             <ul className="space-y-4 mb-8">
               <li className="flex items-center gap-3">
                 <div className="bg-blue-500/20 p-1.5 rounded-full text-blue-400"><Check size={16} strokeWidth={3} /></div>
-                <span className="text-gray-300">Comissões generosas em todos os planos</span>
+                <span className="text-gray-300">{t('landing.partners.b1')}</span>
               </li>
               <li className="flex items-center gap-3">
                 <div className="bg-blue-500/20 p-1.5 rounded-full text-blue-400"><Check size={16} strokeWidth={3} /></div>
-                <span className="text-gray-300">Material de apoio e vendas pronto para usar</span>
+                <span className="text-gray-300">{t('landing.partners.b2')}</span>
               </li>
               <li className="flex items-center gap-3">
                 <div className="bg-blue-500/20 p-1.5 rounded-full text-blue-400"><Check size={16} strokeWidth={3} /></div>
-                <span className="text-gray-300">Painel exclusivo para acompanhar suas indicações</span>
+                <span className="text-gray-300">{t('landing.partners.b3')}</span>
               </li>
             </ul>
             <RouterLink to="/cadastro" className="px-8 py-4 inline-block font-bold text-gray-900 bg-white rounded-xl hover:bg-gray-100 transition-colors">
@@ -842,56 +848,36 @@ export default function App() {
       >
         <div className="max-w-4xl mx-auto w-full">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">Perguntas Frequentes</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">{t('landing.faq.title')}</h2>
             <p className="text-lg text-gray-600">
               Tire suas dúvidas e entenda exatamente como a plataforma VX Leads funciona.
             </p>
           </div>
 
           <div className="space-y-3">
-            <FaqItem 
-              question="O VX Leads é um software ou um equipamento físico?"
-              answer={
-                <>
-                  O VX Leads é uma <strong>plataforma de software (SaaS)</strong>. Nós fornecemos o sistema web, o painel de controle e os jogos gamificados virtuais. <strong>O tablet físico não está incluso nos planos</strong>. Nossa plataforma pode ser acessada através de um link em qualquer dispositivo touch screen com navegador de internet (tablets ou smartphones) que você já possua ou alugue com fornecedores locais.
-                </>
-              }
+                        <FaqItem 
+              question={t('landing.faq.q1')}
+              answer={<span dangerouslySetInnerHTML={{ __html: t('landing.faq.a1') }} />}
             />
-            
             <FaqItem 
-              question="Preciso de internet no evento para funcionar?"
-              answer={
-                <>
-                  Você precisará de internet apenas no momento inicial para carregar o sistema no dispositivo e fazer o login. Depois disso, o sistema funciona em <strong>modo offline</strong> via PWA. Os leads capturados ficarão salvos localmente e serão sincronizados automaticamente com o seu painel de controle assim que o dispositivo for conectado novamente à internet.
-                </>
-              }
+              question={t('landing.faq.q2')}
+              answer={<span dangerouslySetInnerHTML={{ __html: t('landing.faq.a2') }} />}
             />
-
             <FaqItem 
-              question="O que significa 'Dispositivos Simultâneos' nos planos?"
-              answer={
-                <>
-                  Agora todos os nossos planos possuem dispositivos simultâneos ilimitados. Isso significa que você pode conectar quantas telas, totens ou celulares de promotores quiser ao mesmo tempo, em qualquer plano. O limite será apenas a cota de leads de cada plano.
-                </>
-              }
+              question={t('landing.faq.q3')}
+              answer={<span dangerouslySetInnerHTML={{ __html: t('landing.faq.a3') }} />}
             />
-
             <FaqItem 
-              question="O VX Leads substitui o QR Code do crachá do evento?"
-              answer={
-                <>
-                  <strong>Não.</strong> O QR Code do crachá do evento geralmente é uma ferramenta oficial da feira para troca de contatos e CRM interno. O VX Leads é uma ferramenta <strong>complementar</strong> focada em atrair visitantes para o seu estande através de gamificação, gerenciar a distribuição de brindes e qualificar esses leads. Quando a plataforma do evento permitir, nós podemos conectar o nosso leitor ao sistema deles para facilitar ainda mais o cadastro.
-                </>
-              }
+              question={t('landing.faq.q4')}
+              answer={<span dangerouslySetInnerHTML={{ __html: t('landing.faq.a4') }} />}
             />
-
             <FaqItem 
-              question="O VX Leads é um CRM ou se integra com o meu CRM?"
-              answer={
-                <>
-                  <strong>O VX Leads não é um CRM</strong>. Nós somos uma plataforma especializada na <strong>captação e qualificação de leads</strong> durante os eventos. No entanto, você pode exportar facilmente todos os leads qualificados em uma planilha (Excel/CSV) diretamente do seu painel de controle. Essa planilha pode ser importada rapidamente em qualquer CRM do mercado (como RD Station, HubSpot, Pipedrive, Bitrix24, etc) para dar continuidade ao atendimento.
-                </>
-              }
+              question={t('landing.faq.q5')}
+              answer={<span dangerouslySetInnerHTML={{ __html: t('landing.faq.a5') }} />}
+            />
+            <FaqItem 
+              question={t('landing.faq.q6')}
+              answer={<span dangerouslySetInnerHTML={{ __html: t('landing.faq.a6') }} />}
             />
           </div>
         </div>
@@ -921,7 +907,7 @@ export default function App() {
 
             {/* Legal Links */}
             <div>
-              <h4 className="text-white font-bold text-lg mb-6">Políticas</h4>
+              <h4 className="text-white font-bold text-lg mb-6">{t('footer.legal')}</h4>
               <ul className="space-y-4">
                 <li>
                   <RouterLink to="/termos-de-uso" className="text-gray-400 hover:text-white transition-colors cursor-pointer">
@@ -938,11 +924,11 @@ export default function App() {
 
             {/* Contact */}
             <div>
-              <h4 className="text-white font-bold text-lg mb-6">Contato</h4>
+              <h4 className="text-white font-bold text-lg mb-6">{t('footer.contact') || 'Contact'}</h4>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors cursor-pointer">
                   <Mail size={20} />
-                  <span>contato@vxleads.com.br</span>
+                  <span>{t('footer.contact_email') || 'contato@vxleads.com.br'}</span>
                 </li>
                 <li className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors cursor-pointer">
                   <Phone size={20} />
@@ -953,7 +939,7 @@ export default function App() {
 
             {/* Social Media */}
             <div>
-              <h4 className="text-white font-bold text-lg mb-6">Acompanhe nossas redes sociais</h4>
+              <h4 className="text-white font-bold text-lg mb-6">{t('footer.social') || 'Follow our social networks'}</h4>
               <div className="flex gap-4">
                 <a href="#" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-blue-600 hover:text-white transition-all">
                   <Instagram size={20} />
@@ -974,7 +960,7 @@ export default function App() {
               &copy; {new Date().getFullYear()} VX Leads. Todos os direitos reservados.
             </p>
             <p className="text-gray-500 text-sm">
-              Design por: <span className="text-white font-medium">Eleve gestão e estratégia</span>
+              {t('footer.design_by')} <span className="text-white font-medium">{t('footer.design_agency')}</span>
             </p>
           </div>
         </div>
