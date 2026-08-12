@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Target, Building2, MapPin, User, Mail, Phone, Lock, FileText, ChevronLeft, Loader2, XCircle } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -63,20 +62,7 @@ export default function Register() {
   };
 
   const formatPrice = (price: number) => {
-    const lang = i18n.language.split('-')[0];
-    let currency = 'BRL';
-    let locale = 'pt-BR';
-    if (lang === 'en') {
-      currency = 'USD';
-      locale = 'en-US';
-      // simple conversion for demo
-      price = price / 5;
-    } else if (lang === 'es') {
-      currency = 'EUR';
-      locale = 'es-ES';
-      price = price / 5.5;
-    }
-    return new Intl.NumberFormat(locale, { style: 'currency', currency, minimumFractionDigits: 0 }).format(price);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(price);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -166,7 +152,7 @@ export default function Register() {
             annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
           },
           enterprise: {
-            event: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02',
+            event: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05_event',
             annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
           }
         };
@@ -211,9 +197,7 @@ export default function Register() {
                 <Target className="text-white" size={24} />
               </div>
               <span className="text-xl font-black tracking-tight text-gray-900">VX Leads</span>
-            </div>
-            <LanguageSwitcher />
-          </div>
+            </div>          </div>
           
           <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden p-8 sm:p-12">
             <div className="text-center mb-10">
@@ -325,22 +309,24 @@ export default function Register() {
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className={`flex flex-col sm:flex-row items-center gap-4 ${selectedPlan === 'personalizado' ? 'justify-center mt-4' : 'justify-between'}`}>
               <a 
                 href="https://wa.me/5511999999999?text=Ol%C3%A1,%20gostaria%20de%20falar%20com%20um%20consultor%20sobre%20os%20planos%20da%20VX%20Leads" 
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all flex items-center gap-2 w-full sm:w-auto justify-center"
+                className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 w-full sm:w-auto justify-center ${selectedPlan === 'personalizado' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg text-lg px-10 py-4' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'}`}
               >
                 Converse com um consultor
               </a>
-              <button 
-                onClick={() => setStep(2)}
-                disabled={!selectedPlan}
-                className={`px-8 py-3 rounded-xl font-bold text-white transition-all w-full sm:w-auto ${selectedPlan ? 'bg-blue-600 hover:bg-blue-700 shadow-lg' : 'bg-gray-300 cursor-not-allowed'}`}
-              >
-                Continuar para Dados da Empresa
-              </button>
+              {selectedPlan !== 'personalizado' && (
+                <button 
+                  onClick={() => setStep(2)}
+                  disabled={!selectedPlan}
+                  className={`px-8 py-3 rounded-xl font-bold text-white transition-all w-full sm:w-auto ${selectedPlan ? 'bg-blue-600 hover:bg-blue-700 shadow-lg' : 'bg-gray-300 cursor-not-allowed'}`}
+                >
+                  Continuar para Dados da Empresa
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -360,9 +346,7 @@ export default function Register() {
               <Target className="text-white" size={24} />
             </div>
             <span className="text-xl font-black tracking-tight text-gray-900">VX Leads</span>
-            </div>
-            <LanguageSwitcher />
-        </div>
+            </div>        </div>
 
         <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
           <div className="bg-gray-900 p-8 sm:px-12 text-center relative overflow-hidden">

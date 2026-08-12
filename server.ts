@@ -27,7 +27,7 @@ async function startServer() {
 
   app.post("/api/create-checkout-session", async (req, res) => {
     try {
-      const { plan, cycle, lang } = req.body;
+      const { plan, cycle } = req.body;
       
       // CONFIGURAÇÃO DOS PRODUTOS DO STRIPE (COLOQUE SEUS PRICE IDs AQUI)
       // Exemplo: 'price_1Pxxxxxxxxxxxxx'
@@ -65,16 +65,13 @@ async function startServer() {
         
         if (plan === 'starter') {
           amount = cycle === 'annual' ? 499700 : 79700;
-          if (lang !== 'pt') amount = cycle === 'annual' ? 99900 : 14900;
-        } else if (plan === 'pro') {
+                  } else if (plan === 'pro') {
           amount = cycle === 'annual' ? 899700 : 149700;
-          if (lang !== 'pt') amount = cycle === 'annual' ? 199900 : 29900;
-        } else if (plan === 'enterprise') {
+                  } else if (plan === 'enterprise') {
           amount = cycle === 'annual' ? 2499700 : 299700;
-          if (lang !== 'pt') amount = cycle === 'annual' ? 399900 : 59900;
-        }
+                  }
         
-        currency = lang === 'pt' ? 'brl' : (lang === 'es' ? 'eur' : 'usd');
+        currency = 'brl';
 
         sessionConfig.line_items = [{
           price_data: {

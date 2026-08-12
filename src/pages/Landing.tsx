@@ -10,7 +10,6 @@ import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, Shie
 import { motion } from 'motion/react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from 'recharts';
 
 
@@ -203,9 +202,7 @@ export default function Landing() {
             VX<span className="text-blue-600">Leads</span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <LanguageSwitcher />
-          <RouterLink to="/login" className="px-5 py-2.5 text-sm font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shadow-sm cursor-pointer inline-block">
+        <div className="flex items-center gap-4">          <RouterLink to="/login" className="px-5 py-2.5 text-sm font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shadow-sm cursor-pointer inline-block">
             {t('nav.login')}
           </RouterLink>
         </div>
@@ -924,7 +921,7 @@ export default function Landing() {
 
             {/* Contact */}
             <div>
-              <h4 className="text-white font-bold text-lg mb-6">{t('footer.contact') || 'Contact'}</h4>
+              <h4 className="text-white font-bold text-lg mb-6">{t('footer.contact') || 'Contato'}</h4>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors cursor-pointer">
                   <Mail size={20} />
@@ -939,7 +936,7 @@ export default function Landing() {
 
             {/* Social Media */}
             <div>
-              <h4 className="text-white font-bold text-lg mb-6">{t('footer.social') || 'Follow our social networks'}</h4>
+              <h4 className="text-white font-bold text-lg mb-6">{t('footer.social') || 'Siga nossas redes sociais'}</h4>
               <div className="flex gap-4">
                 <a href="#" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-blue-600 hover:text-white transition-all">
                   <Instagram size={20} />

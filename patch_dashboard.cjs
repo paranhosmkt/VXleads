@@ -1,40 +1,56 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/pages/Dashboard.tsx', 'utf-8');
 
-const replacement = `
-          <button
-            onClick={() => {
-              const STRIPE_LINKS: Record<string, Record<string, string>> = {
-                starter: {
-                  event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
-                  annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
-                },
-                pro: {
-                  event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
-                  annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
-                },
-                enterprise: {
-                  event: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02',
-                  annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
-                }
-              };
-              
-              // If cycle wasn't saved, default to event
-              const paymentUrl = STRIPE_LINKS[currentPlan]?.['event'];
-              if (paymentUrl) {
-                window.location.href = \`\${paymentUrl}?client_reference_id=\${userId}\`;
-              } else {
-                alert('Plano não encontrado.');
+const targetDeleteAll = `      const leadsSnapshot = await getDocs(leadsRef);
+      const deletePromises = leadsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);`;
+
+const replaceDeleteAll = `      const leadsSnapshot = await getDocs(leadsRef);
+      // Restore prize quantities
+      for (const leadDoc of leadsSnapshot.docs) {
+        const data = leadDoc.data();
+        if (data.prizeId) {
+          try {
+            const prizeRef = doc(db, 'companies', userId, 'prizes', data.prizeId);
+            const prizeSnap = await getDoc(prizeRef);
+            if (prizeSnap.exists()) {
+              const currentQ = Number(prizeSnap.data().quantidadeAtual || 0);
+              const totalQ = Number(prizeSnap.data().quantidadeTotal || currentQ);
+              if (currentQ < totalQ) {
+                await updateDoc(prizeRef, { quantidadeAtual: currentQ + 1 });
               }
-            }}
-            className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30"
-          >
-            Pagar Plano Agora
-          </button>
-          <button
-`;
+            }
+          } catch(e) {}
+        }
+      }
+      
+      const deletePromises = leadsSnapshot.docs.map(leadDoc => deleteDoc(leadDoc.ref));
+      await Promise.all(deletePromises);`;
 
-code = code.replace(/<button\s*onClick=\{async \(\) => \{\s*try \{\s*const response = await fetch\('\/api\/create-checkout-session'[\s\S]*?className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600\/30"\s*>\s*Pagar Plano Agora\s*<\/button>\s*<button/, replacement);
+const targetDeleteOne = `    try {
+      await deleteDoc(doc(db, 'companies', userId, 'leads', leadId));
+      setLeads(leads.filter(l => l.id !== leadId));`;
 
+const replaceDeleteOne = `    try {
+      const leadToDelete = leads.find(l => l.id === leadId);
+      if (leadToDelete && leadToDelete.prizeId) {
+        try {
+          const prizeRef = doc(db, 'companies', userId, 'prizes', leadToDelete.prizeId);
+          const prizeSnap = await getDoc(prizeRef);
+          if (prizeSnap.exists()) {
+            const currentQ = Number(prizeSnap.data().quantidadeAtual || 0);
+            const totalQ = Number(prizeSnap.data().quantidadeTotal || currentQ);
+            if (currentQ < totalQ) {
+              await updateDoc(prizeRef, { quantidadeAtual: currentQ + 1 });
+            }
+          }
+        } catch(e) {}
+      }
+      
+      await deleteDoc(doc(db, 'companies', userId, 'leads', leadId));
+      setLeads(leads.filter(l => l.id !== leadId));`;
+
+code = code.replace(targetDeleteAll, replaceDeleteAll);
+code = code.replace(targetDeleteOne, replaceDeleteOne);
 fs.writeFileSync('src/pages/Dashboard.tsx', code);
-console.log("Patched Dashboard.tsx");
+console.log("Patched Dashboard.tsx for lead deletion");

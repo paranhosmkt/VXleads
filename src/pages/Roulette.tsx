@@ -230,8 +230,22 @@ export default function Roulette() {
     }
     
     if (prizes.length > 0) {
-      const randomPrizeIndex = Math.floor(Math.random() * prizes.length);
-      setPreSelectedPrize(prizes[randomPrizeIndex]);
+      // Filtrar apenas brindes com estoque > 0
+      const availablePrizes = prizes.filter(p => (p.quantidadeAtual === undefined) || Number(p.quantidadeAtual) > 0);
+      const pool = availablePrizes.length > 0 ? availablePrizes : prizes;
+      
+      // Sorteio ponderado pela quantidadeAtual
+      const totalWeight = pool.reduce((sum, p) => sum + (Number(p.quantidadeAtual) || 1), 0);
+      let randomVal = Math.random() * totalWeight;
+      let selected = pool[0];
+      for (const p of pool) {
+        randomVal -= (Number(p.quantidadeAtual) || 1);
+        if (randomVal <= 0) {
+          selected = p;
+          break;
+        }
+      }
+      setPreSelectedPrize(selected);
     }
     
     if (videoUrl) {
@@ -301,6 +315,7 @@ export default function Roulette() {
         ...leadForm,
         companyId: companyId && companyId !== 'dev' ? companyId : auth.currentUser?.uid,
         prize: preSelectedPrize.nome,
+        prizeId: preSelectedPrize.id || null,
         createdAt: serverTimestamp(),
         origin: window.location.origin,
         status: 'pending'
@@ -310,6 +325,22 @@ export default function Roulette() {
         const leadsRef = collection(db, 'companies', actualCompanyId, 'leads');
         const docRef = await addDoc(leadsRef, finalLeadData);
         setCreatedLeadId(docRef.id);
+        
+        // Dar baixa no estoque do brinde
+        if (preSelectedPrize && preSelectedPrize.id) {
+          try {
+            const prizeRef = doc(db, 'companies', actualCompanyId, 'prizes', preSelectedPrize.id);
+            const prizeDoc = await getDoc(prizeRef);
+            if (prizeDoc.exists()) {
+              const currentQ = Number(prizeDoc.data().quantidadeAtual);
+              if (currentQ > 0) {
+                await updateDoc(prizeRef, { quantidadeAtual: currentQ - 1 });
+              }
+            }
+          } catch(e) {
+            console.error("Erro ao dar baixa no brinde", e);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
