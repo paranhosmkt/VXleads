@@ -68,7 +68,10 @@ const resources = {
           "stock": "Gestão de Estoque",
           "custom_interface": "Interface personalizada",
           "full_integrations": "Integrações completas",
-          "support_dedicated": "Suporte 24/7 dedicado"
+          "support_dedicated": "Suporte 24/7 dedicado",
+          "community_group": "Grupo Exclusivo VIP",
+          "course_conversion": "Curso Prático de Conversão de Estandes",
+          "script_templates": "Templates de Scripts de Abordagem"
         },
         "buttons": {
           "starter": "Começar com Starter",

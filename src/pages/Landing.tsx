@@ -709,6 +709,10 @@ export default function Landing() {
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
                   <span className="text-gray-700">{t('pricing.features.support_whatsapp')}</span>
                 </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                  <span className="text-gray-700 font-semibold text-indigo-700">{t('pricing.features.course_conversion')}</span>
+                </li>
               </ul>
               <RouterLink to={`/cadastro?plan=pro&cycle=${isAnnual ? "annual" : "event"}`} className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
                 Assinar Plano Pro
@@ -745,6 +749,18 @@ export default function Landing() {
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
                   <span className="text-gray-700">{t('pricing.features.support_247')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                  <span className="text-gray-700 font-semibold text-indigo-700">{t('pricing.features.community_group')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                  <span className="text-gray-700 font-semibold text-indigo-700">{t('pricing.features.course_conversion')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                  <span className="text-gray-700 font-semibold text-indigo-700">{t('pricing.features.script_templates')}</span>
                 </li>
               </ul>
               <RouterLink to={`/cadastro?plan=enterprise&cycle=${isAnnual ? "annual" : "event"}`} className="w-full block text-center py-3.5 px-6 font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-600/30">
@@ -785,6 +801,18 @@ export default function Landing() {
                 <li className="flex items-start gap-3">
                   <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
                   <span className="text-gray-300">{t('pricing.features.support_dedicated')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
+                  <span className="text-yellow-400 font-semibold">{t('pricing.features.community_group')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
+                  <span className="text-yellow-400 font-semibold">{t('pricing.features.course_conversion')}</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="text-blue-500 shrink-0 mt-0.5" size={20} />
+                  <span className="text-yellow-400 font-semibold">{t('pricing.features.script_templates')}</span>
                 </li>
               </ul>
               <RouterLink to="/cadastro" className="w-full block text-center py-3.5 px-6 font-semibold text-gray-900 bg-white rounded-xl hover:bg-gray-100 transition-colors">
