@@ -1,39 +1,80 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/pages/Register.tsx', 'utf-8');
 
-const endOfTryRegex = /\/\/ 3\. Enviar e-mail de verificação\s*await sendEmailVerification\(user\);\s*alert\('Cadastro realizado com sucesso! Um e-mail de confirmação foi enviado para você\.'\);\s*navigate\('\/dashboard'\);\s*\} catch \(error: any\) \{/;
+const importTarget = `import { doc, setDoc, serverTimestamp } from 'firebase/firestore';`;
+const importReplacement = `import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';`;
+if (code.includes(importTarget)) {
+  code = code.replace(importTarget, importReplacement);
+}
 
-code = code.replace(endOfTryRegex, `// 3. Enviar e-mail de verificação
-      await sendEmailVerification(user);
-      
-      // 4. Redirect to Stripe Checkout if it's a paid plan
-      if (selectedPlan && selectedPlan !== 'personalizado') {
-        try {
-          const response = await fetch('/api/create-checkout-session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              plan: selectedPlan,
-              lang: localStorage.getItem('i18nextLng') || 'pt'
-            }),
-          });
-          
-          const session = await response.json();
-          if (session.url) {
-            window.location.href = session.url;
-            return;
+const paymentLogicTarget = `      if (selectedPlan && selectedPlan !== 'personalizado') {
+        const STRIPE_LINKS: Record<string, Record<string, string>> = {
+          starter: {
+            event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
+            annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
+          },
+          pro: {
+            event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
+            annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
+          },
+          enterprise: {
+            event: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05_event',
+            annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
           }
-        } catch (stripeError) {
-          console.error("Stripe error:", stripeError);
-          alert('Conta criada, mas houve um erro ao redirecionar para o pagamento. Você pode acessar seu painel.');
+        };
+
+        const paymentUrl = STRIPE_LINKS[selectedPlan]?.[selectedCycle];
+        if (paymentUrl) {
+          window.location.href = \`\${paymentUrl}?prefilled_email=\${encodeURIComponent(formData.email)}&client_reference_id=\${user.uid}\`;
+          return;
+        } else {
+          alert('Plano não encontrado para pagamento.');
         }
       } else {
-        alert('Cadastro realizado com sucesso! Um consultor entrará em contato.');
-      }
-      
-      navigate('/dashboard');
-    } catch (error: any) {`);
+        alert(t('register.success_contact'));
+      }`;
+
+const paymentLogicReplacement = `      if (selectedPlan && selectedPlan !== 'personalizado') {
+        let consultantStripeAccountId = null;
+        
+        // Find consultant to get their stripeAccountId
+        if (formData.codigoConsultor) {
+          const consultantsRef = collection(db, 'consultants');
+          const q = query(consultantsRef, where('referralCode', '==', formData.codigoConsultor));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const consultantDoc = querySnapshot.docs[0].data();
+            if (consultantDoc.stripeAccountId) {
+              consultantStripeAccountId = consultantDoc.stripeAccountId;
+            }
+          }
+        }
+
+        const res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            plan: selectedPlan, 
+            cycle: selectedCycle, 
+            consultantStripeAccountId,
+            email: formData.email,
+            uid: user.uid
+          })
+        });
+
+        const data = await res.json();
+        
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        } else {
+          alert('Erro ao gerar pagamento: ' + (data.error || 'Desconhecido'));
+        }
+      } else {
+        alert(t('register.success_contact'));
+      }`;
+
+code = code.replace(paymentLogicTarget, paymentLogicReplacement);
 
 fs.writeFileSync('src/pages/Register.tsx', code);
+console.log("Patched Register.tsx");

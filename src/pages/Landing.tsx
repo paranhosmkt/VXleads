@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import Chatbot from '../components/Chatbot';
 import InteractiveDemo from '../components/InteractiveDemo';
 import React, { useRef, useEffect, useState } from 'react';
+import heroFallbackImg from '../assets/hero-fallback.png';
 import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, Briefcase, DollarSign, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone, PlaySquare, Gamepad2, Gift, QrCode } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link as RouterLink } from 'react-router-dom';
@@ -133,60 +133,22 @@ function FloatingBubbles() {
 
 export default function Landing() {
   const { t } = useTranslation();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isAnnual, setIsAnnual] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
 
   useEffect(() => {
-    const video = document.createElement('video');
-    video.src = "https://videovxleads.s3.us-east-1.amazonaws.com/Video.mp4";
-    video.muted = true;
-    video.loop = true;
-    video.autoplay = true;
-    video.playsInline = true;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationFrameId: number;
-
-    const drawFrame = () => {
-      if (video.readyState >= 2) {
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-        }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
-      animationFrameId = requestAnimationFrame(drawFrame);
-    };
-
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        drawFrame();
-      }).catch((e) => {
-        if (canvas && ctx) {
-          canvas.width = 400;
-          canvas.height = 400;
-          const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-          gradient.addColorStop(0, '#f8fafc');
-          gradient.addColorStop(1, '#e2e8f0');
-          ctx.fillStyle = gradient;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          ctx.font = 'bold 24px system-ui, sans-serif';
-          ctx.fillStyle = '#94a3b8';
-          ctx.textAlign = 'center';
-          ctx.fillText('Simulador de Jogos', canvas.width / 2, canvas.height / 2);
-        }
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Autoplay policy or restricted
       });
     }
 
+    const handleOffline = () => setVideoFailed(true);
+    window.addEventListener('offline', handleOffline);
+
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      video.pause();
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
@@ -232,11 +194,29 @@ export default function Landing() {
         </div>
         
         <div className="flex-1 w-full max-w-2xl lg:max-w-none flex justify-center">
-          <div className="w-full aspect-square bg-transparent relative overflow-visible flex items-center justify-center pointer-events-none">
-            <canvas 
-              ref={canvasRef}
-              className="w-full h-full object-cover"
-            ></canvas>
+          <div className="w-full aspect-square bg-transparent relative overflow-visible flex items-center justify-center">
+            <div className="w-full h-full relative flex items-center justify-center">
+              {videoFailed ? (
+                <img 
+                  src={heroFallbackImg} 
+                  alt="Simulador de Roleta VX Leads" 
+                  className="w-full h-full object-contain select-none"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <video 
+                  ref={videoRef}
+                  src="https://videovxleads.s3.us-east-1.amazonaws.com/Video.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="auto"
+                  onError={() => setVideoFailed(true)}
+                  className="w-full h-full object-contain"
+                />
+              )}
+            </div>
             <FloatingBubbles />
           </div>
         </div>
@@ -816,7 +796,7 @@ export default function Landing() {
                 </li>
               </ul>
               <RouterLink to="/cadastro" className="w-full block text-center py-3.5 px-6 font-semibold text-gray-900 bg-white rounded-xl hover:bg-gray-100 transition-colors">
-                Falar com um Consultor
+                Falar com Vendas
               </RouterLink>
             </div>
           </div>
@@ -854,12 +834,12 @@ export default function Landing() {
                 <span className="text-gray-300">{t('landing.partners.b3')}</span>
               </li>
             </ul>
-            <RouterLink to="/cadastro" className="px-8 py-4 inline-block font-bold text-gray-900 bg-white rounded-xl hover:bg-gray-100 transition-colors">
+            <RouterLink to="/cadastro-consultor" className="px-8 py-4 inline-block font-bold text-gray-900 bg-white rounded-xl hover:bg-gray-100 transition-colors">
               Quero ser um Consultor
             </RouterLink>
           </div>
           <div className="flex-1 w-full flex justify-center lg:justify-end">
-            <img src="https://i.ibb.co/q3SrwYM5/6eafasf-3.png" alt="Programa de Parceiros VX Leads" className="w-full max-w-md rounded-2xl shadow-2xl shadow-blue-500/20 object-cover" />
+            <img src="https://i.ibb.co/q3SrwYM5/6eafasf-3.png" alt="Programa de Parceiros VX Leads" className="w-full max-w-xl lg:max-w-2xl rounded-2xl shadow-2xl shadow-blue-500/20 object-cover" />
           </div>
         </div>
       </motion.section>
@@ -990,7 +970,6 @@ export default function Landing() {
           </div>
         </div>
       </motion.footer>
-      <Chatbot />
     </div>
   );
 }

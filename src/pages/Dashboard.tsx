@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, collection, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { 
   Users, Gift, Download, Copy, ExternalLink, 
@@ -104,6 +104,51 @@ export default function Dashboard() {
 
     return () => unsubscribe();
   }, [navigate]);
+
+  const handlePayment = async () => {
+    if (!userId) return;
+    try {
+      const companyDoc = await getDoc(doc(db, 'companies', userId));
+      let consultantStripeAccountId = null;
+      let userEmail = auth.currentUser?.email || '';
+      
+      if (companyDoc.exists()) {
+        const companyData = companyDoc.data();
+        if (companyData.referredByCode) {
+          const q = query(collection(db, 'consultants'), where('referralCode', '==', companyData.referredByCode));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const consultantData = querySnapshot.docs[0].data() as any;
+            if (consultantData?.stripeAccountId) {
+              consultantStripeAccountId = consultantData.stripeAccountId;
+            }
+          }
+        }
+      }
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: currentPlan,
+          cycle: currentCycle,
+          consultantStripeAccountId,
+          email: userEmail,
+          uid: userId
+        })
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Erro ao gerar pagamento: ' + (data.error || 'Tente novamente.'));
+      }
+    } catch (e: any) {
+      console.error('Erro no checkout:', e);
+      alert('Ocorreu um erro ao conectar ao pagamento.');
+    }
+  };
 
   const handleLogout = () => {
     signOut(auth).then(() => {
@@ -304,29 +349,7 @@ export default function Dashboard() {
         <div className="flex gap-4">
           
           <button
-            onClick={() => {
-              const STRIPE_LINKS: Record<string, Record<string, string>> = {
-                starter: {
-                  event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
-                  annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
-                },
-                pro: {
-                  event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
-                  annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
-                },
-                enterprise: {
-                  event: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02',
-                  annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
-                }
-              };
-              
-              const paymentUrl = STRIPE_LINKS[currentPlan]?.[currentCycle] || STRIPE_LINKS[currentPlan]?.['event'];
-              if (paymentUrl) {
-                window.location.href = `${paymentUrl}?client_reference_id=${userId}`;
-              } else {
-                alert('Plano não encontrado.');
-              }
-            }}
+            onClick={handlePayment}
             className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg hover:shadow-blue-600/30"
           >
             Pagar Agora
@@ -416,29 +439,7 @@ export default function Dashboard() {
             </div>
             
             <button 
-              onClick={() => {
-                const STRIPE_LINKS: Record<string, Record<string, string>> = {
-                  starter: {
-                    event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
-                    annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
-                  },
-                  pro: {
-                    event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
-                    annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
-                  },
-                  enterprise: {
-                    event: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02',
-                    annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
-                  }
-                };
-                
-                const paymentUrl = STRIPE_LINKS[currentPlan]?.[currentCycle] || STRIPE_LINKS[currentPlan]?.['event'];
-                if (paymentUrl) {
-                  window.location.href = `${paymentUrl}?client_reference_id=${userId}`;
-                } else {
-                  alert('Plano não encontrado.');
-                }
-              }}
+              onClick={handlePayment}
               className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
             >
               Regularizar Plano

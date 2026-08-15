@@ -12,6 +12,65 @@ async function startServer() {
 
   app.use(express.json());
 
+
+  // --- STRIPE CONNECT ENDPOINTS ---
+  app.post("/api/create-connect-account", async (req, res) => {
+    try {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(500).json({ error: "Chave STRIPE_SECRET_KEY não configurada no servidor. Adicione no painel de configurações para testar." });
+      }
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'BR', // Assuming Brazil
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        settings: {
+          payouts: {
+            schedule: {
+              interval: 'daily',
+              delay_days: 30,
+            },
+          },
+        },
+      });
+      res.json({ accountId: account.id });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/create-account-link", async (req, res) => {
+    try {
+      const { accountId } = req.body;
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `https://${req.headers.host}/painel-consultor`,
+        return_url: `https://${req.headers.host}/painel-consultor?success=true`,
+        type: 'account_onboarding',
+      });
+      res.json({ url: accountLink.url });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/connect-status/:accountId", async (req, res) => {
+    try {
+      const { accountId } = req.params;
+      const account = await stripe.accounts.retrieve(accountId);
+      res.json({
+        details_submitted: account.details_submitted,
+        charges_enabled: account.charges_enabled,
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ---------------------------------
+  
   app.post("/api/verify-session", async (req, res) => {
     try {
       const { session_id } = req.body;
@@ -27,7 +86,7 @@ async function startServer() {
 
   app.post("/api/create-checkout-session", async (req, res) => {
     try {
-      const { plan, cycle } = req.body;
+      const { plan, cycle, consultantStripeAccountId, email, uid } = req.body;
       
       // CONFIGURAÇÃO DOS PRODUTOS DO STRIPE (COLOQUE SEUS PRICE IDs AQUI)
       // Exemplo: 'price_1Pxxxxxxxxxxxxx'
@@ -50,14 +109,28 @@ async function startServer() {
       
       let sessionConfig: any = {
         payment_method_types: ['card'],
-        success_url: `http://${req.headers.host}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `http://${req.headers.host}/cadastro`,
+        success_url: `https://${req.headers.host}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://${req.headers.host}/cadastro`,
+        customer_email: email,
+        client_reference_id: uid,
       };
 
       if (selectedPriceId) {
         // Se o usuário configurou os IDs no código acima, usamos eles:
         sessionConfig.line_items = [{ price: selectedPriceId, quantity: 1 }];
         sessionConfig.mode = cycle === 'annual' ? 'subscription' : 'payment';
+        
+        if (consultantStripeAccountId) {
+          if (sessionConfig.mode === 'subscription') {
+            sessionConfig.subscription_data = {
+              transfer_data: {
+                destination: consultantStripeAccountId,
+                amount_percent: 90.0
+              }
+            };
+          }
+          // Note: for mode='payment' with price IDs, you'd need to fetch the price amount first to calculate the fixed amount for payment_intent_data.transfer_data
+        }
       } else {
         // Fallback dinâmico (não precisa de aprovação de documentos para testar)
         let amount = 0;
@@ -73,6 +146,15 @@ async function startServer() {
         
         currency = 'brl';
 
+        if (consultantStripeAccountId) {
+          sessionConfig.payment_intent_data = {
+            transfer_data: {
+              destination: consultantStripeAccountId,
+              amount: Math.round(amount * 0.90), // 90% para o consultor, 10% para a plataforma
+            },
+          };
+        }
+        
         sessionConfig.line_items = [{
           price_data: {
             currency: currency,

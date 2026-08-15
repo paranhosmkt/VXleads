@@ -11,6 +11,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginType, setLoginType] = useState<'company' | 'consultant'>('company');
   const [formData, setFormData] = useState({
     email: '',
     senha: ''
@@ -30,21 +31,35 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.senha);
       const user = userCredential.user;
       
-      const companyRef = doc(db, 'companies', user.uid);
-      const companySnap = await getDoc(companyRef);
-      
-      let onboardingCompleted = true;
-      if (companySnap.exists()) {
-        const data = companySnap.data();
-        onboardingCompleted = data.onboardingCompleted !== false; // defaults to true if undefined
-      }
+      if (loginType === 'consultant') {
+        const consultantRef = doc(db, 'consultants', user.uid);
+        const consultantSnap = await getDoc(consultantRef);
 
-      alert('Login realizado com sucesso!');
-      
-      if (!onboardingCompleted) {
-        navigate('/configurar-experiencia');
+        if (consultantSnap.exists()) {
+          navigate('/painel-consultor');
+          return;
+        } else {
+          setError('Nenhuma conta de consultor encontrada com este e-mail.');
+          // firebase signout could be called here to prevent floating auth state, but it's fine
+          return;
+        }
       } else {
-        navigate('/dashboard');
+        const companyRef = doc(db, 'companies', user.uid);
+        const companySnap = await getDoc(companyRef);
+        
+        if (companySnap.exists()) {
+          const data = companySnap.data();
+          const onboardingCompleted = data.onboardingCompleted !== false;
+
+          if (!onboardingCompleted) {
+            navigate('/configurar-experiencia');
+          } else {
+            navigate('/dashboard');
+          }
+        } else {
+          setError('Nenhuma conta de empresa encontrada com este e-mail.');
+          return;
+        }
       }
     } catch (err: any) {
       console.error('Erro ao fazer login:', err);
@@ -73,11 +88,35 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/10 mb-4">
               <Target size={32} className="text-blue-500" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">{t('login.title')}</h1>
-            <p className="text-gray-400">{t('login.subtitle')}</p>
+            <h1 className="text-2xl font-bold text-white mb-2">{loginType === 'company' ? t('login.title') : 'Portal do Consultor'}</h1>
+            <p className="text-gray-400">{loginType === 'company' ? t('login.subtitle') : 'Acesse seu painel de parcerias e acompanhe seus ganhos'}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+              <button
+                type="button"
+                onClick={() => setLoginType('company')}
+                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
+                  loginType === 'company'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Sou Empresa
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginType('consultant')}
+                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
+                  loginType === 'consultant'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Sou Consultor
+              </button>
+            </div>
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
                 <div className="flex">
@@ -93,7 +132,7 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                E-mail Corporativo
+                {loginType === 'company' ? 'E-mail Corporativo' : 'E-mail do Consultor'}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -112,9 +151,14 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Senha
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Senha
+                </label>
+                <Link to="/recuperar-senha" className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                  Esqueceu a senha?
+                </Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock size={18} className="text-gray-400" />
@@ -151,7 +195,7 @@ export default function Login() {
             <div className="text-center mt-6">
               <p className="text-gray-600">
                 Ainda não tem uma conta?{' '}
-                <Link to="/cadastro" className="text-blue-600 font-bold hover:underline">
+                <Link to={loginType === 'company' ? "/cadastro" : "/cadastro-consultor"} className="text-blue-600 font-bold hover:underline">
                   Cadastre-se
                 </Link>
               </p>

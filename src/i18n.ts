@@ -8,7 +8,7 @@ const resources = {
         "features": "Funcionalidades",
         "how_it_works": "Como Funciona",
         "pricing": "Planos",
-        "login": "Entrar",
+        "login": "Login/Cadastro",
         "register": "Criar Conta"
       },
       "hero": {

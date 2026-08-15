@@ -3,7 +3,7 @@ import { Target, Building2, MapPin, User, Mail, Phone, Lock, FileText, ChevronLe
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 export default function Register() {
@@ -23,6 +23,8 @@ export default function Register() {
     const cycleFromUrl = params.get('cycle');
     if (planFromUrl) setSelectedPlan(planFromUrl);
     if (cycleFromUrl === 'annual' || cycleFromUrl === 'event') setSelectedCycle(cycleFromUrl as 'event' | 'annual');
+    const refCode = params.get('ref');
+    if (refCode) setFormData(prev => ({ ...prev, codigoConsultor: refCode }));
   }, [location.search]);
   const [discount, setDiscount] = useState<string | null>(null);
   useEffect(() => {
@@ -46,7 +48,8 @@ export default function Register() {
     telefone: '',
     senha: '',
     confirmacaoSenha: '',
-    logoDataUrl: ''
+    logoDataUrl: '',
+    codigoConsultor: ''
   });
 
   const getDiscountValue = () => {
@@ -133,6 +136,7 @@ export default function Register() {
         discountWon: localStorage.getItem('vxleads_discount_won') || null,
         plan: selectedPlan,
         cycle: selectedCycle,
+        referredByCode: formData.codigoConsultor,
         planStatus: 'pending'
       };
       await setDoc(doc(db, 'companies', user.uid), companyData);
@@ -142,30 +146,48 @@ export default function Register() {
       
       
       if (selectedPlan && selectedPlan !== 'personalizado') {
-        const STRIPE_LINKS: Record<string, Record<string, string>> = {
-          starter: {
-            event: 'https://buy.stripe.com/8x2cN5adZ05V0BJeCn6Zy00',
-            annual: 'https://buy.stripe.com/bJeaEXadZ5qf84bdyj6Zy02'
-          },
-          pro: {
-            event: 'https://buy.stripe.com/4gMfZhadZcSH3NV1PB6Zy01',
-            annual: 'https://buy.stripe.com/aFa14n2Lx2e398fcuf6Zy04'
-          },
-          enterprise: {
-            event: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05_event',
-            annual: 'https://buy.stripe.com/9B6aEXfyjbODfwD8dZ6Zy05'
-          }
-        };
+        let consultantStripeAccountId = null;
 
-        const paymentUrl = STRIPE_LINKS[selectedPlan]?.[selectedCycle];
-        if (paymentUrl) {
-          window.location.href = `${paymentUrl}?prefilled_email=${encodeURIComponent(formData.email)}&client_reference_id=${user.uid}`;
-          return;
-        } else {
-          alert('Plano não encontrado para pagamento.');
+        if (formData.codigoConsultor) {
+          try {
+            const q = query(collection(db, 'consultants'), where('referralCode', '==', formData.codigoConsultor));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              const consultantData = querySnapshot.docs[0].data();
+              if (consultantData.stripeAccountId) {
+                consultantStripeAccountId = consultantData.stripeAccountId;
+              }
+            }
+          } catch (e) {
+            console.error("Erro ao buscar consultor:", e);
+          }
+        }
+
+        try {
+          const response = await fetch('/api/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              plan: selectedPlan,
+              cycle: selectedCycle,
+              consultantStripeAccountId,
+              email: formData.email,
+              uid: user.uid
+            })
+          });
+
+          const data = await response.json();
+          if (data.url) {
+            window.location.href = data.url;
+            return;
+          } else {
+            alert('Erro ao gerar pagamento: ' + (data.error || 'Tente novamente.'));
+          }
+        } catch (e: any) {
+          console.error('Erro no checkout:', e);
+          alert('Ocorreu um erro ao conectar ao pagamento.');
         }
       } else {
-
         alert(t('register.success_contact'));
       }
       
