@@ -263,27 +263,25 @@ export default function RoletaPremioPage() {
                       const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
                       
                       const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
-
-                      const textAngle = startAngle + angle / 2;
-                      const textRadius = 32;
-                      const tx = 50 + textRadius * Math.cos((Math.PI * textAngle) / 180);
-                      const ty = 50 + textRadius * Math.sin((Math.PI * textAngle) / 180);
+                      const midAngle = startAngle + angle / 2;
 
                       return (
                         <g key={prize.id}>
                           <path d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
-                          <text
-                            x={tx}
-                            y={ty}
-                            fill="#ffffff"
-                            fontSize="4.2"
-                            fontWeight="900"
-                            textAnchor="middle"
-                            dominantBaseline="central"
-                            transform={`rotate(${textAngle + 90}, ${tx}, ${ty})`}
-                          >
-                            {prize.name}
-                          </text>
+                          <g transform={`rotate(${midAngle}, 50, 50)`}>
+                            <text
+                              x={32}
+                              y={50}
+                              fill="#ffffff"
+                              fontSize="3.6"
+                              fontWeight="900"
+                              textAnchor="middle"
+                              dominantBaseline="central"
+                              style={{ letterSpacing: '0.02em', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+                            >
+                              {prize.name}
+                            </text>
+                          </g>
                         </g>
                       );
                     })}
