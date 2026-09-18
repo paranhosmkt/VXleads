@@ -654,56 +654,45 @@ Content-Type: application/json
 
             {activeConfigTab === 'base44' ? (
               <div className="space-y-4">
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  O nosso backend já disponibiliza o endpoint <code className="text-emerald-400 bg-slate-950 px-2 py-0.5 rounded font-mono">POST /api/integracao/base44</code> pronto para receber os leads criados no seu app do Base44.
-                </p>
+                <div className="bg-blue-600/10 border border-blue-500/30 rounded-xl p-4 text-xs text-blue-200">
+                  <strong className="text-white text-sm block mb-1">Como enviar os dados do crachá do Base44 para a Triagem:</strong>
+                  Você pode usar qualquer uma das duas maneiras abaixo no Base44. A <strong>Opção 1 (Redirecionamento direto via Link)</strong> é a mais rápida e não requer webhook!
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        URL do Endpoint no Base44 (Webhook POST)
-                      </label>
-                      <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-emerald-400 select-all mb-2 font-bold">
-                        {window.location.origin}/api
-                      </div>
-                      <div className="text-[11px] text-slate-400 space-y-1">
-                        <div>
-                          • <strong>Ambiente Atual (Ativo agora):</strong> <code className="text-blue-300">{window.location.origin}/api</code>
-                        </div>
-                        <div>
-                          • <strong>Domínio Próprio (em produção):</strong> <code className="text-slate-300">https://www.vxleads.com.br/api</code> (requer deploy para o seu domínio)
-                        </div>
-                      </div>
+                  {/* OPÇÃO 1: REDIRECIONAR LINK DIRETO */}
+                  <div className="space-y-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center">1</span>
+                      <h4 className="text-sm font-bold text-white">Opção 1 (Mais Simples): Abrir URL Direta</h4>
                     </div>
-
-                    <div className="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl text-xs text-slate-300 space-y-2">
-                      <strong className="text-white block font-semibold">Como configurar no Base44:</strong>
-                      <ol className="list-decimal list-inside space-y-1 text-slate-400">
-                        <li>No Base44, adicione uma ação no botão ou formulário de cadastro.</li>
-                        <li>Escolha a ação <strong>HTTP / Webhook POST</strong> apontando para a URL acima.</li>
-                        <li>Envie o corpo JSON com os dados do lead (nome, empresa, cargo, etc).</li>
-                        <li>O Base44 recebe de volta o link exclusivo da roleta pronto para ser aberto!</li>
-                      </ol>
+                    <p className="text-xs text-slate-400">
+                      No Base44, após ler o crachá, configure o botão/ação para <strong>Abrir URL / Navegar para site externo</strong>:
+                    </p>
+                    <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono text-emerald-300 break-all select-all">
+                      {window.location.origin}/triagem?nome=&#123;&#123;nome&#125;&#125;&empresa=&#123;&#123;empresa&#125;&#125;&cargo=&#123;&#123;cargo&#125;&#125;&crachaId=&#123;&#123;cracha&#125;&#125;
                     </div>
+                    <p className="text-[11px] text-slate-400">
+                      ✓ A página de Triagem já carrega com os dados preenchidos na hora.<br/>
+                      ✓ Ao responder a 3ª pergunta, abre a Roleta automaticamente.
+                    </p>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Exemplo de Requisição (cURL / Base44)
-                      </label>
-                      <button
-                        onClick={copyBase44Code}
-                        className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer"
-                      >
-                        {copiedBase44Code ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                        <span>{copiedBase44Code ? 'Copiado!' : 'Copiar Exemplo'}</span>
-                      </button>
+                  {/* OPÇÃO 2: WEBHOOK API */}
+                  <div className="space-y-3 bg-slate-950/60 border border-slate-800 p-4 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-blue-500 text-white font-black text-xs flex items-center justify-center">2</span>
+                      <h4 className="text-sm font-bold text-white">Opção 2: Webhook POST</h4>
                     </div>
-                    <pre className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-slate-300 overflow-x-auto max-h-48">
-                      {sampleBase44Snippet}
-                    </pre>
+                    <p className="text-xs text-slate-400">
+                      Envie um POST HTTP no Base44 para:
+                    </p>
+                    <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono text-blue-300 select-all font-bold">
+                      {window.location.origin}/api
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      A tela de Triagem escuta automaticamente e sincroniza assim que o lead chega no webhook.
+                    </p>
                   </div>
                 </div>
               </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
-  Sparkles, CheckCircle2, ArrowRight, ArrowLeft, Check, Smartphone, Target 
+  Sparkles, CheckCircle2, ArrowRight, ArrowLeft, Check, Smartphone, Target, 
+  RefreshCw, QrCode, AlertCircle, Radio
 } from 'lucide-react';
 
 export interface ScreeningParticipant {
@@ -58,37 +59,125 @@ export const SCREENING_QUESTIONS: Question[] = [
 ];
 
 export default function TriagemPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const [participant, setParticipant] = useState<ScreeningParticipant>({
-    nome: searchParams.get('nome') || 'Mariana Costa',
-    email: searchParams.get('email') || 'mariana.costa@logtech.com.br',
-    whatsapp: searchParams.get('whatsapp') || '(11) 98765-4321',
-    empresa: searchParams.get('empresa') || 'LogTech Brasil',
-    cargo: searchParams.get('cargo') || 'Diretora de Operações',
-    crachaId: searchParams.get('crachaId') || 'CR-9482',
-    origem: searchParams.get('origem') || 'API_App_Evento'
+  // Helper to extract parameters flexible to Portuguese / English variable names
+  const extractFromParams = (): ScreeningParticipant => {
+    return {
+      nome: searchParams.get('nome') || searchParams.get('name') || searchParams.get('Nome') || searchParams.get('lead_nome') || '',
+      email: searchParams.get('email') || searchParams.get('Email') || searchParams.get('lead_email') || '',
+      whatsapp: searchParams.get('whatsapp') || searchParams.get('telefone') || searchParams.get('phone') || searchParams.get('celular') || '',
+      empresa: searchParams.get('empresa') || searchParams.get('company') || searchParams.get('Empresa') || '',
+      cargo: searchParams.get('cargo') || searchParams.get('role') || searchParams.get('jobTitle') || '',
+      crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('badge') || searchParams.get('id') || '',
+      origem: searchParams.get('origem') || 'Base44'
+    };
+  };
+
+  const [participant, setParticipant] = useState<ScreeningParticipant>(() => {
+    const fromUrl = extractFromParams();
+    if (fromUrl.nome) return fromUrl;
+
+    // Check if there is a recently pushed lead saved in localStorage
+    try {
+      const cached = localStorage.getItem('vx_latest_base44_lead');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return {
+      nome: 'Mariana Costa',
+      email: 'mariana.costa@logtech.com.br',
+      whatsapp: '(11) 98765-4321',
+      empresa: 'LogTech Brasil',
+      cargo: 'Diretora de Operações',
+      crachaId: 'CR-9482',
+      origem: 'Base44_Demo'
+    };
   });
 
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [autoSyncStatus, setAutoSyncStatus] = useState<string | null>(null);
 
+  // Read URL params whenever URL changes
   useEffect(() => {
-    const nome = searchParams.get('nome');
-    if (nome) {
-      setParticipant({
-        nome: nome,
-        email: searchParams.get('email') || '',
-        whatsapp: searchParams.get('whatsapp') || '',
-        empresa: searchParams.get('empresa') || '',
-        cargo: searchParams.get('cargo') || '',
-        crachaId: searchParams.get('crachaId') || 'CR-' + Math.floor(1000 + Math.random() * 9000),
-        origem: searchParams.get('origem') || 'API_App_Evento'
-      });
+    const fromUrl = extractFromParams();
+    if (fromUrl.nome) {
+      setParticipant(fromUrl);
+      localStorage.setItem('vx_latest_base44_lead', JSON.stringify(fromUrl));
     }
   }, [searchParams]);
+
+  // Check backend periodically for leads pushed from Base44 via Webhook
+  useEffect(() => {
+    const checkRecentLeads = async () => {
+      try {
+        const res = await fetch('/api/leads');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.leads && data.leads.length > 0) {
+            const latest = data.leads[0];
+            // Only update if current is mock or different lead ID
+            if (latest.crachaId && latest.crachaId !== participant.crachaId && latest.nome) {
+              setParticipant({
+                nome: latest.nome,
+                email: latest.email || '',
+                whatsapp: latest.whatsapp || '',
+                empresa: latest.empresa || '',
+                cargo: latest.cargo || '',
+                crachaId: latest.crachaId,
+                origem: latest.origem || 'Base44_Webhook'
+              });
+              setAutoSyncStatus(`Lead recebido via API: ${latest.nome} (${latest.empresa})`);
+            }
+          }
+        }
+      } catch (e) {
+        // quiet catch
+      }
+    };
+
+    checkRecentLeads();
+    const interval = setInterval(checkRecentLeads, 4000);
+    return () => clearInterval(interval);
+  }, [participant.crachaId]);
+
+  const handleManualRefresh = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch('/api/leads');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.leads && data.leads.length > 0) {
+          const latest = data.leads[0];
+          setParticipant({
+            nome: latest.nome,
+            email: latest.email || '',
+            whatsapp: latest.whatsapp || '',
+            empresa: latest.empresa || '',
+            cargo: latest.cargo || '',
+            crachaId: latest.crachaId,
+            origem: latest.origem || 'Base44_Webhook'
+          });
+          setAutoSyncStatus(`Atualizado com sucesso: ${latest.nome}`);
+        } else {
+          setAutoSyncStatus('Nenhum lead novo recebido via webhook ainda.');
+        }
+      }
+    } catch (err) {
+      setAutoSyncStatus('Falha ao verificar novos leads.');
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setAutoSyncStatus(null), 5000);
+    }
+  };
 
   const handleSelectAnswer = (optionLabel: string) => {
     const currentQ = SCREENING_QUESTIONS[currentQuestionIdx];
@@ -100,7 +189,7 @@ export default function TriagemPage() {
         setCurrentQuestionIdx(prev => prev + 1);
       }, 250);
     } else {
-      // Completed all screening questions! Redirect to separate Roulette page
+      // Completed all screening questions! Redirect to separate Roulette page automatically
       setIsRedirecting(true);
       setTimeout(() => {
         const nextParams = new URLSearchParams({
@@ -138,33 +227,63 @@ export default function TriagemPage() {
           </span>
         </div>
 
-        <div className="text-xs text-slate-400">
-          Etapa 1 de 2 • Perguntas Rápidas
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700 cursor-pointer"
+            title="Sincronizar com último crachá lido no Base44"
+          >
+            <RefreshCw size={13} className={isSyncing ? "animate-spin text-blue-400" : ""} />
+            <span>Sincronizar Base44</span>
+          </button>
+          <div className="text-xs text-slate-400 hidden sm:block">
+            Etapa 1 de 2 • Triagem
+          </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-center gap-6">
+      <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-center gap-5">
         
-        {/* Participant Identification Badge */}
-        <div className="bg-slate-900/80 border border-blue-500/30 rounded-2xl p-4 sm:p-5 shadow-lg flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center shrink-0">
-              <Smartphone size={20} />
+        {/* Auto Sync Notification */}
+        {autoSyncStatus && (
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-xs text-blue-300 flex items-center justify-between animate-fade-in">
+            <div className="flex items-center gap-2">
+              <Radio size={14} className="text-blue-400 animate-pulse" />
+              <span>{autoSyncStatus}</span>
+            </div>
+            <span className="text-[10px] text-blue-400/80 font-mono">Conectado</span>
+          </div>
+        )}
+
+        {/* Participant Identification Badge (Received from Base44) */}
+        <div className="bg-slate-900/90 border border-blue-500/30 rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center shrink-0">
+              <QrCode size={24} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">
-                  Participante Identificado
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                  Crachá Identificado no Base44
                 </span>
                 <span className="text-[10px] font-medium px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <CheckCircle2 size={10} className="inline mr-1" /> Validado
+                  <CheckCircle2 size={10} className="inline mr-1" /> ID: {participant.crachaId || 'Crachá Lido'}
                 </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-white">
-                {participant.nome} <span className="text-sm font-normal text-slate-400">• {participant.empresa} ({participant.cargo})</span>
+              <h2 className="text-lg sm:text-xl font-black text-white">
+                {participant.nome}{' '}
+                <span className="text-sm font-normal text-slate-400">
+                  • {participant.empresa} {participant.cargo ? `(${participant.cargo})` : ''}
+                </span>
               </h2>
             </div>
+          </div>
+
+          <div className="text-right text-xs text-slate-400 hidden sm:block">
+            <div className="text-emerald-400 font-semibold">Leitura Confirmada</div>
+            <div className="text-[11px] text-slate-500">Pronto para triagem</div>
           </div>
         </div>
 
@@ -250,10 +369,18 @@ export default function TriagemPage() {
             </button>
 
             <span className="text-slate-500 font-medium">
-              {isRedirecting ? 'Liberando a Roleta de Prêmios...' : 'Responda para liberar a roleta exclusiva'}
+              {isRedirecting ? 'Abrindo a Roleta de Prêmios...' : 'Ao concluir, a roleta abre automaticamente'}
             </span>
           </div>
         </div>
+
+        {/* Quick Connection Help for Base44 */}
+        <div className="text-center">
+          <p className="text-xs text-slate-500">
+            Você pode enviar o visitante direto do Base44 via link: <code className="text-blue-400">/triagem?nome=...&empresa=...</code> ou via webhook.
+          </p>
+        </div>
+
       </main>
     </div>
   );
