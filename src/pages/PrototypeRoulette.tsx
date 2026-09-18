@@ -416,9 +416,8 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }`;
 
-  const sampleBase44Snippet = `// EXTREMAMENTE SIMPLES NO BASE44:
-// 1. Em qualquer Ação / Botão / Automação no Base44, faça uma chamada HTTP:
-POST https://${window.location.host}/api/integracao/base44
+  const sampleBase44Snippet = `// CHAMADA HTTP NO BASE44:
+POST ${window.location.origin}/api/base44
 Content-Type: application/json
 
 {
@@ -433,8 +432,8 @@ Content-Type: application/json
 }
 
 // Resposta recebida da API:
-// { "success": true, "gameUrl": "/prototipo-roleta?nome=...&..." }
-// Basta redirecionar o visitante para gameUrl ou abrir no tablet!`;
+// { "success": true, "gameUrl": "/triagem?nome=...", "triagemUrl": "...", "roletaUrl": "..." }
+// Basta abrir ou redirecionar o visitante para gameUrl ou triagemUrl!`;
 
   const copyScriptCode = () => {
     navigator.clipboard.writeText(sampleGoogleAppsScript);
@@ -663,10 +662,18 @@ Content-Type: application/json
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        Endpoint de Recepção (Webhook Base44)
+                        URL do Endpoint no Base44 (Webhook POST)
                       </label>
-                      <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-blue-300 select-all">
-                        https://{window.location.host}/api/integracao/base44
+                      <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-emerald-400 select-all mb-2 font-bold">
+                        {window.location.origin}/api
+                      </div>
+                      <div className="text-[11px] text-slate-400 space-y-1">
+                        <div>
+                          • <strong>Ambiente Atual (Ativo agora):</strong> <code className="text-blue-300">{window.location.origin}/api</code>
+                        </div>
+                        <div>
+                          • <strong>Domínio Próprio (em produção):</strong> <code className="text-slate-300">https://www.vxleads.com.br/api</code> (requer deploy para o seu domínio)
+                        </div>
                       </div>
                     </div>
 

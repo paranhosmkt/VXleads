@@ -11,6 +11,18 @@ async function startServer() {
   });
 
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // CORS middleware for external integrations (Base44, webhooks, third-party apps)
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
 
 
   // --- STRIPE CONNECT ENDPOINTS ---
@@ -180,8 +192,7 @@ async function startServer() {
   // In-memory store for leads pushed from Base44 (with TTL / limit)
   const base44Leads: Record<string, any> = {};
 
-  // Endpoint 1: Base44 sends a lead to VX Leads
-  app.post("/api/integracao/base44", (req, res) => {
+  const handleBase44Post = (req: express.Request, res: express.Response) => {
     try {
       const data = req.body || {};
       const leadId = data.leadId || data.id || data.crachaId || `b44_${Date.now()}`;
@@ -212,24 +223,24 @@ async function startServer() {
         origem: leadPayload.origem
       });
 
-      const gameUrl = `/triagem?${params.toString()}`;
+      const triagemUrl = `/triagem?${params.toString()}`;
+      const roletaUrl = `/roleta-premio?${params.toString()}`;
 
       res.status(200).json({
         success: true,
-        message: "Lead recebido do Base44 com sucesso!",
+        message: "Lead recebido com sucesso!",
         lead: leadPayload,
-        gameUrl: gameUrl,
-        triagemUrl: `/triagem?${params.toString()}`,
-        roletaUrl: `/roleta-premio?${params.toString()}`
+        gameUrl: triagemUrl,
+        triagemUrl: triagemUrl,
+        roletaUrl: roletaUrl
       });
     } catch (err: any) {
       console.error("Erro ao receber lead do Base44:", err);
-      res.status(500).json({ error: "Falha ao processar dados do Base44", details: err.message });
+      res.status(500).json({ error: "Falha ao processar dados", details: err.message });
     }
-  });
+  };
 
-  // Endpoint 2: Fetch lead by ID or get list of received leads
-  app.get("/api/integracao/base44/:leadId?", (req, res) => {
+  const handleBase44Get = (req: express.Request, res: express.Response) => {
     const { leadId } = req.params;
     if (leadId) {
       const lead = base44Leads[leadId];
@@ -238,10 +249,14 @@ async function startServer() {
       }
       return res.json({ lead });
     }
-    // Return latest 20 leads
     const leads = Object.values(base44Leads).slice(-20).reverse();
     res.json({ count: leads.length, leads });
-  });
+  };
+
+  // Supported Endpoint routes & aliases to prevent 404 (supports /api, /api/leads, /api/base44, etc)
+  app.post(["/api", "/api/", "/api/leads", "/api/lead", "/api/integracao/base44", "/api/integration/base44", "/api/base44", "/api/webhook/base44"], handleBase44Post);
+  app.get(["/api", "/api/", "/api/leads", "/api/lead", "/api/integracao/base44", "/api/integration/base44", "/api/base44", "/api/webhook/base44"], handleBase44Get);
+  app.get(["/api/leads/:leadId", "/api/lead/:leadId", "/api/integracao/base44/:leadId", "/api/integration/base44/:leadId", "/api/base44/:leadId"], handleBase44Get);
 
   // API routes FIRST
   app.post("/api/chat", async (req, res) => {
