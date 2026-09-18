@@ -12,6 +12,7 @@ import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ConsultantRegister from './pages/ConsultantRegister';
 import ConsultantDashboard from './pages/ConsultantDashboard';
+import PrototypeRoulette from './pages/PrototypeRoulette';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/tv/:companyId" element={<TVMode />} />
         <Route path="/roleta/:companyId" element={<Roulette />} />
         <Route path="/roleta" element={<Roulette />} />
+        <Route path="/prototipo-roleta" element={<PrototypeRoulette />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/painel-consultor" element={<ConsultantDashboard />} />
         <Route path="/termos-de-uso" element={<TermsOfUse />} />

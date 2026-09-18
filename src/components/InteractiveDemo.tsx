@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ScratchCard from './ScratchCard';
 import SlotMachine from './SlotMachine';
-import { Gift, Zap, Ticket, Target } from 'lucide-react';
+import { Gift, Zap, Ticket, Target, MessageCircle, RotateCcw, ArrowLeft } from 'lucide-react';
+
+const WHATSAPP_URL = "https://wa.me/5548999542785?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20VX%20Leads%20para%20o%20meu%20estande.";
+const WHATSAPP_PHONE = "(48) 9 9954-2785";
 
 const PRIZES = [
   { nome: 'Desconto de 5%' },
@@ -16,7 +18,6 @@ const COLORS = ['#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
 
 export default function InteractiveDemo() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [gameType, setGameType] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [wonPrize, setWonPrize] = useState<any>(null);
@@ -30,6 +31,20 @@ export default function InteractiveDemo() {
 
   const startGame = (type: string) => {
     setGameType(type);
+    setWonPrize(null);
+  };
+
+  const resetGame = () => {
+    setGameType(null);
+    setWonPrize(null);
+    setIsSpinning(false);
+    setRotation(0);
+    localStorage.removeItem('vxleads_discount_won');
+    setAlreadyWon(null);
+  };
+
+  const getPrizeWhatsAppUrl = (prizeText: string) => {
+    return `https://wa.me/5548999542785?text=${encodeURIComponent(`Olá! Joguei a demonstração no site da VX Leads e ganhei um ${prizeText}. Gostaria de saber mais sobre a gamificação para o meu estande!`)}`;
   };
 
   const play = () => {
@@ -138,31 +153,44 @@ export default function InteractiveDemo() {
         {alreadyWon && !wonPrize && !gameType && (
           <div className="bg-yellow-400 text-indigo-900 p-8 rounded-2xl text-center shadow-xl w-full max-w-md animate-fade-in-up">
             <h3 className="text-2xl font-black mb-2">{t('demo.already_won')}</h3>
-            <p className="text-4xl font-black mb-6">{alreadyWon}</p>
+            <p className="text-4xl font-black mb-4 text-indigo-900">{alreadyWon}</p>
             <p className="text-sm font-medium opacity-80 mb-6">{t('demo.already_won_desc')}</p>
-            <button onClick={() => navigate('/cadastro')} className="w-full bg-indigo-900 text-white font-bold py-4 rounded-xl hover:bg-indigo-800 transition-colors">
-              Cadastrar e Garantir Desconto
+            <a 
+              href={getPrizeWhatsAppUrl(alreadyWon)}
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 transition-colors shadow-lg mb-3 cursor-pointer"
+            >
+              <MessageCircle size={20} />
+              <span>Entrar em contato</span>
+            </a>
+            <button 
+              onClick={resetGame}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-900/10 text-indigo-950 font-semibold py-2.5 rounded-xl hover:bg-indigo-900/20 transition-colors text-sm"
+            >
+              <RotateCcw size={16} />
+              <span>Testar outro jogo</span>
             </button>
           </div>
         )}
 
         {!gameType && !alreadyWon && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-            <button onClick={() => startGame('roleta')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group">
+            <button onClick={() => startGame('roleta')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group cursor-pointer">
               <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-500/40 transition-colors">
                 <Target className="text-blue-400" size={32} />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">{t('demo.roulette_title')}</h3>
               <p className="text-indigo-300 text-sm">{t('demo.roulette_desc')}</p>
             </button>
-            <button onClick={() => startGame('raspadinha')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group">
+            <button onClick={() => startGame('raspadinha')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group cursor-pointer">
               <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-emerald-500/40 transition-colors">
                 <Ticket className="text-emerald-400" size={32} />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">{t('demo.scratch_title')}</h3>
               <p className="text-indigo-300 text-sm">{t('demo.scratch_desc')}</p>
             </button>
-            <button onClick={() => startGame('caca_niquel')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group">
+            <button onClick={() => startGame('caca_niquel')} className="bg-indigo-900/50 border border-indigo-500/30 hover:bg-indigo-800 p-6 rounded-2xl text-center transition-all hover:scale-105 group cursor-pointer">
               <div className="w-16 h-16 bg-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-pink-500/40 transition-colors">
                 <Zap className="text-pink-400" size={32} />
               </div>
@@ -174,6 +202,14 @@ export default function InteractiveDemo() {
 
         {gameType && !wonPrize && (
           <div className="w-full flex flex-col items-center">
+            <button 
+              onClick={() => setGameType(null)} 
+              className="inline-flex items-center gap-2 text-indigo-300 hover:text-white text-sm font-medium mb-6 transition-colors self-start cursor-pointer"
+            >
+              <ArrowLeft size={16} />
+              <span>Escolher outro jogo</span>
+            </button>
+
             {gameType === 'roleta' && (
               <div className="relative w-[280px] h-[280px] md:w-[350px] md:h-[350px] mx-auto">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-30 filter drop-shadow-md">
@@ -185,7 +221,7 @@ export default function InteractiveDemo() {
                   {renderWheel()}
                 </div>
                 {!isSpinning && (
-                  <button onClick={play} className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-yellow-400 text-indigo-900 font-black text-xl px-10 py-4 rounded-full shadow-[0_8px_0_#b45309] active:shadow-none active:translate-y-2 z-30">
+                  <button onClick={play} className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-yellow-400 text-indigo-900 font-black text-xl px-10 py-4 rounded-full shadow-[0_8px_0_#b45309] active:shadow-none active:translate-y-2 z-30 cursor-pointer hover:bg-yellow-300 transition-colors">
                     GIRAR
                   </button>
                 )}
@@ -207,7 +243,7 @@ export default function InteractiveDemo() {
               <div className="relative w-full max-w-sm mx-auto bg-red-600 rounded-3xl border-8 border-red-800 p-6 shadow-2xl">
                 <SlotMachine isSpinning={isSpinning} prizeText={null} />
                 {!isSpinning && (
-                  <button onClick={play} className="mt-6 w-full bg-yellow-400 hover:bg-yellow-300 text-red-900 font-black text-2xl py-4 rounded-xl shadow-[0_6px_0_#b45309] active:shadow-none active:translate-y-2 transition-all">
+                  <button onClick={play} className="mt-6 w-full bg-yellow-400 hover:bg-yellow-300 text-red-900 font-black text-2xl py-4 rounded-xl shadow-[0_6px_0_#b45309] active:shadow-none active:translate-y-2 transition-all cursor-pointer">
                     JOGAR
                   </button>
                 )}
@@ -219,10 +255,23 @@ export default function InteractiveDemo() {
         {wonPrize && (
           <div className="bg-yellow-400 text-indigo-900 p-8 rounded-2xl text-center shadow-xl w-full max-w-md animate-fade-in-up mt-8">
             <h3 className="text-2xl font-black mb-2">{t('demo.won_title')}</h3>
-            <p className="text-4xl font-black mb-6 text-indigo-700">{wonPrize.nome}</p>
+            <p className="text-4xl font-black mb-3 text-indigo-950">{wonPrize.nome}</p>
             <p className="text-sm font-medium opacity-80 mb-6">{t('demo.won_desc')}</p>
-            <button onClick={() => navigate('/cadastro')} className="w-full bg-indigo-900 text-white font-bold py-4 rounded-xl hover:bg-indigo-800 transition-colors shadow-lg">
-              Cadastrar e Garantir Desconto
+            <a 
+              href={getPrizeWhatsAppUrl(wonPrize.nome)} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 transition-colors shadow-lg mb-3 cursor-pointer"
+            >
+              <MessageCircle size={20} />
+              <span>Entrar em contato</span>
+            </a>
+            <button 
+              onClick={resetGame}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-900/10 text-indigo-950 font-semibold py-2.5 rounded-xl hover:bg-indigo-900/20 transition-colors text-sm cursor-pointer"
+            >
+              <RotateCcw size={16} />
+              <span>Testar outro jogo</span>
             </button>
           </div>
         )}

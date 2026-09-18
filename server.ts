@@ -176,6 +176,71 @@ async function startServer() {
     }
   });
 
+  // --- BASE44 INTEGRATION ENDPOINTS ---
+  // In-memory store for leads pushed from Base44 (with TTL / limit)
+  const base44Leads: Record<string, any> = {};
+
+  // Endpoint 1: Base44 sends a lead to VX Leads
+  app.post("/api/integracao/base44", (req, res) => {
+    try {
+      const data = req.body || {};
+      const leadId = data.leadId || data.id || data.crachaId || `b44_${Date.now()}`;
+      
+      const leadPayload = {
+        id: leadId,
+        nome: data.nome || data.name || 'Visitante Base44',
+        email: data.email || '',
+        whatsapp: data.whatsapp || data.phone || data.telefone || '',
+        empresa: data.empresa || data.company || '',
+        cargo: data.cargo || data.jobTitle || data.role || '',
+        crachaId: data.crachaId || data.badgeId || leadId,
+        origem: data.origem || 'Base44_App',
+        createdAt: new Date().toISOString(),
+        customFields: data.customFields || {}
+      };
+
+      base44Leads[leadId] = leadPayload;
+
+      // Generate direct game URL with prefilled parameters
+      const params = new URLSearchParams({
+        nome: leadPayload.nome,
+        email: leadPayload.email,
+        whatsapp: leadPayload.whatsapp,
+        empresa: leadPayload.empresa,
+        cargo: leadPayload.cargo,
+        crachaId: leadPayload.crachaId,
+        origem: leadPayload.origem
+      });
+
+      const gameUrl = `/prototipo-roleta?${params.toString()}`;
+
+      res.status(200).json({
+        success: true,
+        message: "Lead recebido do Base44 com sucesso!",
+        lead: leadPayload,
+        gameUrl: gameUrl
+      });
+    } catch (err: any) {
+      console.error("Erro ao receber lead do Base44:", err);
+      res.status(500).json({ error: "Falha ao processar dados do Base44", details: err.message });
+    }
+  });
+
+  // Endpoint 2: Fetch lead by ID or get list of received leads
+  app.get("/api/integracao/base44/:leadId?", (req, res) => {
+    const { leadId } = req.params;
+    if (leadId) {
+      const lead = base44Leads[leadId];
+      if (!lead) {
+        return res.status(404).json({ error: "Lead não encontrado" });
+      }
+      return res.json({ lead });
+    }
+    // Return latest 20 leads
+    const leads = Object.values(base44Leads).slice(-20).reverse();
+    res.json({ count: leads.length, leads });
+  });
+
   // API routes FIRST
   app.post("/api/chat", async (req, res) => {
     try {

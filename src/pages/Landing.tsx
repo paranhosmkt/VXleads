@@ -5,6 +5,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import heroFallbackImg from '../assets/hero-fallback.png';
+import InteractiveDemo from '../components/InteractiveDemo';
 import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone, Gift, Sparkles, MessageCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link as RouterLink } from 'react-router-dom';
@@ -526,6 +527,11 @@ export default function Landing() {
         </div>
       </motion.section>
 
+      {/* Interactive Game Demo Section */}
+      <section className="relative z-10 px-6">
+        <InteractiveDemo />
+      </section>
+
       {/* CRM Conversion Curve Section */}
       <motion.section className="px-6 py-24 bg-indigo-900 border-t border-indigo-800 text-white overflow-hidden relative"
         initial={{ opacity: 0, y: 30 }}
@@ -798,9 +804,14 @@ export default function Landing() {
             <p className="text-gray-500 text-sm">
               &copy; {new Date().getFullYear()} VX Leads. Todos os direitos reservados.
             </p>
-            <p className="text-gray-500 text-sm">
-              {t('footer.design_by')} <span className="text-white font-medium">{t('footer.design_agency')}</span>
-            </p>
+            <div className="flex items-center gap-6">
+              <RouterLink to="/prototipo-roleta" className="text-gray-600 hover:text-gray-400 text-xs transition-colors cursor-pointer">
+                Protótipo (API + Roleta)
+              </RouterLink>
+              <p className="text-gray-500 text-sm">
+                {t('footer.design_by')} <span className="text-white font-medium">{t('footer.design_agency')}</span>
+              </p>
+            </div>
           </div>
         </div>
       </motion.footer>
