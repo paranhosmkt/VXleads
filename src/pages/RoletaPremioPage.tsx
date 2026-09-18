@@ -354,13 +354,13 @@ export default function RoletaPremioPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <RouterLink
-                  to="/triagem"
+                <a
+                  href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
                   className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
                 >
                   <RotateCcw size={16} />
-                  <span>Novo Visitante</span>
-                </RouterLink>
+                  <span>Retornar à Captura</span>
+                </a>
 
                 <RouterLink
                   to="/prototipo-roleta"

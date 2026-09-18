@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, Dices, Gift, Smartphone, CheckCircle2, 
-  ArrowRight, ShieldCheck, Trophy, Layers, Flame, Check, HelpCircle
+  ArrowRight, ShieldCheck, Trophy, Layers, Flame, Check, HelpCircle,
+  ExternalLink, Users, Database, Lock
 } from 'lucide-react';
 import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // Confetti burst helper
 function triggerConfetti() {
@@ -66,15 +69,14 @@ function triggerConfetti() {
   requestAnimationFrame(animate);
 }
 
-// 7 Possible prizes
 const PRIZES = [
-  { id: 'p1', name: '10% de Desconto', color: '#3B82F6', icon: '🏷️' },
-  { id: 'p2', name: '15% de Desconto', color: '#10B981', icon: '🎉' },
-  { id: 'p3', name: '20% de Desconto', color: '#8B5CF6', icon: '⭐' },
-  { id: 'p4', name: '25% de Desconto', color: '#F59E0B', icon: '🔥' },
-  { id: 'p5', name: '30% de Desconto', color: '#EC4899', icon: '✨' },
-  { id: 'p6', name: '35% de Desconto', color: '#06B6D4', icon: '🚀' },
-  { id: 'p7', name: '40% de Desconto', color: '#EF4444', icon: '👑' },
+  { id: 'p1', name: '10% de Desconto', shortName: '10% OFF', color: '#2563eb', icon: '🏷️' },
+  { id: 'p2', name: '15% de Desconto', shortName: '15% OFF', color: '#059669', icon: '🎉' },
+  { id: 'p3', name: '20% de Desconto', shortName: '20% OFF', color: '#7c3aed', icon: '⭐' },
+  { id: 'p4', name: '25% de Desconto', shortName: '25% OFF', color: '#d97706', icon: '🔥' },
+  { id: 'p5', name: '30% de Desconto', shortName: '30% OFF', color: '#db2777', icon: '✨' },
+  { id: 'p6', name: '35% de Desconto', shortName: '35% OFF', color: '#0891b2', icon: '🚀' },
+  { id: 'p7', name: '40% de Desconto', shortName: '40% OFF', color: '#dc2626', icon: '👑' },
 ];
 
 const SCREENING_QUESTIONS = [
@@ -235,7 +237,7 @@ export default function TriagemPage() {
         setCurrentQuestionIdx(prev => prev + 1);
       }, 250);
     } else {
-      // Completed all screening questions! Save and show final voucher
+      // Completed all screening questions! Save to Firestore + LocalStorage and show final voucher
       persistFinalLead(newAnswers);
       setCurrentStep('voucher_final');
     }
@@ -261,7 +263,18 @@ export default function TriagemPage() {
       resposta3: screeningAnswers[3] || 'Não informada'
     };
 
-    // 1. Save to localStorage
+    // 1. Save to Firestore (Online Cloud Database) so the whole commercial team can view in real-time
+    try {
+      await addDoc(collection(db, 'event_leads'), {
+        ...record,
+        createdAt: serverTimestamp()
+      });
+      setStatusMessage('Lead sincronizado online no Banco de Dados em Nuvem (Firestore)!');
+    } catch (err) {
+      console.warn('Firestore addDoc error:', err);
+    }
+
+    // 2. Save to LocalStorage (Offline browser cache fallback)
     try {
       const saved = localStorage.getItem('vx_proto_submissions');
       const list = saved ? JSON.parse(saved) : [];
@@ -271,7 +284,7 @@ export default function TriagemPage() {
       console.error(e);
     }
 
-    // 2. Post to Google Sheets webhook if configured
+    // 3. Post to Google Sheets webhook if configured
     const webhookUrl = localStorage.getItem('vx_proto_webhook_url') || '';
     if (webhookUrl) {
       try {
@@ -281,19 +294,17 @@ export default function TriagemPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(record)
         });
-        setStatusMessage('Dados consolidados e enviados para a Planilha Google!');
+        setStatusMessage('Dados consolidados e enviados para Banco Online + Planilha Google!');
       } catch (e) {
-        setStatusMessage('Salvo no histórico do dispositivo.');
+        // ignore
       }
-    } else {
-      setStatusMessage('Lead e respostas de triagem salvas com sucesso!');
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 p-2 rounded-xl text-white shadow-md shadow-blue-500/20">
             <Trophy size={18} />
@@ -310,11 +321,34 @@ export default function TriagemPage() {
           </span>
         </div>
 
-        {/* Participant Mini Badge */}
-        <div className="text-xs text-slate-300 flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="font-bold text-white max-w-[130px] sm:max-w-[200px] truncate">{participant.nome}</span>
-          <span className="text-slate-500 hidden sm:inline">• {participant.empresa}</span>
+        {/* Quick Action Navigation Buttons */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Link to Commercial Leads Panel */}
+          <button
+            onClick={() => navigate('/leads')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+            title="Acessar painel de leads captados da empresa (Requer senha)"
+          >
+            <Lock size={13} className="text-blue-400" />
+            <span className="hidden md:inline">Painel da Empresa</span>
+          </button>
+
+          {/* Button: Return to Base44 to scan next user */}
+          <a
+            href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            title="Voltar para o app do Base44 para escanear nova pessoa"
+          >
+            <ExternalLink size={14} />
+            <span className="hidden sm:inline">Retornar à Captura</span>
+            <span className="sm:hidden">Captura</span>
+          </a>
+
+          {/* Participant Mini Badge */}
+          <div className="text-xs text-slate-300 hidden lg:flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="font-bold text-white max-w-[140px] truncate">{participant.nome}</span>
+          </div>
         </div>
       </header>
 
@@ -340,99 +374,92 @@ export default function TriagemPage() {
               </p>
             </div>
 
-            {/* 3 Games Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+            {/* 3 Game Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-3xl mx-auto pt-2">
               
-              {/* JOGO 1: ROLETA DE PRÊMIOS */}
-              <div 
+              {/* CARD 1: ROLETA */}
+              <button
                 onClick={() => handleChooseGame('roleta')}
-                className="group relative bg-slate-900/90 border border-slate-800 hover:border-blue-500 rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
+                className="group p-6 rounded-3xl bg-slate-900 border-2 border-slate-800 hover:border-blue-500 hover:bg-slate-850 transition-all text-left flex flex-col justify-between relative overflow-hidden shadow-xl hover:shadow-blue-500/10 cursor-pointer"
               >
-                <div className="space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+                <div>
+                  <div className="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
                     🎡
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
-                      O Clássico de Estandes
-                    </span>
-                    <h3 className="text-xl font-extrabold text-white mt-0.5">
-                      Roleta da Sorte
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                      Gire a roleta com física realista e veja a sorte parar no seu desconto especial.
-                    </p>
-                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 block mb-1">
+                    Clássico de Eventos
+                  </span>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Roleta da Sorte
+                  </h3>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    Gire a roleta de prêmios física digital e veja onde a seta premiada vai parar!
+                  </p>
                 </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-blue-400 group-hover:text-blue-300">
+                <div className="mt-6 flex items-center gap-2 text-blue-400 text-xs font-bold group-hover:translate-x-1 transition-transform">
                   <span>Jogar Roleta</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={14} />
                 </div>
-              </div>
+              </button>
 
-              {/* JOGO 2: RASPADINHA DIGITAL */}
-              <div 
+              {/* CARD 2: RASPADINHA */}
+              <button
                 onClick={() => handleChooseGame('raspadinha')}
-                className="group relative bg-slate-900/90 border border-slate-800 hover:border-purple-500 rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
+                className="group p-6 rounded-3xl bg-slate-900 border-2 border-slate-800 hover:border-purple-500 hover:bg-slate-850 transition-all text-left flex flex-col justify-between relative overflow-hidden shadow-xl hover:shadow-purple-500/10 cursor-pointer"
               >
-                <div className="space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-purple-600/20 border border-purple-500/40 text-purple-400 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
+                <div>
+                  <div className="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
                     ✨
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
-                      Interação Touch
-                    </span>
-                    <h3 className="text-xl font-extrabold text-white mt-0.5">
-                      Raspadinha Digital
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                      Passe o dedo na tela ou o mouse para raspar a película prateada e revelar seu prêmio.
-                    </p>
-                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 block mb-1">
+                    Toque Interativo
+                  </span>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Raspadinha Digital
+                  </h3>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    Use o dedo ou cursor para raspar a película metalizada e revelar seu desconto na hora!
+                  </p>
                 </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-purple-400 group-hover:text-purple-300">
-                  <span>Jogar Raspadinha</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <div className="mt-6 flex items-center gap-2 text-purple-400 text-xs font-bold group-hover:translate-x-1 transition-transform">
+                  <span>Raspar Agora</span>
+                  <ArrowRight size={14} />
                 </div>
-              </div>
+              </button>
 
-              {/* JOGO 3: CAÇA-NÍQUEL (SLOT MACHINE) */}
-              <div 
+              {/* CARD 3: CAÇA-NÍQUEL */}
+              <button
                 onClick={() => handleChooseGame('caca_niquel')}
-                className="group relative bg-slate-900/90 border border-slate-800 hover:border-amber-500 rounded-3xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
+                className="group p-6 rounded-3xl bg-slate-900 border-2 border-slate-800 hover:border-amber-500 hover:bg-slate-850 transition-all text-left flex flex-col justify-between relative overflow-hidden shadow-xl hover:shadow-amber-500/10 cursor-pointer"
               >
-                <div className="space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-amber-600/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all"></div>
+                <div>
+                  <div className="w-14 h-14 rounded-2xl bg-amber-600/20 border border-amber-500/30 text-amber-400 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
                     🎰
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                      Emoção de Cassino
-                    </span>
-                    <h3 className="text-xl font-extrabold text-white mt-0.5">
-                      Caça-Níquel
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                      Puxe a alavanca e torça para alinhar os símbolos premiados em alta velocidade.
-                    </p>
-                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block mb-1">
+                    Estilo Las Vegas
+                  </span>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Caça-Níquel (Slots)
+                  </h3>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    Puxe a alavanca e alinhe 3 símbolos iguais nos rolos para conquistar a melhor premiação!
+                  </p>
                 </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-amber-400 group-hover:text-amber-300">
-                  <span>Jogar Caça-Níquel</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                <div className="mt-6 flex items-center gap-2 text-amber-400 text-xs font-bold group-hover:translate-x-1 transition-transform">
+                  <span>Puxar Alavanca</span>
+                  <ArrowRight size={14} />
                 </div>
-              </div>
-
+              </button>
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* ETAPA 2: JOGANDO O JOGO ESCOLHIDO                                         */}
+        {/* ETAPA 2: JOGANDO O JOGO ESCOLHIDO (ROLETA / RASPADINHA / CAÇA-NÍQUEL)       */}
         {/* ========================================================================= */}
         {currentStep === 'playing' && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden animate-fade-in">
@@ -479,25 +506,25 @@ export default function TriagemPage() {
                         const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
 
                         const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
-
                         const midAngle = startAngle + angle / 2;
 
                         return (
                           <g key={prize.id}>
                             <path d={pathData} fill={prize.color} stroke="#1e293b" strokeWidth="0.8" />
-                            {/* Verticalized Radial Text: Points along the spoke, perfectly aligned within segment */}
+                            
+                            {/* Radial alignment: Text positioned along the slice radius */}
                             <g transform={`rotate(${midAngle}, 50, 50)`}>
                               <text
                                 x={32}
                                 y={50}
                                 fill="#ffffff"
-                                fontSize="3.6"
+                                fontSize="3.8"
                                 fontWeight="900"
                                 textAnchor="middle"
                                 dominantBaseline="central"
-                                style={{ letterSpacing: '0.02em', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+                                style={{ letterSpacing: '0.01em', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}
                               >
-                                {prize.name}
+                                {prize.shortName}
                               </text>
                             </g>
                           </g>
@@ -505,8 +532,12 @@ export default function TriagemPage() {
                       })}
                     </svg>
 
-                    <div className="absolute inset-0 m-auto w-14 h-14 rounded-full bg-slate-900 border-4 border-yellow-400 shadow-xl flex items-center justify-center z-10 text-yellow-400 font-extrabold text-xs">
-                      VX
+                    {/* Prominent Center Hub */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-slate-950 via-slate-900 to-slate-800 border-4 border-yellow-400 shadow-2xl flex flex-col items-center justify-center z-20 text-center">
+                      <Sparkles className="text-yellow-400 mb-0.5" size={16} />
+                      <span className="text-yellow-400 font-black text-[10px] tracking-wider leading-none">
+                        VX LEADS
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -561,20 +592,23 @@ export default function TriagemPage() {
                   Puxe a Alavanca do Caça-Níquel
                 </h3>
                 <p className="text-slate-400 text-xs sm:text-sm">
-                  Alinhe 3 símbolos iguais para desbloquear seu super prêmio.
+                  Alinhe os 3 símbolos nos cilindros para liberar seu desconto exclusivo!
                 </p>
 
-                <div className="border-4 border-amber-500/40 rounded-2xl p-4 bg-amber-950/20 shadow-2xl">
-                  <SlotMachine isSpinning={isSpinningSlots} prizeText={wonPrize.name} />
+                <div className="my-6">
+                  <SlotMachine 
+                    isSpinning={isSpinningSlots} 
+                    prizeText={wonPrize.name} 
+                  />
                 </div>
 
-                <div>
+                <div className="mt-6">
                   <button
                     disabled={isSpinningSlots}
                     onClick={handleSpinSlots}
                     className="px-10 py-4 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-black text-xl shadow-[0_8px_0_#b45309] active:shadow-none active:translate-y-2 transition-all disabled:opacity-50 cursor-pointer uppercase tracking-wider"
                   >
-                    {isSpinningSlots ? 'Sorteando...' : 'PUXAR ALAVANCA!'}
+                    {isSpinningSlots ? 'Girando os Rolos...' : 'PUXAR ALAVANCA!'}
                   </button>
                 </div>
               </div>
@@ -584,31 +618,38 @@ export default function TriagemPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* ETAPA 3: GANHOU O PRÊMIO -> AVISO PARA RESPONDER A TRIAGEM                */}
+        {/* ETAPA 3: PARABÉNS! PRÊMIO CONQUISTADO -> DESBLOQUEIE COM 3 PERGUNTAS      */}
         {/* ========================================================================= */}
         {currentStep === 'prize_won' && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden animate-fade-in">
-            <div className="max-w-xl mx-auto space-y-4">
-              <div className="w-20 h-20 rounded-full bg-yellow-400/20 text-yellow-400 border border-yellow-400/40 flex items-center justify-center mx-auto text-4xl shadow-xl">
-                {wonPrize.icon}
+            <div className="max-w-lg mx-auto space-y-5">
+              <div className="w-20 h-20 rounded-full bg-yellow-400/20 border border-yellow-400/40 text-yellow-400 flex items-center justify-center mx-auto text-4xl shadow-xl animate-bounce">
+                🎉
               </div>
 
-              <span className="text-xs font-bold uppercase tracking-wider text-yellow-400">
-                Sensacional! Você Foi Premiado
-              </span>
-              <h3 className="text-3xl sm:text-5xl font-black text-white">
-                {wonPrize.name}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/10 text-yellow-400 text-xs font-bold border border-yellow-400/20">
+                <Sparkles size={14} />
+                <span>Prêmio Sorteado com Sucesso!</span>
+              </div>
+
+              <h3 className="text-3xl sm:text-4xl font-black text-white">
+                Você Ganhou:
               </h3>
-              <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-                Para liberar o seu voucher oficial e validar o desconto com a equipe, responda apenas <strong>3 perguntas rápidas</strong> sobre a sua operação.
+
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 shadow-xl text-white font-black text-3xl sm:text-4xl tracking-tight">
+                {wonPrize.name}
+              </div>
+
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Para desbloquear e gerar o seu <strong>Voucher Oficial</strong> e salvar seu desconto no estande, responda <strong>3 perguntas rápidas</strong> (menos de 20 segundos).
               </p>
 
-              <div className="pt-4">
+              <div className="pt-2">
                 <button
                   onClick={() => setCurrentStep('triagem')}
-                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-lg shadow-lg shadow-blue-500/25 transition-all cursor-pointer inline-flex items-center gap-2"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-lg shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
                 >
-                  <span>Responder Triagem & Liberar Voucher</span>
+                  <span>Liberar Meu Voucher Agora</span>
                   <ArrowRight size={20} />
                 </button>
               </div>
@@ -617,15 +658,15 @@ export default function TriagemPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* ETAPA 4: AS 3 PERGUNTAS DE TRIAGEM                                        */}
+        {/* ETAPA 4: TRIAGEM COM AS 3 PERGUNTAS DE QUALIFICAÇÃO                       */}
         {/* ========================================================================= */}
         {currentStep === 'triagem' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden animate-fade-in">
             {/* Progress Bar */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-slate-400 mb-2.5">
-                <span className="text-blue-400 font-bold">Pergunta {currentQuestionIdx + 1} de {SCREENING_QUESTIONS.length}</span>
-                <span>{Math.round(((currentQuestionIdx + 1) / SCREENING_QUESTIONS.length) * 100)}% Concluído</span>
+            <div className="mb-6">
+              <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
+                <span>Triagem de Qualificação</span>
+                <span>Pergunta {currentQuestionIdx + 1} de {SCREENING_QUESTIONS.length}</span>
               </div>
               <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
                 <div 
@@ -635,58 +676,61 @@ export default function TriagemPage() {
               </div>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-bold mb-3 border border-yellow-500/20">
-              <Trophy size={14} />
-              <span>Prêmio em Espera: {wonPrize.name}</span>
-            </div>
+            {/* Question Card */}
+            <div className="max-w-2xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold mb-3 border border-blue-500/20">
+                <Sparkles size={14} />
+                <span>Passo Final para o Voucher</span>
+              </div>
 
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-snug">
-              {SCREENING_QUESTIONS[currentQuestionIdx].title}
-            </h3>
-            <p className="text-sm text-slate-400 mb-8">
-              {SCREENING_QUESTIONS[currentQuestionIdx].subtitle}
-            </p>
+              <h3 className="text-xl sm:text-2xl font-black text-white mb-2 leading-snug">
+                {SCREENING_QUESTIONS[currentQuestionIdx].title}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-400 mb-6">
+                {SCREENING_QUESTIONS[currentQuestionIdx].subtitle}
+              </p>
 
-            {/* Options */}
-            <div className="space-y-3.5">
-              {SCREENING_QUESTIONS[currentQuestionIdx].options.map(option => {
-                const isSelected = answers[SCREENING_QUESTIONS[currentQuestionIdx].id] === option.label;
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() => handleSelectAnswer(option.label)}
-                    className={`w-full text-left p-4 sm:p-5 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${
-                      isSelected 
-                        ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-500/10 scale-[1.01]' 
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50 text-slate-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm transition-colors ${
-                        isSelected ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
-                      }`}>
-                        {option.id}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-base sm:text-lg text-white">
-                          {option.label}
+              {/* Options */}
+              <div className="space-y-3">
+                {SCREENING_QUESTIONS[currentQuestionIdx].options.map(option => {
+                  const isSelected = answers[SCREENING_QUESTIONS[currentQuestionIdx].id] === option.label;
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => handleSelectAnswer(option.label)}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${
+                        isSelected 
+                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-500/10' 
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50 text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs transition-colors ${
+                          isSelected ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
+                        }`}>
+                          {option.id}
                         </div>
-                        {option.desc && (
-                          <div className="text-xs text-slate-400 mt-0.5">
-                            {option.desc}
+                        <div>
+                          <div className="font-semibold text-sm sm:text-base text-white">
+                            {option.label}
                           </div>
-                        )}
+                          {option.desc && (
+                            <div className="text-xs text-slate-400 mt-0.5">
+                              {option.desc}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 ${
-                      isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-700 text-transparent'
-                    }`}>
-                      <Check size={14} strokeWidth={3} />
-                    </div>
-                  </button>
-                );
-              })}
+                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
+                        isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-700 text-transparent'
+                      }`}>
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-800 text-xs sm:text-sm">
@@ -698,7 +742,7 @@ export default function TriagemPage() {
                 ← Pergunta Anterior
               </button>
 
-              <span className="text-slate-500 font-medium">
+              <span className="text-slate-500 font-medium text-xs">
                 Ao responder a última, seu voucher oficial é liberado na hora!
               </span>
             </div>
@@ -738,7 +782,7 @@ export default function TriagemPage() {
               <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-5 mb-8 text-left">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm mb-2">
                   <CheckCircle2 size={18} />
-                  <span>Dados Consolidados com Sucesso!</span>
+                  <span>Dados Consolidados & Salvos Online!</span>
                 </div>
                 {statusMessage && (
                   <p className="text-xs text-emerald-200/80 leading-relaxed mb-3">
@@ -754,16 +798,23 @@ export default function TriagemPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => {
-                    setCurrentStep('select_game');
-                    setCurrentQuestionIdx(0);
-                    setAnswers({});
-                  }}
-                  className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors cursor-pointer shadow-lg shadow-blue-600/20"
+              {/* Return to Base44 or start next lead */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 cursor-pointer"
                 >
-                  Novo Participante
+                  <ExternalLink size={16} />
+                  <span>Retornar à Captura</span>
+                </a>
+
+                <button
+                  onClick={() => navigate('/leads')}
+                  className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
+                  title="Acessar painel de leads captados da empresa (Requer senha)"
+                >
+                  <Lock size={15} className="text-blue-400" />
+                  <span>Painel da Empresa (Leads & Perguntas)</span>
                 </button>
               </div>
             </div>

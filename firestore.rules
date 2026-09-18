@@ -19,5 +19,12 @@ service cloud.firestore {
         allow read, update, delete: if request.auth != null && request.auth.uid == uid;
       }
     }
+
+    // Leads collected in events (Triagem & Gamification) for the commercial team
+    match /event_leads/{leadId} {
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if request.auth != null;
+    }
   }
 }

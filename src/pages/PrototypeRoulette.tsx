@@ -4,7 +4,7 @@ import {
   Target, Sparkles, CheckCircle2, ArrowRight, RotateCcw, 
   Table, Download, Send, Globe, Code2, Copy, Check, 
   ChevronDown, ChevronUp, RefreshCw, Smartphone, Award,
-  Info, ExternalLink, HelpCircle
+  Info, ExternalLink, HelpCircle, Lock
 } from 'lucide-react';
 
 function triggerConfetti() {
@@ -977,13 +977,13 @@ Content-Type: application/json
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button
-                  onClick={restartFlow}
+                <a
+                  href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
                   className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
                 >
                   <RotateCcw size={16} />
-                  <span>Testar Próximo Visitante</span>
-                </button>
+                  <span>Retornar à Captura</span>
+                </a>
 
                 <button
                   onClick={downloadCSV}
@@ -1108,8 +1108,16 @@ Content-Type: application/json
       </main>
 
       {/* Discrete Footer Link */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p>VX Leads • Protótipo Funcional de Gamificação, Triagem e Integração com Planilhas</p>
+        <RouterLink
+          to="/leads"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-400 hover:text-blue-400 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
+          title="Acessar painel de leads captados da empresa (Requer senha)"
+        >
+          <Lock size={12} className="text-blue-400" />
+          <span>Painel da Empresa</span>
+        </RouterLink>
       </footer>
     </div>
   );

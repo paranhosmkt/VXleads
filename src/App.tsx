@@ -15,6 +15,7 @@ import ConsultantDashboard from './pages/ConsultantDashboard';
 import PrototypeRoulette from './pages/PrototypeRoulette';
 import TriagemPage from './pages/TriagemPage';
 import RoletaPremioPage from './pages/RoletaPremioPage';
+import LeadsComercial from './pages/LeadsComercial';
 
 export default function App() {
   return (
@@ -33,6 +34,8 @@ export default function App() {
         <Route path="/prototipo-roleta" element={<PrototypeRoulette />} />
         <Route path="/triagem" element={<TriagemPage />} />
         <Route path="/roleta-premio" element={<RoletaPremioPage />} />
+        <Route path="/leads" element={<LeadsComercial />} />
+        <Route path="/leads-comercial" element={<LeadsComercial />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/painel-consultor" element={<ConsultantDashboard />} />
         <Route path="/termos-de-uso" element={<TermsOfUse />} />

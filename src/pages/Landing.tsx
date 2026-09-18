@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import heroFallbackImg from '../assets/hero-fallback.png';
 import InteractiveDemo from '../components/InteractiveDemo';
-import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone, Gift, Sparkles, MessageCircle } from 'lucide-react';
+import { Target, XCircle, CheckCircle2, UserX, Database, TrendingDown, Zap, ShieldCheck, ListOrdered, Check, HelpCircle, ChevronDown, MonitorSmartphone, WifiOff, Link, Star, Instagram, Linkedin, Facebook, Mail, Phone, Gift, Sparkles, MessageCircle, Lock, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -804,16 +804,17 @@ export default function Landing() {
             <p className="text-gray-500 text-sm">
               &copy; {new Date().getFullYear()} VX Leads. Todos os direitos reservados.
             </p>
-            <div className="flex items-center gap-6">
-              <RouterLink to="/triagem" className="text-blue-500 hover:text-blue-400 text-xs font-semibold transition-colors cursor-pointer">
-                Página 1: Triagem
+
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+              <RouterLink
+                to="/leads"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gray-800/80 hover:bg-blue-600/20 text-gray-300 hover:text-blue-400 border border-gray-700 hover:border-blue-500/40 text-xs font-semibold transition-all duration-200 shadow-sm"
+                title="Acessar painel de leads captados da empresa (Requer senha)"
+              >
+                <Lock size={13} className="text-blue-400" />
+                <span>Painel da Empresa (Leads & Perguntas)</span>
               </RouterLink>
-              <RouterLink to="/roleta-premio" className="text-yellow-500 hover:text-yellow-400 text-xs font-semibold transition-colors cursor-pointer">
-                Página 2: Roleta
-              </RouterLink>
-              <RouterLink to="/prototipo-roleta" className="text-gray-600 hover:text-gray-400 text-xs transition-colors cursor-pointer">
-                Painel API / Planilha
-              </RouterLink>
+
               <p className="text-gray-500 text-sm">
                 {t('footer.design_by')} <span className="text-white font-medium">{t('footer.design_agency')}</span>
               </p>
