@@ -805,8 +805,14 @@ export default function Landing() {
               &copy; {new Date().getFullYear()} VX Leads. Todos os direitos reservados.
             </p>
             <div className="flex items-center gap-6">
+              <RouterLink to="/triagem" className="text-blue-500 hover:text-blue-400 text-xs font-semibold transition-colors cursor-pointer">
+                Página 1: Triagem
+              </RouterLink>
+              <RouterLink to="/roleta-premio" className="text-yellow-500 hover:text-yellow-400 text-xs font-semibold transition-colors cursor-pointer">
+                Página 2: Roleta
+              </RouterLink>
               <RouterLink to="/prototipo-roleta" className="text-gray-600 hover:text-gray-400 text-xs transition-colors cursor-pointer">
-                Protótipo (API + Roleta)
+                Painel API / Planilha
               </RouterLink>
               <p className="text-gray-500 text-sm">
                 {t('footer.design_by')} <span className="text-white font-medium">{t('footer.design_agency')}</span>

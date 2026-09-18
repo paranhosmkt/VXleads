@@ -127,12 +127,13 @@ const QUESTIONS: Question[] = [
 ];
 
 const PRIZES = [
-  { id: 'p1', name: 'Brinde Especial VIP', color: '#3B82F6', icon: '🎁' },
-  { id: 'p2', name: 'Desconto de 20%', color: '#10B981', icon: '🏷️' },
-  { id: 'p3', name: 'Consultoria de Estande', color: '#8B5CF6', icon: '⭐' },
-  { id: 'p4', name: 'Kit Boas-Vindas', color: '#F59E0B', icon: '📦' },
-  { id: 'p5', name: 'Diagnóstico Comercial', color: '#EC4899', icon: '📊' },
-  { id: 'p6', name: 'Powerbank / Brinde Tech', color: '#06B6D4', icon: '⚡' },
+  { id: 'p1', name: '10% de Desconto', color: '#3B82F6', icon: '🏷️' },
+  { id: 'p2', name: '15% de Desconto', color: '#10B981', icon: '🎉' },
+  { id: 'p3', name: '20% de Desconto', color: '#8B5CF6', icon: '⭐' },
+  { id: 'p4', name: '25% de Desconto', color: '#F59E0B', icon: '🔥' },
+  { id: 'p5', name: '30% de Desconto', color: '#EC4899', icon: '✨' },
+  { id: 'p6', name: '35% de Desconto', color: '#06B6D4', icon: '🚀' },
+  { id: 'p7', name: '40% de Desconto', color: '#EF4444', icon: '👑' },
 ];
 
 export interface LeadSubmission {
@@ -466,6 +467,13 @@ Content-Type: application/json
         </div>
 
         <div className="flex items-center gap-3">
+          <RouterLink
+            to="/triagem"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/30 transition-colors"
+          >
+            <span>Ver Tela de Triagem</span>
+            <ArrowRight size={14} />
+          </RouterLink>
           <button
             onClick={() => setShowConfigPanel(!showConfigPanel)}
             className="flex items-center gap-2 text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700 cursor-pointer"
@@ -890,8 +898,8 @@ Content-Type: application/json
                             x={tx}
                             y={ty}
                             fill="#ffffff"
-                            fontSize="4"
-                            fontWeight="bold"
+                            fontSize="4.2"
+                            fontWeight="900"
                             textAnchor="middle"
                             dominantBaseline="central"
                             transform={`rotate(${textAngle + 90}, ${tx}, ${ty})`}

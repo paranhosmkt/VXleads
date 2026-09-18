@@ -212,13 +212,15 @@ async function startServer() {
         origem: leadPayload.origem
       });
 
-      const gameUrl = `/prototipo-roleta?${params.toString()}`;
+      const gameUrl = `/triagem?${params.toString()}`;
 
       res.status(200).json({
         success: true,
         message: "Lead recebido do Base44 com sucesso!",
         lead: leadPayload,
-        gameUrl: gameUrl
+        gameUrl: gameUrl,
+        triagemUrl: `/triagem?${params.toString()}`,
+        roletaUrl: `/roleta-premio?${params.toString()}`
       });
     } catch (err: any) {
       console.error("Erro ao receber lead do Base44:", err);

@@ -13,6 +13,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import ConsultantRegister from './pages/ConsultantRegister';
 import ConsultantDashboard from './pages/ConsultantDashboard';
 import PrototypeRoulette from './pages/PrototypeRoulette';
+import TriagemPage from './pages/TriagemPage';
+import RoletaPremioPage from './pages/RoletaPremioPage';
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="/roleta/:companyId" element={<Roulette />} />
         <Route path="/roleta" element={<Roulette />} />
         <Route path="/prototipo-roleta" element={<PrototypeRoulette />} />
+        <Route path="/triagem" element={<TriagemPage />} />
+        <Route path="/roleta-premio" element={<RoletaPremioPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/painel-consultor" element={<ConsultantDashboard />} />
         <Route path="/termos-de-uso" element={<TermsOfUse />} />
