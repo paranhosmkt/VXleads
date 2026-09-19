@@ -199,6 +199,7 @@ async function startServer() {
       
       const leadPayload = {
         id: leadId,
+        leadId: leadId,
         nome: data.nome || data.name || 'Visitante Base44',
         email: data.email || '',
         whatsapp: data.whatsapp || data.phone || data.telefone || '',
@@ -206,11 +207,22 @@ async function startServer() {
         cargo: data.cargo || data.jobTitle || data.role || '',
         crachaId: data.crachaId || data.badgeId || leadId,
         origem: data.origem || 'Base44_App',
-        createdAt: new Date().toISOString(),
+        premio: data.premio || data.premioGanho || '',
+        voucher: data.voucher || data.voucherCode || '',
+        codigoVoucher: data.codigoVoucher || data.voucher || '',
+        problemas: data.problemas || data.resposta1 || '',
+        possiveisSolucoes: data.possiveisSolucoes || data.resposta2 || '',
+        respostasTriagem: data.respostasTriagem || '',
+        status: data.status || 'pending',
+        updatedAt: new Date().toISOString(),
+        createdAt: data.createdAt || new Date().toISOString(),
         customFields: data.customFields || {}
       };
 
       base44Leads[leadId] = leadPayload;
+      if (leadPayload.crachaId && leadPayload.crachaId !== leadId) {
+        base44Leads[leadPayload.crachaId] = leadPayload;
+      }
 
       // Generate direct game URL with prefilled parameters
       const params = new URLSearchParams({
@@ -228,7 +240,7 @@ async function startServer() {
 
       res.status(200).json({
         success: true,
-        message: "Lead recebido com sucesso!",
+        message: "Lead recebido e sincronizado com sucesso!",
         lead: leadPayload,
         gameUrl: triagemUrl,
         triagemUrl: triagemUrl,
@@ -241,15 +253,15 @@ async function startServer() {
   };
 
   const handleBase44Get = (req: express.Request, res: express.Response) => {
-    const { leadId } = req.params;
+    const leadId = req.params.leadId || (req.query.id as string) || (req.query.leadId as string) || (req.query.crachaId as string);
     if (leadId) {
       const lead = base44Leads[leadId];
       if (!lead) {
-        return res.status(404).json({ error: "Lead não encontrado" });
+        return res.status(404).json({ error: "Lead não encontrado", leadId });
       }
-      return res.json({ lead });
+      return res.json({ success: true, lead });
     }
-    const leads = Object.values(base44Leads).slice(-20).reverse();
+    const leads = Object.values(base44Leads).slice(-50).reverse();
     res.json({ count: leads.length, leads });
   };
 

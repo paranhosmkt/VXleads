@@ -4,8 +4,10 @@ import {
   Target, Sparkles, CheckCircle2, ArrowRight, RotateCcw, 
   Table, Download, Send, Globe, Code2, Copy, Check, 
   ChevronDown, ChevronUp, RefreshCw, Smartphone, Award,
-  Info, ExternalLink, HelpCircle, Lock
+  Info, ExternalLink, HelpCircle, Lock, Database
 } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 
 function triggerConfetti() {
@@ -313,6 +315,33 @@ export default function PrototypeRoulette() {
     };
 
     setSubmissions(prev => [newSubmission, ...prev]);
+
+    // 1. Salvar no Firebase Firestore em tempo real
+    const cleanDocId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : newSubmission.id;
+    try {
+      await setDoc(doc(db, 'event_leads', cleanDocId), {
+        ...newSubmission,
+        leadId: participant.crachaId || cleanDocId,
+        premioGanho: prizeName,
+        status: 'completed',
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      }, { merge: true });
+      console.log('Gravado no Firestore event_leads:', cleanDocId);
+    } catch (e) {
+      console.warn('Erro ao gravar no Firestore:', e);
+    }
+
+    // 2. Notificar backend local
+    try {
+      await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSubmission)
+      });
+    } catch (apiErr) {
+      // ignore
+    }
 
     // If Webhook URL is configured, send the complete payload
     if (webhookUrl.trim()) {

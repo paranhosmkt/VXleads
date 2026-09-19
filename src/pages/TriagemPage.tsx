@@ -8,7 +8,7 @@ import {
 import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { 
   TRIAGEM_QUESTION_TITLE, 
@@ -341,14 +341,17 @@ export default function TriagemPage() {
     };
 
     // 1. Save to Firestore (Online Cloud Database) so the whole commercial team can view in real-time
+    const cleanDocId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : record.id;
     try {
-      await addDoc(collection(db, 'event_leads'), {
+      await setDoc(doc(db, 'event_leads', cleanDocId), {
         ...record,
+        leadId: participant.crachaId || cleanDocId,
+        updatedAt: serverTimestamp(),
         createdAt: serverTimestamp()
-      });
+      }, { merge: true });
       setStatusMessage('Lead sincronizado online no Banco de Dados em Nuvem (Firestore)!');
     } catch (err) {
-      console.warn('Firestore addDoc error:', err);
+      console.warn('Firestore setDoc error:', err);
     }
 
     // 2. Save to LocalStorage (Offline browser cache fallback)

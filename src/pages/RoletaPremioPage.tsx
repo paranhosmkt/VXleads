@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { 
-  Sparkles, CheckCircle2, RotateCcw, Download, Target, Smartphone, Gift, Check, ExternalLink, Copy
+  Sparkles, CheckCircle2, RotateCcw, Download, Target, Smartphone, Gift, Check, ExternalLink, Copy, Cloud,
+  Database, ChevronDown, ChevronUp, Code2
 } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 
 function triggerConfetti() {
@@ -108,6 +111,8 @@ export default function RoletaPremioPage() {
   const [wonPrize, setWonPrize] = useState<(typeof PRIZES)[0] | null>(null);
   const [voucherCode, setVoucherCode] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [showFirebaseDetails, setShowFirebaseDetails] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleSpinWheel = () => {
     if (isSpinning) return;
@@ -135,8 +140,10 @@ export default function RoletaPremioPage() {
   };
 
   const persistResult = async (prizeName: string, voucher: string) => {
+    const cleanDocId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : `sub_${Date.now()}`;
+
     const record = {
-      id: 'sub_' + Date.now(),
+      id: cleanDocId,
       dataHora: new Date().toLocaleString('pt-BR'),
       nome: participant.nome,
       email: participant.email,
@@ -144,15 +151,46 @@ export default function RoletaPremioPage() {
       empresa: participant.empresa,
       cargo: participant.cargo,
       crachaId: participant.crachaId,
+      leadId: participant.crachaId,
       origem: participant.origem,
       resposta1: participant.r1,
       resposta2: participant.r2,
       resposta3: participant.r3,
+      problemas: participant.r1,
+      possiveisSolucoes: participant.r2,
+      codigoVoucher: voucher,
       premio: prizeName,
-      voucher: voucher
+      premioGanho: prizeName,
+      voucher: voucher,
+      voucherCode: voucher,
+      status: 'completed',
+      jogo: 'roleta'
     };
 
-    // Save to localStorage history
+    // 1. Sincronizar em Tempo Real no Banco de Dados em Nuvem (Firebase Firestore)
+    try {
+      await setDoc(doc(db, 'event_leads', cleanDocId), {
+        ...record,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      }, { merge: true });
+      setStatusMessage('Sincronizado no Firebase Firestore e pronto para o Base44!');
+    } catch (dbErr) {
+      console.warn('Erro ao salvar no Firestore:', dbErr);
+    }
+
+    // 2. Notificar backend local (/api/leads)
+    try {
+      await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record)
+      });
+    } catch (apiErr) {
+      // ignore
+    }
+
+    // 3. Salvar no histórico local offline
     try {
       const saved = localStorage.getItem('vx_proto_submissions');
       const list = saved ? JSON.parse(saved) : [];
@@ -162,7 +200,24 @@ export default function RoletaPremioPage() {
       console.error(e);
     }
 
-    // Send Webhook if configured
+    // 4. Se tiver webhook callback direto do Base44, disparar
+    if (participant.webhookCallback) {
+      try {
+        await fetch(participant.webhookCallback, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'prize_won',
+            leadId: participant.crachaId,
+            ...record
+          })
+        });
+      } catch (err) {
+        console.warn('Erro no callback do Base44:', err);
+      }
+    }
+
+    // 5. Enviar para webhook da Planilha Google (se configurado)
     if (webhookUrl) {
       try {
         await fetch(webhookUrl, {
@@ -171,12 +226,10 @@ export default function RoletaPremioPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(record)
         });
-        setStatusMessage('Dados consolidados e enviados com sucesso para a Planilha Google!');
+        setStatusMessage('Dados consolidados e enviados para Banco Firebase + Planilha Google!');
       } catch (e) {
-        setStatusMessage('Salvo no histórico do dispositivo.');
+        // fallback
       }
-    } else {
-      setStatusMessage('Salvo no histórico consolidado com sucesso!');
     }
   };
 
@@ -353,6 +406,84 @@ export default function RoletaPremioPage() {
                   <div><strong>2. Possíveis soluções:</strong> {participant.r2}</div>
                   <div><strong>3. Código do Voucher:</strong> {voucherCode}</div>
                   <div className="text-yellow-400 font-bold"><strong>Prêmio:</strong> {wonPrize.name} ({voucherCode})</div>
+                </div>
+
+                {/* Firebase & Base44 Integration Details */}
+                <div className="mt-4 pt-3 border-t border-emerald-500/20">
+                  <button
+                    type="button"
+                    onClick={() => setShowFirebaseDetails(!showFirebaseDetails)}
+                    className="w-full flex items-center justify-between text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors py-1 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Database size={14} />
+                      <span>Linkar com o Base44 via Firebase / API REST</span>
+                    </span>
+                    {showFirebaseDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+
+                  {showFirebaseDetails && (
+                    <div className="mt-3 p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-3 font-sans animate-fade-in">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-white flex items-center gap-1">
+                            <Cloud size={12} className="text-amber-400" />
+                            1. API REST Direta do Firebase Firestore:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cleanId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : 'CR-XXXX';
+                              const url = `https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents/event_leads/${cleanId}?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E`;
+                              navigator.clipboard.writeText(url);
+                              setCopiedKey('firestore');
+                              setTimeout(() => setCopiedKey(null), 2000);
+                            }}
+                            className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 flex items-center gap-1"
+                          >
+                            {copiedKey === 'firestore' ? <Check size={10} /> : <Copy size={10} />}
+                            {copiedKey === 'firestore' ? 'Copiado!' : 'Copiar URL'}
+                          </button>
+                        </div>
+                        <code className="block p-2 bg-slate-950 rounded text-[10px] text-slate-400 font-mono break-all select-all">
+                          https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents/event_leads/{participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : 'ID_DO_LEAD'}?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E
+                        </code>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          O Base44 pode fazer um simples <code>fetch(url)</code> nesta URL para consultar o prêmio e voucher deste lead em tempo real.
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-white flex items-center gap-1">
+                            <Code2 size={12} className="text-blue-400" />
+                            2. API Endpoint VX Leads:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cleanId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : 'CR-XXXX';
+                              const url = `${window.location.origin}/api/leads/${cleanId}`;
+                              navigator.clipboard.writeText(url);
+                              setCopiedKey('api');
+                              setTimeout(() => setCopiedKey(null), 2000);
+                            }}
+                            className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 flex items-center gap-1"
+                          >
+                            {copiedKey === 'api' ? <Check size={10} /> : <Copy size={10} />}
+                            {copiedKey === 'api' ? 'Copiado!' : 'Copiar URL'}
+                          </button>
+                        </div>
+                        <code className="block p-2 bg-slate-950 rounded text-[10px] text-slate-400 font-mono break-all select-all">
+                          {window.location.origin}/api/leads/{participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : 'ID_DO_LEAD'}
+                        </code>
+                      </div>
+
+                      <div className="p-2 bg-blue-950/30 rounded border border-blue-800/40 text-[10px] text-blue-200">
+                        💡 <strong>Dica de Automação:</strong> Se passar <code>&webhook=URL_DO_BASE44</code> na abertura da roleta, nosso sistema envia um POST automático no mesmo segundo em que a roleta para.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

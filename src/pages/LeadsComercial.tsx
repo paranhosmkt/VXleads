@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Download, RefreshCw, Smartphone, 
   Trophy, CheckCircle2, Clock, Phone, Mail, Building, Briefcase, 
-  ExternalLink, ArrowUpDown, Filter, Sparkles, Lock, KeyRound, LogOut, ArrowRight, ShieldCheck
+  ExternalLink, ArrowUpDown, Filter, Sparkles, Lock, KeyRound, LogOut, ArrowRight, ShieldCheck,
+  Code2, Copy, Check, X, Database, Cloud
 } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -46,6 +47,13 @@ export default function LeadsComercial() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGame, setFilterGame] = useState<string>('todos');
   const [selectedLead, setSelectedLead] = useState<EventLead | null>(null);
+
+  // Direct Firebase API Integration Modal
+  const [showApiModal, setShowApiModal] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [testLeadId, setTestLeadId] = useState('6aaee39e34cf9a3a6283ba77');
+  const [testResponse, setTestResponse] = useState<string | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
 
   // Authentication submission
   const handleLogin = (e: React.FormEvent) => {
@@ -281,6 +289,15 @@ export default function LeadsComercial() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setShowApiModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30 transition-colors cursor-pointer"
+            title="Ver credenciais e endpoints diretos da API do Firebase"
+          >
+            <Database size={14} className="text-amber-400" />
+            <span className="hidden sm:inline">API Direta Firebase</span>
+          </button>
+
           <button
             onClick={exportCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
@@ -576,6 +593,286 @@ export default function LeadsComercial() {
                   className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold cursor-pointer"
                 >
                   Fechar Detalhes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* API FIREBASE DIRECT INTEGRATION MODAL */}
+        {showApiModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                    <Database size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Acesso Direto à API do Firebase Firestore</h3>
+                    <p className="text-xs text-slate-400">Credenciais e endpoints oficiais para o Base44 ou qualquer sistema externo</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowApiModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Parametros e Segredos do Projeto */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span className="text-slate-500 block text-[11px]">API Key (apiKey / Segredo)</span>
+                  <span className="font-mono text-blue-400 font-bold break-all">AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E</span>
+                </div>
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span className="text-slate-500 block text-[11px]">Project ID (projectId)</span>
+                  <span className="font-mono text-white font-bold">gen-lang-client-0914985094</span>
+                </div>
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span className="text-slate-500 block text-[11px]">Database ID (firestoreDatabaseId)</span>
+                  <span className="font-mono text-amber-400 font-bold break-all">ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88</span>
+                </div>
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span className="text-slate-500 block text-[11px]">App ID (appId)</span>
+                  <span className="font-mono text-slate-300 font-bold break-all">1:239443020505:web:1e21020dea0711496f8cc8</span>
+                </div>
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span className="text-slate-500 block text-[11px]">Auth Domain (authDomain)</span>
+                  <span className="font-mono text-slate-300 font-bold break-all">gen-lang-client-0914985094.firebaseapp.com</span>
+                </div>
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                  <span className="text-slate-500 block text-[11px]">Storage Bucket (storageBucket)</span>
+                  <span className="font-mono text-slate-300 font-bold break-all">gen-lang-client-0914985094.firebasestorage.app</span>
+                </div>
+              </div>
+
+              {/* JSON de Configuração Completo */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-white">
+                    <KeyRound size={16} className="text-amber-400" />
+                    <span>Firebase Config Object (JSON Completo para Base44 / Secrets)</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const jsonConfig = JSON.stringify({
+                        apiKey: "AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E",
+                        authDomain: "gen-lang-client-0914985094.firebaseapp.com",
+                        projectId: "gen-lang-client-0914985094",
+                        storageBucket: "gen-lang-client-0914985094.firebasestorage.app",
+                        messagingSenderId: "239443020505",
+                        appId: "1:239443020505:web:1e21020dea0711496f8cc8",
+                        firestoreDatabaseId: "ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88"
+                      }, null, 2);
+                      navigator.clipboard.writeText(jsonConfig);
+                      setCopiedKey('json');
+                      setTimeout(() => setCopiedKey(null), 2000);
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedKey === 'json' ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedKey === 'json' ? 'Copiado!' : 'Copiar Objeto JSON'}</span>
+                  </button>
+                </div>
+                <pre className="p-3 bg-slate-900 rounded-xl text-[11px] font-mono text-amber-300/90 overflow-x-auto border border-slate-800">
+{`{
+  "apiKey": "AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E",
+  "authDomain": "gen-lang-client-0914985094.firebaseapp.com",
+  "projectId": "gen-lang-client-0914985094",
+  "storageBucket": "gen-lang-client-0914985094.firebasestorage.app",
+  "messagingSenderId": "239443020505",
+  "appId": "1:239443020505:web:1e21020dea0711496f8cc8",
+  "firestoreDatabaseId": "ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88"
+}`}
+                </pre>
+              </div>
+
+              {/* Endpoint 1: REST API Query por crachaId */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-white">
+                    <Cloud size={16} className="text-amber-400" />
+                    <span>1. Consulta REST Direta por Crachá (POST runQuery)</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const snippet = `curl -X POST "https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents:runQuery?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E" \\
+  -H "Content-Type: application/json" \\
+  -d '{"structuredQuery": {"from": [{"collectionId": "event_leads"}], "where": {"fieldFilter": {"field": {"fieldPath": "crachaId"}, "op": "EQUAL", "value": {"stringValue": "SEU_CRACHA_ID"}}}}}'`;
+                      navigator.clipboard.writeText(snippet);
+                      setCopiedKey('curl');
+                      setTimeout(() => setCopiedKey(null), 2000);
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedKey === 'curl' ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedKey === 'curl' ? 'Copiado!' : 'Copiar cURL'}</span>
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Utilize este endpoint HTTP puro no Base44 ou qualquer backend para buscar os dados de um participante pelo crachá:
+                </p>
+                <code className="block p-3 bg-slate-900 rounded-xl text-[11px] font-mono text-amber-300 break-all select-all border border-slate-800">
+                  POST https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents:runQuery?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E
+                </code>
+              </div>
+
+              {/* Endpoint 2: Snippet JavaScript para o Base44 */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-white">
+                    <Code2 size={16} className="text-blue-400" />
+                    <span>2. Código JavaScript para colar no Base44</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const code = `async function getLeadFromFirebase(crachaId) {
+  const url = 'https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents:runQuery?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: 'event_leads' }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: 'crachaId' },
+            op: 'EQUAL',
+            value: { stringValue: crachaId }
+          }
+        }
+      }
+    })
+  });
+  const data = await res.json();
+  if (data && data[0] && data[0].document) {
+    const f = data[0].document.fields;
+    return {
+      premio: f.premioGanho?.stringValue || f.premio?.stringValue,
+      voucher: f.voucher?.stringValue,
+      problemas: f.resposta1?.stringValue,
+      possiveisSolucoes: f.resposta2?.stringValue,
+      codigoVoucher: f.codigoVoucher?.stringValue || f.voucher?.stringValue
+    };
+  }
+  return null;
+}`;
+                      navigator.clipboard.writeText(code);
+                      setCopiedKey('js');
+                      setTimeout(() => setCopiedKey(null), 2000);
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedKey === 'js' ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedKey === 'js' ? 'Copiado!' : 'Copiar Função'}</span>
+                  </button>
+                </div>
+                <pre className="p-3 bg-slate-900 rounded-xl text-[11px] font-mono text-slate-300 overflow-x-auto border border-slate-800 max-h-44">
+{`async function getLeadFromFirebase(crachaId) {
+  const url = 'https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents:runQuery?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: 'event_leads' }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: 'crachaId' },
+            op: 'EQUAL',
+            value: { stringValue: crachaId }
+          }
+        }
+      }
+    })
+  });
+  const data = await res.json();
+  if (data && data[0] && data[0].document) {
+    const f = data[0].document.fields;
+    return {
+      premio: f.premioGanho?.stringValue || f.premio?.stringValue,
+      voucher: f.voucher?.stringValue,
+      problemas: f.resposta1?.stringValue,
+      possiveisSolucoes: f.resposta2?.stringValue,
+      codigoVoucher: f.codigoVoucher?.stringValue || f.voucher?.stringValue
+    };
+  }
+  return null;
+}`}
+                </pre>
+              </div>
+
+              {/* Testador em Tempo Real */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-emerald-400">
+                  <CheckCircle2 size={16} />
+                  <span>Testador da API Direta do Firebase</span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Teste a chamada HTTP em tempo real contra o Firebase Firestore para ver a resposta imediata:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={testLeadId}
+                    onChange={(e) => setTestLeadId(e.target.value)}
+                    placeholder="Digite o ID do crachá (Ex: 6aaee39e34cf9a3a6283ba77)"
+                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white font-mono"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!testLeadId.trim()) return;
+                      setTestLoading(true);
+                      setTestResponse(null);
+                      try {
+                        const url = `https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents:runQuery?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E`;
+                        const res = await fetch(url, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            structuredQuery: {
+                              from: [{ collectionId: 'event_leads' }],
+                              where: {
+                                fieldFilter: {
+                                  field: { fieldPath: 'crachaId' },
+                                  op: 'EQUAL',
+                                  value: { stringValue: testLeadId.trim() }
+                                }
+                              }
+                            }
+                          })
+                        });
+                        const data = await res.json();
+                        setTestResponse(JSON.stringify(data, null, 2));
+                      } catch (err: any) {
+                        setTestResponse(`Erro ao consultar API: ${err.message}`);
+                      } finally {
+                        setTestLoading(false);
+                      }
+                    }}
+                    disabled={testLoading}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {testLoading ? 'Consultando...' : 'Testar Consulta'}
+                  </button>
+                </div>
+
+                {testResponse && (
+                  <pre className="p-3 bg-slate-900 rounded-xl text-[10px] font-mono text-emerald-300 overflow-x-auto border border-emerald-500/20 max-h-56">
+                    {testResponse}
+                  </pre>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setShowApiModal(false)}
+                  className="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold cursor-pointer"
+                >
+                  Fechar
                 </button>
               </div>
             </div>
