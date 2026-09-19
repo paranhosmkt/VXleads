@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { 
-  Sparkles, CheckCircle2, RotateCcw, Download, Target, Smartphone, Gift, Check 
+  Sparkles, CheckCircle2, RotateCcw, Download, Target, Smartphone, Gift, Check, ExternalLink, Copy
 } from 'lucide-react';
+import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 
 function triggerConfetti() {
   const canvas = document.createElement('canvas');
@@ -85,16 +86,18 @@ export default function RoletaPremioPage() {
 
   // Participant details received from URL (passed from Base44 / Triagem)
   const participant = {
-    nome: searchParams.get('nome') || 'Visitante Convidado',
+    nome: searchParams.get('nome') || searchParams.get('name') || 'Visitante Convidado',
     email: searchParams.get('email') || '',
-    whatsapp: searchParams.get('whatsapp') || '',
-    empresa: searchParams.get('empresa') || 'Empresa Visitante',
-    cargo: searchParams.get('cargo') || 'Participante',
-    crachaId: searchParams.get('crachaId') || 'CR-0000',
+    whatsapp: searchParams.get('whatsapp') || searchParams.get('telefone') || searchParams.get('phone') || '',
+    empresa: searchParams.get('empresa') || searchParams.get('company') || 'Empresa Visitante',
+    cargo: searchParams.get('cargo') || searchParams.get('role') || 'Participante',
+    crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || searchParams.get('lead_id') || searchParams.get('id') || 'CR-0000',
     origem: searchParams.get('origem') || 'Triagem_Base44',
-    r1: searchParams.get('r1') || 'Não informada',
-    r2: searchParams.get('r2') || 'Não informada',
-    r3: searchParams.get('r3') || 'Não informada'
+    r1: searchParams.get('r1') || searchParams.get('resposta1') || 'Não informada',
+    r2: searchParams.get('r2') || searchParams.get('resposta2') || 'Não informada',
+    r3: searchParams.get('r3') || searchParams.get('resposta3') || 'Não informada',
+    returnUrl: searchParams.get('return_url') || searchParams.get('returnUrl') || searchParams.get('redirect_url') || searchParams.get('redirectUrl') || searchParams.get('callback_url') || searchParams.get('callback') || '',
+    webhookCallback: searchParams.get('webhook') || searchParams.get('webhook_url') || ''
   };
 
   const webhookUrl = localStorage.getItem('vx_proto_webhook_url') || '';
@@ -354,13 +357,33 @@ export default function RoletaPremioPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a
-                  href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
+                <button
+                  onClick={() => {
+                    if (wonPrize) {
+                      executeBase44Return({
+                        returnUrl: participant.returnUrl,
+                        leadId: participant.crachaId,
+                        nome: participant.nome,
+                        empresa: participant.empresa,
+                        cargo: participant.cargo,
+                        whatsapp: participant.whatsapp,
+                        email: participant.email,
+                        premio: wonPrize.name,
+                        voucher: voucherCode,
+                        jogo: 'roleta',
+                        respostasTriagem: `${participant.r1} | ${participant.r2} | ${participant.r3}`,
+                        webhookCallback: participant.webhookCallback
+                      });
+                    } else {
+                      window.location.href = 'https://pristine-lead-scan-go.base44.app/?is_new_user=true';
+                    }
+                  }}
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
+                  title="Retornar ao Base44 com prêmio, voucher e dados do participante preenchidos"
                 >
                   <RotateCcw size={16} />
-                  <span>Retornar à Captura</span>
-                </a>
+                  <span>Retornar à Captura no Base44</span>
+                </button>
 
                 <RouterLink
                   to="/prototipo-roleta"

@@ -3,12 +3,13 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, Dices, Gift, Smartphone, CheckCircle2, 
   ArrowRight, ShieldCheck, Trophy, Layers, Flame, Check, HelpCircle,
-  ExternalLink, Users, Database, Lock
+  ExternalLink, Users, Database, Lock, RotateCcw
 } from 'lucide-react';
 import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { 
   TRIAGEM_QUESTION_TITLE, 
   TRIAGEM_QUESTION_SUBTITLE, 
@@ -395,48 +396,50 @@ export default function TriagemPage() {
   };
 
   // Generate return to Base44 URL with all query parameters
-  const generateBase44ReturnUrl = () => {
-    // If a specific return/redirect URL was passed from Base44 (e.g. deep link to lead sheet or app), use it
-    let baseUrl = participant.returnUrl || 'https://pristine-lead-scan-go.base44.app/';
-    
-    // Parse existing query params if baseUrl already has them
-    let urlObj: URL;
-    try {
-      urlObj = new URL(baseUrl);
-    } catch {
-      urlObj = new URL(baseUrl, window.location.origin);
-    }
+  const generateBase44ReturnUrl = (options?: { skipTriagem?: boolean }) => {
+    const productsStr = !options?.skipTriagem && matchedProductsList.length > 0 
+      ? matchedProductsList.join(', ') 
+      : (options?.skipTriagem ? 'A Definir' : 'Nenhum');
 
-    const params = urlObj.searchParams;
-    params.set('is_new_user', 'true');
-    params.set('crachaId', participant.crachaId);
-    params.set('leadId', participant.crachaId);
-    params.set('nome', participant.nome);
-    params.set('name', participant.nome);
-    params.set('empresa', participant.empresa);
-    params.set('company', participant.empresa);
-    params.set('cargo', participant.cargo);
-    params.set('role', participant.cargo);
-    params.set('whatsapp', participant.whatsapp);
-    params.set('telefone', participant.whatsapp);
-    params.set('phone', participant.whatsapp);
-    params.set('email', participant.email);
-    params.set('premio', wonPrize.name);
-    params.set('premio_ganho', wonPrize.name);
-    params.set('voucher', voucherCode);
-    params.set('voucher_code', voucherCode);
-    params.set('jogo', selectedGame);
+    return buildBase44ReturnUrl({
+      returnUrl: participant.returnUrl,
+      leadId: participant.crachaId,
+      nome: participant.nome,
+      empresa: participant.empresa,
+      cargo: participant.cargo,
+      whatsapp: participant.whatsapp,
+      email: participant.email,
+      premio: wonPrize.name,
+      voucher: voucherCode,
+      jogo: selectedGame,
+      produtos: productsStr,
+      opcoesTriagem: !options?.skipTriagem ? selectedOptionIds.join(',') : '',
+      respostasTriagem: !options?.skipTriagem ? selectedOptionIds.map(id => `Opção ${id}`).join(', ') : '',
+      webhookCallback: participant.webhookCallback
+    });
+  };
 
-    // Products string (ACM, TDM, VERICUT, CRIBWISE, HUMAINX)
-    const productsStr = matchedProductsList.length > 0 ? matchedProductsList.join(', ') : 'Nenhum';
-    params.set('produtos', productsStr);
-    params.set('produtos_direcionados', productsStr);
+  const handleExecuteReturn = async (options?: { skipTriagem?: boolean }) => {
+    const productsStr = !options?.skipTriagem && matchedProductsList.length > 0 
+      ? matchedProductsList.join(', ') 
+      : (options?.skipTriagem ? 'A Definir' : 'Nenhum');
 
-    // Selected options IDs as comma separated (ex: "1, 3")
-    params.set('opcoes_triagem', selectedOptionIds.join(','));
-    params.set('respostas_triagem', selectedOptionIds.map(id => `Opção ${id}`).join(', '));
-
-    return urlObj.toString();
+    await executeBase44Return({
+      returnUrl: participant.returnUrl,
+      leadId: participant.crachaId,
+      nome: participant.nome,
+      empresa: participant.empresa,
+      cargo: participant.cargo,
+      whatsapp: participant.whatsapp,
+      email: participant.email,
+      premio: wonPrize.name,
+      voucher: voucherCode,
+      jogo: selectedGame,
+      produtos: productsStr,
+      opcoesTriagem: !options?.skipTriagem ? selectedOptionIds.join(',') : '',
+      respostasTriagem: !options?.skipTriagem ? selectedOptionIds.map(id => `Opção ${id}`).join(', ') : '',
+      webhookCallback: participant.webhookCallback
+    });
   };
 
   return (
@@ -786,13 +789,23 @@ export default function TriagemPage() {
                 Para desbloquear e gerar o seu <strong>Voucher Oficial</strong> e salvar seu benefício no estande, responda à <strong>pergunta rápida de triagem</strong> sobre as operações da sua empresa.
               </p>
 
-              <div className="pt-2">
+              <div className="pt-2 flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setCurrentStep('triagem')}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-lg shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                  className="flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                  title="Responder a pergunta de triagem rápida para direcionar produtos e gerar voucher completo"
                 >
-                  <span>Liberar Meu Voucher Agora</span>
-                  <ArrowRight size={20} />
+                  <span>Liberar Voucher Completo</span>
+                  <ArrowRight size={18} />
+                </button>
+
+                <button
+                  onClick={() => handleExecuteReturn({ skipTriagem: true })}
+                  className="py-4 px-6 rounded-2xl bg-blue-600/90 hover:bg-blue-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer border border-blue-500/40 shadow-lg shadow-blue-600/20"
+                  title="Retornar diretamente ao Base44 com o prêmio ganho e código de voucher gerado"
+                >
+                  <RotateCcw size={16} />
+                  <span>Retornar ao Base44 com Prêmio</span>
                 </button>
               </div>
             </div>
@@ -975,14 +988,14 @@ export default function TriagemPage() {
 
               {/* Return to Base44 or start next lead */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <a
-                  href={generateBase44ReturnUrl()}
+                <button
+                  onClick={() => handleExecuteReturn()}
                   className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 cursor-pointer"
                   title="Retornar ao Base44 com todos os dados preenchidos: nome, crachá, prêmio, voucher e produtos"
                 >
                   <ExternalLink size={16} />
                   <span>Retornar à Captura no Base44</span>
-                </a>
+                </button>
 
                 <button
                   onClick={() => navigate('/leads')}

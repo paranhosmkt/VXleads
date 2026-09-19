@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp, RefreshCw, Smartphone, Award,
   Info, ExternalLink, HelpCircle, Lock
 } from 'lucide-react';
+import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 
 function triggerConfetti() {
   const canvas = document.createElement('canvas');
@@ -81,6 +82,8 @@ interface ParticipantData {
   cargo: string;
   crachaId: string;
   origem: string;
+  returnUrl?: string;
+  webhookCallback?: string;
 }
 
 interface Question {
@@ -162,13 +165,15 @@ export default function PrototypeRoulette() {
 
   // Participant Data from API / URL params
   const [participant, setParticipant] = useState<ParticipantData>({
-    nome: searchParams.get('nome') || 'Mariana Costa',
+    nome: searchParams.get('nome') || searchParams.get('name') || 'Mariana Costa',
     email: searchParams.get('email') || 'mariana.costa@logtech.com.br',
-    whatsapp: searchParams.get('whatsapp') || '(11) 98765-4321',
-    empresa: searchParams.get('empresa') || 'LogTech Brasil',
-    cargo: searchParams.get('cargo') || 'Diretora de Operações',
-    crachaId: searchParams.get('crachaId') || 'CR-9482',
-    origem: searchParams.get('origem') || 'API_App_Evento'
+    whatsapp: searchParams.get('whatsapp') || searchParams.get('telefone') || searchParams.get('phone') || '(11) 98765-4321',
+    empresa: searchParams.get('empresa') || searchParams.get('company') || 'LogTech Brasil',
+    cargo: searchParams.get('cargo') || searchParams.get('role') || 'Diretora de Operações',
+    crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || searchParams.get('lead_id') || searchParams.get('id') || 'CR-9482',
+    origem: searchParams.get('origem') || 'Base44',
+    returnUrl: searchParams.get('return_url') || searchParams.get('returnUrl') || searchParams.get('redirect_url') || searchParams.get('redirectUrl') || searchParams.get('callback_url') || searchParams.get('callback') || '',
+    webhookCallback: searchParams.get('webhook') || searchParams.get('webhook_url') || ''
   });
 
   const [isSimulatingApi, setIsSimulatingApi] = useState(false);
@@ -208,16 +213,18 @@ export default function PrototypeRoulette() {
 
   // Update participant when search params change
   useEffect(() => {
-    const nome = searchParams.get('nome');
+    const nome = searchParams.get('nome') || searchParams.get('name');
     if (nome) {
       setParticipant({
         nome: nome,
         email: searchParams.get('email') || '',
-        whatsapp: searchParams.get('whatsapp') || '',
-        empresa: searchParams.get('empresa') || '',
-        cargo: searchParams.get('cargo') || '',
-        crachaId: searchParams.get('crachaId') || 'CR-' + Math.floor(1000 + Math.random() * 9000),
-        origem: searchParams.get('origem') || 'API_App_Evento'
+        whatsapp: searchParams.get('whatsapp') || searchParams.get('telefone') || searchParams.get('phone') || '',
+        empresa: searchParams.get('empresa') || searchParams.get('company') || '',
+        cargo: searchParams.get('cargo') || searchParams.get('role') || '',
+        crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || searchParams.get('lead_id') || searchParams.get('id') || 'CR-' + Math.floor(1000 + Math.random() * 9000),
+        origem: searchParams.get('origem') || 'Base44',
+        returnUrl: searchParams.get('return_url') || searchParams.get('returnUrl') || searchParams.get('redirect_url') || searchParams.get('redirectUrl') || searchParams.get('callback_url') || searchParams.get('callback') || '',
+        webhookCallback: searchParams.get('webhook') || searchParams.get('webhook_url') || ''
       });
     }
   }, [searchParams]);
@@ -977,13 +984,33 @@ Content-Type: application/json
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a
-                  href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
+                <button
+                  onClick={() => {
+                    if (wonPrize) {
+                      executeBase44Return({
+                        returnUrl: participant.returnUrl,
+                        leadId: participant.crachaId,
+                        nome: participant.nome,
+                        empresa: participant.empresa,
+                        cargo: participant.cargo,
+                        whatsapp: participant.whatsapp,
+                        email: participant.email,
+                        premio: wonPrize.name,
+                        voucher: voucherCode,
+                        jogo: 'roleta',
+                        respostasTriagem: `Equipe: ${answers[1] || ''} | Desafio: ${answers[2] || ''} | Momento: ${answers[3] || ''}`,
+                        webhookCallback: participant.webhookCallback
+                      });
+                    } else {
+                      window.location.href = 'https://pristine-lead-scan-go.base44.app/?is_new_user=true';
+                    }
+                  }}
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
+                  title="Retornar ao Base44 com todos os dados preenchidos: prêmio, voucher, crachá e respostas de triagem"
                 >
                   <RotateCcw size={16} />
-                  <span>Retornar à Captura</span>
-                </a>
+                  <span>Retornar à Captura no Base44</span>
+                </button>
 
                 <button
                   onClick={downloadCSV}

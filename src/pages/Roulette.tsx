@@ -10,6 +10,7 @@ import ReactPlayerRaw from 'react-player';
 const ReactPlayer = ReactPlayerRaw as any;
 import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
+import { executeBase44Return } from '../lib/base44';
 
 const COLORS = ['#F59E0B', '#3B82F6', '#10B981', '#EC4899', '#8B5CF6', '#EF4444', '#14B8A6', '#F97316'];
 
@@ -677,6 +678,30 @@ export default function Roulette() {
                     >
                       Resgatar agora
                     </button>
+
+                    {Boolean(leadForm['return_url'] || leadForm['redirect_url'] || leadForm['crachaId'] || leadForm['cracha'] || (typeof document !== 'undefined' && document.referrer && document.referrer.includes('base44.app'))) && (
+                      <button 
+                        onClick={() => {
+                          const voucher = `VX-${Math.floor(10000 + Math.random() * 90000)}`;
+                          executeBase44Return({
+                            returnUrl: leadForm['return_url'] || leadForm['redirect_url'],
+                            leadId: leadForm['crachaId'] || leadForm['cracha'] || createdLeadId || 'CR-VISITANTE',
+                            nome: leadForm['nome'] || leadForm['name'],
+                            empresa: leadForm['empresa'] || leadForm['company'],
+                            cargo: leadForm['cargo'] || leadForm['role'],
+                            whatsapp: leadForm['whatsapp'] || leadForm['telefone'] || leadForm['phone'],
+                            email: leadForm['email'],
+                            premio: selectedPrize.nome,
+                            voucher: voucher,
+                            jogo: gameType
+                          });
+                        }}
+                        className="mt-3 px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-base rounded-xl shadow-lg transition-colors w-full flex items-center justify-center gap-2 cursor-pointer"
+                        title="Retornar ao Base44 com o prêmio ganho e voucher"
+                      >
+                        Retornar ao Base44 com Prêmio & Voucher
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
