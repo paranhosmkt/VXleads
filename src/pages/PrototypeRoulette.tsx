@@ -96,35 +96,35 @@ interface Question {
 const QUESTIONS: Question[] = [
   {
     id: 1,
-    title: 'Qual o tamanho da sua equipe comercial / de atendimento em eventos?',
-    subtitle: 'Ajuda a dimensionar o volume de totens ou tablets ideais.',
+    title: '1. Problemas',
+    subtitle: 'Identifique os principais desafios e gargalos da sua operação atual.',
     options: [
-      { id: 'A', label: '1 a 3 pessoas', desc: 'Operação enxuta, foco em automação total' },
-      { id: 'B', label: '4 a 10 pessoas', desc: 'Equipe média para fluxo constante' },
-      { id: 'C', label: 'Mais de 10 pessoas', desc: 'Grande estande com múltiplos promotores' },
-      { id: 'D', label: 'Apenas sócios / diretoria', desc: 'Foco exclusivo em tomadores de decisão' }
+      { id: 'A', label: 'Perda de leads e anotações manuais', desc: 'Contatos anotados no papel ou perdidos após o evento' },
+      { id: 'B', label: 'Dificuldade de atrair visitantes do corredor', desc: 'Pessoas passam direto pelo estande sem engajar' },
+      { id: 'C', label: 'Follow-up demorado após a feira', desc: 'Dias ou semanas para acionar os contatos captados' },
+      { id: 'D', label: 'Falta de qualificação em tempo real', desc: 'Não sabe quem tem poder de compra ou perfil ideal' }
     ]
   },
   {
     id: 2,
-    title: 'Qual o maior obstáculo do seu estande na captação de leads?',
-    subtitle: 'Identifica o gargalo principal do seu funil presencial.',
+    title: '2. Possíveis soluções',
+    subtitle: 'Qual a abordagem ideal para resolver esses gargalos no estande?',
     options: [
-      { id: 'A', label: 'Atrair o visitante do corredor', desc: 'Pessoas passam direto sem parar' },
-      { id: 'B', label: 'Anotações em papel ou crachás perdidos', desc: 'Dados ilegíveis ou esquecidos na mala' },
-      { id: 'C', label: 'Follow-up demorado após a feira', desc: 'Dias para entrar em contato com o lead' },
-      { id: 'D', label: 'Falta de qualificação na hora', desc: 'Não sabe quem tem poder de compra' }
+      { id: 'A', label: 'Gamificação interativa no estande', desc: 'Roleta digital, raspadinha e totem de engajamento' },
+      { id: 'B', label: 'Integração direta com CRM / Base44', desc: 'Sincronização imediata dos dados dos visitantes' },
+      { id: 'C', label: 'Triagem e qualificação comercial rápida', desc: 'Perguntas estratégicas antes de entregar o benefício' },
+      { id: 'D', label: 'Automação completa via QR Code / Crachá', desc: 'Leitura rápida de crachás com geração de vouchers' }
     ]
   },
   {
     id: 3,
-    title: 'Qual a previsão do próximo evento ou feira da sua empresa?',
-    subtitle: 'Para mapear o tempo hábil de implantação da gamificação.',
+    title: '3. Código do Voucher',
+    subtitle: 'Confirmação e liberação do código de benefício oficial.',
     options: [
-      { id: 'A', label: 'Próximos 30 a 60 dias', desc: 'Precisamos de solução rápida e pronta' },
-      { id: 'B', label: 'Neste semestre', desc: 'Estamos na fase de planejamento e cotação' },
-      { id: 'C', label: 'Ano que vem', desc: 'Montando o orçamento anual de eventos' },
-      { id: 'D', label: 'Apenas avaliando protótipo', desc: 'Estudando novas tecnologias para o futuro' }
+      { id: 'A', label: 'Voucher Automático Gerado no Sorteio', desc: 'Código exclusivo validado para resgate no estande' },
+      { id: 'B', label: 'Desconto Comercial Especial', desc: 'Condição exclusiva para negociação na feira' },
+      { id: 'C', label: 'Brinde Físico de Participação', desc: 'Retirada imediata com o promotor do estande' },
+      { id: 'D', label: 'Atendimento VIP Prioritário', desc: 'Reunião agendada com especialista técnico' }
     ]
   }
 ];
@@ -154,6 +154,9 @@ export interface LeadSubmission {
   resposta1: string;
   resposta2: string;
   resposta3: string;
+  problemas?: string;
+  possiveisSolucoes?: string;
+  codigoVoucher?: string;
   // Roleta
   premio: string;
   voucher: string;
@@ -301,6 +304,9 @@ export default function PrototypeRoulette() {
       resposta1: answers[1] || 'Não respondeu',
       resposta2: answers[2] || 'Não respondeu',
       resposta3: answers[3] || 'Não respondeu',
+      problemas: answers[1] || 'Não respondeu',
+      possiveisSolucoes: answers[2] || 'Não respondeu',
+      codigoVoucher: voucher,
       premio: prizeName,
       voucher: voucher,
       statusEnvioPlanilha: webhookUrl ? 'Enviado' : 'Simulado'
@@ -355,9 +361,9 @@ export default function PrototypeRoulette() {
       'Cargo',
       'Crachá ID',
       'Origem API',
-      'Pergunta 1 (Tamanho Equipe)',
-      'Pergunta 2 (Gargalo Estande)',
-      'Pergunta 3 (Previsão Evento)',
+      '1. Problemas',
+      '2. Possíveis soluções',
+      '3. Código do Voucher',
       'Prêmio Sorteado',
       'Código Voucher'
     ];
@@ -975,9 +981,9 @@ Content-Type: application/json
                 <div className="bg-slate-950/80 rounded-xl p-3 text-xs space-y-1 font-mono text-slate-300 border border-emerald-500/20">
                   <div><strong>Participante:</strong> {participant.nome} ({participant.empresa} - {participant.cargo})</div>
                   <div><strong>Origem / Crachá:</strong> {participant.origem} / {participant.crachaId}</div>
-                  <div><strong>Tamanho Equipe:</strong> {answers[1]}</div>
-                  <div><strong>Principal Desafio:</strong> {answers[2]}</div>
-                  <div><strong>Momento de Compra:</strong> {answers[3]}</div>
+                  <div><strong>1. Problemas:</strong> {answers[1]}</div>
+                  <div><strong>2. Possíveis soluções:</strong> {answers[2]}</div>
+                  <div><strong>3. Código do Voucher:</strong> {voucherCode}</div>
                   <div className="text-yellow-400 font-bold"><strong>Prêmio Sorteado:</strong> {wonPrize.name} ({voucherCode})</div>
                 </div>
               </div>
@@ -998,7 +1004,9 @@ Content-Type: application/json
                         premio: wonPrize.name,
                         voucher: voucherCode,
                         jogo: 'roleta',
-                        respostasTriagem: `Equipe: ${answers[1] || ''} | Desafio: ${answers[2] || ''} | Momento: ${answers[3] || ''}`,
+                        problemas: answers[1] || '',
+                        possiveisSolucoes: answers[2] || '',
+                        respostasTriagem: `1. Problemas: ${answers[1] || ''} | 2. Possíveis soluções: ${answers[2] || ''} | 3. Código do Voucher: ${voucherCode}`,
                         webhookCallback: participant.webhookCallback
                       });
                     } else {
@@ -1078,9 +1086,9 @@ Content-Type: application/json
                     <th className="py-3 px-3">Data/Hora</th>
                     <th className="py-3 px-3">Visitante (API)</th>
                     <th className="py-3 px-3">Empresa & Cargo</th>
-                    <th className="py-3 px-3">Q1: Tamanho Equipe</th>
-                    <th className="py-3 px-3">Q2: Principal Desafio</th>
-                    <th className="py-3 px-3">Q3: Momento Compra</th>
+                    <th className="py-3 px-3">1. Problemas</th>
+                    <th className="py-3 px-3">2. Possíveis soluções</th>
+                    <th className="py-3 px-3">3. Código do Voucher</th>
                     <th className="py-3 px-3">Prêmio Roleta</th>
                     <th className="py-3 px-3">Voucher</th>
                   </tr>

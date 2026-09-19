@@ -17,6 +17,8 @@ export interface Base44LeadPayload {
   produtos?: string;
   opcoesTriagem?: string;
   respostasTriagem?: string;
+  problemas?: string;
+  possiveisSolucoes?: string;
   webhookCallback?: string;
 }
 
@@ -133,6 +135,17 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
   }
   if (payload.respostasTriagem) {
     p.set('respostas_triagem', payload.respostasTriagem);
+    p.set('triagem', payload.respostasTriagem);
+  }
+  if (payload.problemas) {
+    p.set('problemas', payload.problemas);
+    p.set('problema', payload.problemas);
+    p.set('pergunta_1', payload.problemas);
+  }
+  if (payload.possiveisSolucoes) {
+    p.set('possiveis_solucoes', payload.possiveisSolucoes);
+    p.set('solucoes', payload.possiveisSolucoes);
+    p.set('pergunta_2', payload.possiveisSolucoes);
   }
 
   return urlObj.toString();

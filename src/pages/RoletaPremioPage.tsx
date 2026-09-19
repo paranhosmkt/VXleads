@@ -349,9 +349,9 @@ export default function RoletaPremioPage() {
                 
                 <div className="bg-slate-950/80 rounded-xl p-3 text-xs space-y-1 font-mono text-slate-300 border border-emerald-500/20">
                   <div><strong>Participante:</strong> {participant.nome} ({participant.empresa})</div>
-                  <div><strong>Equipe:</strong> {participant.r1}</div>
-                  <div><strong>Desafio:</strong> {participant.r2}</div>
-                  <div><strong>Momento:</strong> {participant.r3}</div>
+                  <div><strong>1. Problemas:</strong> {participant.r1}</div>
+                  <div><strong>2. Possíveis soluções:</strong> {participant.r2}</div>
+                  <div><strong>3. Código do Voucher:</strong> {voucherCode}</div>
                   <div className="text-yellow-400 font-bold"><strong>Prêmio:</strong> {wonPrize.name} ({voucherCode})</div>
                 </div>
               </div>
@@ -371,7 +371,9 @@ export default function RoletaPremioPage() {
                         premio: wonPrize.name,
                         voucher: voucherCode,
                         jogo: 'roleta',
-                        respostasTriagem: `${participant.r1} | ${participant.r2} | ${participant.r3}`,
+                        problemas: participant.r1,
+                        possiveisSolucoes: participant.r2,
+                        respostasTriagem: `1. Problemas: ${participant.r1} | 2. Possíveis soluções: ${participant.r2} | 3. Código do Voucher: ${voucherCode}`,
                         webhookCallback: participant.webhookCallback
                       });
                     } else {
