@@ -923,35 +923,40 @@ Content-Type: application/json
                       const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
                       
                       const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
-
-                      const textAngle = startAngle + angle / 2;
-                      const textRadius = 32;
-                      const tx = 50 + textRadius * Math.cos((Math.PI * textAngle) / 180);
-                      const ty = 50 + textRadius * Math.sin((Math.PI * textAngle) / 180);
+                      const midAngle = startAngle + angle / 2;
 
                       return (
                         <g key={prize.id}>
                           <path d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
-                          <text
-                            x={tx}
-                            y={ty}
-                            fill="#ffffff"
-                            fontSize="4.2"
-                            fontWeight="900"
-                            textAnchor="middle"
-                            dominantBaseline="central"
-                            transform={`rotate(${textAngle + 90}, ${tx}, ${ty})`}
-                          >
-                            {prize.name}
-                          </text>
+                          {/* Radial diagonal alignment: Text positioned along the slice centerline */}
+                          <g transform={`rotate(${midAngle}, 50, 50)`}>
+                            <text
+                              x={74}
+                              y={50}
+                              fill="#ffffff"
+                              stroke="#0f172a"
+                              strokeWidth="0.6"
+                              paintOrder="stroke fill"
+                              fontSize="3.2"
+                              fontWeight="900"
+                              textAnchor="middle"
+                              dominantBaseline="central"
+                              style={{
+                                letterSpacing: '0.02em',
+                                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.85))'
+                              }}
+                            >
+                              {prize.name}
+                            </text>
+                          </g>
                         </g>
                       );
                     })}
                   </svg>
 
-                  {/* Center Hub */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-slate-900 border-4 border-yellow-400 flex items-center justify-center shadow-lg z-20">
-                    <Sparkles className="text-yellow-400" size={24} />
+                  {/* Sleek Center Hub */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-slate-900 border-4 border-yellow-400 flex items-center justify-center shadow-2xl z-20 pointer-events-none">
+                    <Sparkles className="text-yellow-400" size={20} />
                   </div>
                 </div>
               </div>

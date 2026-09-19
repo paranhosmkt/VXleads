@@ -660,19 +660,25 @@ export default function TriagemPage() {
                           <g key={prize.id}>
                             <path d={pathData} fill={prize.color} stroke="#1e293b" strokeWidth="0.8" />
                             
-                            {/* Radial alignment: Text positioned along the slice radius */}
+                            {/* Radial diagonal alignment: Text positioned along the slice centerline */}
                             <g transform={`rotate(${midAngle}, 50, 50)`}>
                               <text
-                                x={32}
+                                x={74}
                                 y={50}
                                 fill="#ffffff"
-                                fontSize="3.8"
+                                stroke="#0f172a"
+                                strokeWidth="0.6"
+                                paintOrder="stroke fill"
+                                fontSize="3.2"
                                 fontWeight="900"
                                 textAnchor="middle"
                                 dominantBaseline="central"
-                                style={{ letterSpacing: '0.01em', textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}
+                                style={{
+                                  letterSpacing: '0.02em',
+                                  filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.85))'
+                                }}
                               >
-                                {prize.shortName}
+                                {prize.name}
                               </text>
                             </g>
                           </g>
@@ -680,12 +686,9 @@ export default function TriagemPage() {
                       })}
                     </svg>
 
-                    {/* Prominent Center Hub */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-slate-950 via-slate-900 to-slate-800 border-4 border-yellow-400 shadow-2xl flex flex-col items-center justify-center z-20 text-center">
-                      <Sparkles className="text-yellow-400 mb-0.5" size={16} />
-                      <span className="text-yellow-400 font-black text-[10px] tracking-wider leading-none">
-                        VX LEADS
-                      </span>
+                    {/* Sleek Center Hub positioned so it never overlaps text */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-slate-950 via-slate-900 to-slate-800 border-4 border-yellow-400 shadow-2xl flex flex-col items-center justify-center z-20 text-center pointer-events-none">
+                      <Sparkles className="text-yellow-400" size={16} />
                     </div>
                   </div>
                 </div>

@@ -324,16 +324,23 @@ export default function RoletaPremioPage() {
                       return (
                         <g key={prize.id}>
                           <path d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
+                          {/* Radial diagonal alignment: Text positioned along the slice centerline */}
                           <g transform={`rotate(${midAngle}, 50, 50)`}>
                             <text
-                              x={32}
+                              x={74}
                               y={50}
                               fill="#ffffff"
-                              fontSize="3.6"
+                              stroke="#0f172a"
+                              strokeWidth="0.6"
+                              paintOrder="stroke fill"
+                              fontSize="3.2"
                               fontWeight="900"
                               textAnchor="middle"
                               dominantBaseline="central"
-                              style={{ letterSpacing: '0.02em', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+                              style={{
+                                letterSpacing: '0.02em',
+                                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.85))'
+                              }}
                             >
                               {prize.name}
                             </text>
@@ -343,9 +350,9 @@ export default function RoletaPremioPage() {
                     })}
                   </svg>
 
-                  {/* Center Hub */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-slate-900 border-4 border-yellow-400 flex items-center justify-center shadow-lg z-20">
-                    <Sparkles className="text-yellow-400" size={24} />
+                  {/* Sleek Center Hub positioned so it never overlaps text */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-slate-900 border-4 border-yellow-400 flex items-center justify-center shadow-2xl z-20 pointer-events-none">
+                    <Sparkles className="text-yellow-400" size={20} />
                   </div>
                 </div>
               </div>
