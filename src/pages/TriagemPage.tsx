@@ -9,6 +9,58 @@ import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  TRIAGEM_QUESTION_TITLE, 
+  TRIAGEM_QUESTION_SUBTITLE, 
+  TRIAGEM_ALTERNATIVES, 
+  calculateMatchedProducts 
+} from '../data/triagemConfig';
+
+// Audio click and fanfare effect using Web Audio API
+function playTickSound() {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(580, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  } catch (e) {
+    // AudioContext may be blocked by browser policy prior to user interaction
+  }
+}
+
+function playWinSound() {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const notes = [440, 554.37, 659.25, 880];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.12);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + idx * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.12 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.12);
+      osc.stop(ctx.currentTime + idx * 0.12 + 0.4);
+    });
+  } catch (e) {
+    // ignore
+  }
+}
 
 // Confetti burst helper
 function triggerConfetti() {
@@ -79,42 +131,6 @@ const PRIZES = [
   { id: 'p7', name: '40% de Desconto', shortName: '40% OFF', color: '#dc2626', icon: '👑' },
 ];
 
-const SCREENING_QUESTIONS = [
-  {
-    id: 1,
-    title: 'Qual o tamanho da sua equipe comercial / de atendimento em eventos?',
-    subtitle: 'Ajuda a dimensionar o volume de totens ou tablets ideais.',
-    options: [
-      { id: 'A', label: '1 a 3 pessoas', desc: 'Operação enxuta, foco em automação total' },
-      { id: 'B', label: '4 a 10 pessoas', desc: 'Equipe média para fluxo constante' },
-      { id: 'C', label: 'Mais de 10 pessoas', desc: 'Grande estande com múltiplos promotores' },
-      { id: 'D', label: 'Apenas sócios / diretoria', desc: 'Foco exclusivo em tomadores de decisão' }
-    ]
-  },
-  {
-    id: 2,
-    title: 'Qual o maior obstáculo do seu estande na captação de leads?',
-    subtitle: 'Identifica o gargalo principal do seu funil presencial.',
-    options: [
-      { id: 'A', label: 'Atrair o visitante do corredor', desc: 'Pessoas passam direto sem parar' },
-      { id: 'B', label: 'Anotações em papel ou crachás perdidos', desc: 'Dados ilegíveis ou esquecidos na mala' },
-      { id: 'C', label: 'Follow-up demorado após a feira', desc: 'Dias para entrar em contato com o lead' },
-      { id: 'D', label: 'Falta de qualificação na hora', desc: 'Não sabe quem tem poder de compra' }
-    ]
-  },
-  {
-    id: 3,
-    title: 'Qual a previsão do próximo evento ou feira da sua empresa?',
-    subtitle: 'Para mapear o tempo hábil de implantação da gamificação.',
-    options: [
-      { id: 'A', label: 'Próximos 30 a 60 dias', desc: 'Precisamos de solução rápida e pronta' },
-      { id: 'B', label: 'Neste semestre', desc: 'Estamos na fase de planejamento e cotação' },
-      { id: 'C', label: 'Ano que vem', desc: 'Montando o orçamento anual de eventos' },
-      { id: 'D', label: 'Apenas avaliando protótipo', desc: 'Estudando novas tecnologias para o futuro' }
-    ]
-  }
-];
-
 type FlowStep = 'select_game' | 'playing' | 'prize_won' | 'triagem' | 'voucher_final';
 
 export default function TriagemPage() {
@@ -128,8 +144,10 @@ export default function TriagemPage() {
     whatsapp: searchParams.get('whatsapp') || searchParams.get('telefone') || searchParams.get('phone') || '',
     empresa: searchParams.get('empresa') || searchParams.get('company') || 'LogTech Brasil',
     cargo: searchParams.get('cargo') || searchParams.get('role') || 'Diretora de Operações',
-    crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || 'CR-9482',
-    origem: searchParams.get('origem') || 'Base44'
+    crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || 'CR-9482',
+    origem: searchParams.get('origem') || 'Base44',
+    returnUrl: searchParams.get('return_url') || searchParams.get('redirect_url') || searchParams.get('callback_url') || '',
+    webhookCallback: searchParams.get('webhook') || searchParams.get('webhook_url') || ''
   });
 
   // Flow State: 
@@ -151,9 +169,10 @@ export default function TriagemPage() {
   // Scratch card specific state
   const [isScratchRevealed, setIsScratchRevealed] = useState(false);
 
-  // Screening questions state
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  // Multi-select Screening state (1 unified question with multiple options)
+  const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
+  const [triagemValidationWarning, setTriagemValidationWarning] = useState(false);
+  const [matchedProductsList, setMatchedProductsList] = useState<string[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Pre-seed winner prize randomly on mount
@@ -171,11 +190,13 @@ export default function TriagemPage() {
       setParticipant({
         nome: nome,
         email: searchParams.get('email') || '',
-        whatsapp: searchParams.get('whatsapp') || searchParams.get('telefone') || '',
+        whatsapp: searchParams.get('whatsapp') || searchParams.get('telefone') || searchParams.get('phone') || '',
         empresa: searchParams.get('empresa') || searchParams.get('company') || '',
-        cargo: searchParams.get('cargo') || '',
-        crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || 'CR-' + Math.floor(1000 + Math.random() * 9000),
-        origem: searchParams.get('origem') || 'Base44'
+        cargo: searchParams.get('cargo') || searchParams.get('role') || '',
+        crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || 'CR-' + Math.floor(1000 + Math.random() * 9000),
+        origem: searchParams.get('origem') || 'Base44',
+        returnUrl: searchParams.get('return_url') || searchParams.get('redirect_url') || searchParams.get('callback_url') || '',
+        webhookCallback: searchParams.get('webhook') || searchParams.get('webhook_url') || ''
       });
     }
   }, [searchParams]);
@@ -191,15 +212,44 @@ export default function TriagemPage() {
     if (isSpinningWheel) return;
     setIsSpinningWheel(true);
 
-    const prizeIdx = PRIZES.findIndex(p => p.id === wonPrize.id);
+    // Sortear aleatoriamente o prêmio no momento do giro
+    const randomPrize = PRIZES[Math.floor(Math.random() * PRIZES.length)];
+    setWonPrize(randomPrize);
+
+    const prizeIdx = PRIZES.findIndex(p => p.id === randomPrize.id);
     const segmentAngle = 360 / PRIZES.length;
+    // O ponteiro indicador fica no topo (0° / 360°).
+    // No SVG, a fatia prizeIdx tem centro em (prizeIdx * segmentAngle + segmentAngle / 2).
+    // Como o SVG tem rotação inicial de -90deg, no topo a fatia 0 já está posicionada.
+    // Para a fatia prizeIdx parar perfeitamente embaixo do ponteiro no topo:
     const targetAngle = 360 - (prizeIdx * segmentAngle + segmentAngle / 2);
-    const totalRotation = wheelRotation + (360 * 6) + targetAngle - (wheelRotation % 360);
+    const extraSpins = 360 * 6; // 6 voltas completas
+    const currentModulo = wheelRotation % 360;
+    let delta = targetAngle - currentModulo;
+    if (delta <= 0) {
+      delta += 360;
+    }
+    const totalRotation = wheelRotation + extraSpins + delta;
 
     setWheelRotation(totalRotation);
 
+    // Efeito sonoro de cliques ritmados que desaceleram junto com a roleta
+    const tickIntervals = [
+      80, 80, 80, 90, 90, 100, 110, 120, 140, 160, 190, 230, 280, 340, 420, 520, 650
+    ];
+    let elapsed = 0;
+    tickIntervals.forEach((interval) => {
+      elapsed += interval;
+      if (elapsed < 4200) {
+        setTimeout(() => {
+          playTickSound();
+        }, elapsed);
+      }
+    });
+
     setTimeout(() => {
       setIsSpinningWheel(false);
+      playWinSound();
       triggerConfetti();
       setCurrentStep('prize_won');
     }, 4500);
@@ -226,25 +276,45 @@ export default function TriagemPage() {
     }, 1200);
   };
 
-  // Handler: Submit answer in Screening
-  const handleSelectAnswer = (optionLabel: string) => {
-    const currentQ = SCREENING_QUESTIONS[currentQuestionIdx];
-    const newAnswers = { ...answers, [currentQ.id]: optionLabel };
-    setAnswers(newAnswers);
-
-    if (currentQuestionIdx < SCREENING_QUESTIONS.length - 1) {
-      setTimeout(() => {
-        setCurrentQuestionIdx(prev => prev + 1);
-      }, 250);
-    } else {
-      // Completed all screening questions! Save to Firestore + LocalStorage and show final voucher
-      persistFinalLead(newAnswers);
-      setCurrentStep('voucher_final');
-    }
+  // Handler: Toggle option in multi-select screening
+  const handleToggleOption = (id: number) => {
+    setTriagemValidationWarning(false);
+    setSelectedOptionIds(prev => {
+      // Option 6 is "Nenhuma das alternativas acima" (exclusive)
+      if (id === 6) {
+        return prev.includes(6) ? [] : [6];
+      } else {
+        // If clicking another option, unselect 6 if it was selected
+        const withoutNone = prev.filter(item => item !== 6);
+        if (withoutNone.includes(id)) {
+          return withoutNone.filter(item => item !== id);
+        } else {
+          return [...withoutNone, id];
+        }
+      }
+    });
   };
 
-  // Persist full consolidated lead (Participant + Prize + 3 Answers)
-  const persistFinalLead = async (screeningAnswers: Record<number, string>) => {
+  // Handler: Submit Screening answers
+  const handleSubmitScreening = () => {
+    if (selectedOptionIds.length === 0) {
+      setTriagemValidationWarning(true);
+      return;
+    }
+
+    const matchedProducts = calculateMatchedProducts(selectedOptionIds);
+    setMatchedProductsList(matchedProducts);
+
+    persistFinalLead(selectedOptionIds, matchedProducts);
+    setCurrentStep('voucher_final');
+  };
+
+  // Persist full consolidated lead (Participant + Prize + Selected Options + Matched Products)
+  const persistFinalLead = async (chosenIds: number[], matchedProducts: string[]) => {
+    const chosenItems = TRIAGEM_ALTERNATIVES.filter(alt => chosenIds.includes(alt.id));
+    const chosenTexts = chosenItems.map(item => `${item.id}. ${item.shortLabel}`).join(' | ');
+    const productsString = matchedProducts.length > 0 ? matchedProducts.join(', ') : 'Nenhum (Opção 6)';
+
     const record = {
       id: 'sub_' + Date.now(),
       dataHora: new Date().toLocaleString('pt-BR'),
@@ -258,9 +328,15 @@ export default function TriagemPage() {
       jogoEscolhido: selectedGame,
       premioGanho: wonPrize.name,
       voucher: voucherCode,
-      resposta1: screeningAnswers[1] || 'Não informada',
-      resposta2: screeningAnswers[2] || 'Não informada',
-      resposta3: screeningAnswers[3] || 'Não informada'
+      // Unified Triagem fields
+      opcoesSelecionadasIds: chosenIds,
+      respostasTriagem: chosenTexts,
+      produtosDirecionados: productsString,
+      produtosArray: matchedProducts,
+      // Legacy backward compatibility
+      resposta1: chosenTexts,
+      resposta2: productsString,
+      resposta3: `Voucher: ${voucherCode}`
     };
 
     // 1. Save to Firestore (Online Cloud Database) so the whole commercial team can view in real-time
@@ -299,6 +375,68 @@ export default function TriagemPage() {
         // ignore
       }
     }
+
+    // 4. Post directly to Base44 webhook callback if provided in URL (webhook_url or webhook)
+    if (participant.webhookCallback) {
+      try {
+        await fetch(participant.webhookCallback, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: 'lead_triagem_completed',
+            leadId: participant.crachaId,
+            ...record
+          })
+        });
+      } catch (err) {
+        console.warn('Base44 webhook callback error:', err);
+      }
+    }
+  };
+
+  // Generate return to Base44 URL with all query parameters
+  const generateBase44ReturnUrl = () => {
+    // If a specific return/redirect URL was passed from Base44 (e.g. deep link to lead sheet or app), use it
+    let baseUrl = participant.returnUrl || 'https://pristine-lead-scan-go.base44.app/';
+    
+    // Parse existing query params if baseUrl already has them
+    let urlObj: URL;
+    try {
+      urlObj = new URL(baseUrl);
+    } catch {
+      urlObj = new URL(baseUrl, window.location.origin);
+    }
+
+    const params = urlObj.searchParams;
+    params.set('is_new_user', 'true');
+    params.set('crachaId', participant.crachaId);
+    params.set('leadId', participant.crachaId);
+    params.set('nome', participant.nome);
+    params.set('name', participant.nome);
+    params.set('empresa', participant.empresa);
+    params.set('company', participant.empresa);
+    params.set('cargo', participant.cargo);
+    params.set('role', participant.cargo);
+    params.set('whatsapp', participant.whatsapp);
+    params.set('telefone', participant.whatsapp);
+    params.set('phone', participant.whatsapp);
+    params.set('email', participant.email);
+    params.set('premio', wonPrize.name);
+    params.set('premio_ganho', wonPrize.name);
+    params.set('voucher', voucherCode);
+    params.set('voucher_code', voucherCode);
+    params.set('jogo', selectedGame);
+
+    // Products string (ACM, TDM, VERICUT, CRIBWISE, HUMAINX)
+    const productsStr = matchedProductsList.length > 0 ? matchedProductsList.join(', ') : 'Nenhum';
+    params.set('produtos', productsStr);
+    params.set('produtos_direcionados', productsStr);
+
+    // Selected options IDs as comma separated (ex: "1, 3")
+    params.set('opcoes_triagem', selectedOptionIds.join(','));
+    params.set('respostas_triagem', selectedOptionIds.map(id => `Opção ${id}`).join(', '));
+
+    return urlObj.toString();
   };
 
   return (
@@ -335,7 +473,7 @@ export default function TriagemPage() {
 
           {/* Button: Return to Base44 to scan next user */}
           <a
-            href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
+            href={generateBase44ReturnUrl()}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
             title="Voltar para o app do Base44 para escanear nova pessoa"
           >
@@ -484,13 +622,17 @@ export default function TriagemPage() {
                 </p>
 
                 {/* Rotating Wheel Disk */}
-                <div className="relative w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] mx-auto my-4">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">
-                    <div className="w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-t-[32px] border-t-yellow-400"></div>
+                <div className="relative w-[310px] h-[310px] sm:w-[390px] sm:h-[390px] mx-auto my-4">
+                  {/* Top Pointer Indicator */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-40 filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] pointer-events-none">
+                    <div className="relative flex flex-col items-center">
+                      <div className="w-4 h-4 rounded-full bg-yellow-400 border-2 border-slate-900 shadow-sm -mb-2 z-10"></div>
+                      <div className="w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[34px] border-t-yellow-400"></div>
+                    </div>
                   </div>
 
                   <div 
-                    className="w-full h-full rounded-full border-8 border-slate-800 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden transition-transform duration-[4500ms] ease-out"
+                    className="w-full h-full rounded-full border-8 border-slate-800 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden transition-transform duration-[4500ms] ease-out will-change-transform"
                     style={{ transform: `rotate(${wheelRotation}deg)` }}
                   >
                     <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
@@ -618,7 +760,7 @@ export default function TriagemPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* ETAPA 3: PARABÉNS! PRÊMIO CONQUISTADO -> DESBLOQUEIE COM 3 PERGUNTAS      */}
+        {/* ETAPA 3: PARABÉNS! PRÊMIO CONQUISTADO -> DESBLOQUEIE COM A TRIAGEM        */}
         {/* ========================================================================= */}
         {currentStep === 'prize_won' && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden animate-fade-in">
@@ -641,7 +783,7 @@ export default function TriagemPage() {
               </div>
 
               <p className="text-slate-300 text-sm leading-relaxed">
-                Para desbloquear e gerar o seu <strong>Voucher Oficial</strong> e salvar seu desconto no estande, responda <strong>3 perguntas rápidas</strong> (menos de 20 segundos).
+                Para desbloquear e gerar o seu <strong>Voucher Oficial</strong> e salvar seu benefício no estande, responda à <strong>pergunta rápida de triagem</strong> sobre as operações da sua empresa.
               </p>
 
               <div className="pt-2">
@@ -658,93 +800,113 @@ export default function TriagemPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* ETAPA 4: TRIAGEM COM AS 3 PERGUNTAS DE QUALIFICAÇÃO                       */}
+        {/* ETAPA 4: TRIAGEM DE QUALIFICAÇÃO (1 PERGUNTA COM MULTI-SELEÇÃO)           */}
         {/* ========================================================================= */}
         {currentStep === 'triagem' && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden animate-fade-in">
-            {/* Progress Bar */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
-                <span>Triagem de Qualificação</span>
-                <span>Pergunta {currentQuestionIdx + 1} de {SCREENING_QUESTIONS.length}</span>
-              </div>
-              <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                <div 
-                  className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full transition-all duration-300"
-                  style={{ width: `${((currentQuestionIdx + 1) / SCREENING_QUESTIONS.length) * 100}%` }}
-                ></div>
-              </div>
-            </div>
+            <div className="max-w-3xl mx-auto">
+              {/* Header Badge */}
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
+                  <Sparkles size={14} />
+                  <span>Triagem de Direcionamento Comercial</span>
+                </div>
 
-            {/* Question Card */}
-            <div className="max-w-2xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold mb-3 border border-blue-500/20">
-                <Sparkles size={14} />
-                <span>Passo Final para o Voucher</span>
+                <span className="text-xs text-slate-400 font-medium">
+                  {selectedOptionIds.length} selecionada(s)
+                </span>
               </div>
 
               <h3 className="text-xl sm:text-2xl font-black text-white mb-2 leading-snug">
-                {SCREENING_QUESTIONS[currentQuestionIdx].title}
+                {TRIAGEM_QUESTION_TITLE}
               </h3>
-              <p className="text-xs sm:text-sm text-slate-400 mb-6">
-                {SCREENING_QUESTIONS[currentQuestionIdx].subtitle}
+              <p className="text-xs sm:text-sm text-slate-400 mb-6 flex items-center gap-2">
+                <HelpCircle size={15} className="text-blue-400 shrink-0" />
+                <span>{TRIAGEM_QUESTION_SUBTITLE}</span>
               </p>
 
-              {/* Options */}
+              {/* Validation Warning */}
+              {triagemValidationWarning && (
+                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold flex items-center gap-2 animate-shake">
+                  <span>⚠️ Por favor, selecione ao menos uma alternativa para liberar seu voucher.</span>
+                </div>
+              )}
+
+              {/* 6 Multi-Select Alternatives */}
               <div className="space-y-3">
-                {SCREENING_QUESTIONS[currentQuestionIdx].options.map(option => {
-                  const isSelected = answers[SCREENING_QUESTIONS[currentQuestionIdx].id] === option.label;
+                {TRIAGEM_ALTERNATIVES.map(option => {
+                  const isSelected = selectedOptionIds.includes(option.id);
                   return (
-                    <button
+                    <div
                       key={option.id}
-                      onClick={() => handleSelectAnswer(option.label)}
-                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${
+                      onClick={() => handleToggleOption(option.id)}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all flex items-start justify-between group cursor-pointer ${
                         isSelected 
                           ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-500/10' 
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50 text-slate-200'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs transition-colors ${
+                      <div className="flex items-start gap-3.5 pr-3">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors mt-0.5 ${
                           isSelected ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
                         }`}>
                           {option.id}
                         </div>
-                        <div>
-                          <div className="font-semibold text-sm sm:text-base text-white">
-                            {option.label}
-                          </div>
-                          {option.desc && (
-                            <div className="text-xs text-slate-400 mt-0.5">
-                              {option.desc}
+                        <div className="space-y-1">
+                          <p className="font-medium text-xs sm:text-sm text-slate-200 leading-relaxed group-hover:text-white">
+                            {option.text}
+                          </p>
+                          {option.produto && (
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-950/80 border border-blue-800/60 text-[10px] font-bold text-blue-300">
+                              <span>Solução:</span>
+                              <span className="text-white font-black">{option.produto}</span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                        isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-700 text-transparent'
+                      {/* Checkbox indicator */}
+                      <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition-all mt-1 ${
+                        isSelected 
+                          ? 'border-blue-500 bg-blue-500 text-white shadow-sm shadow-blue-500/30' 
+                          : 'border-slate-700 text-transparent group-hover:border-slate-500'
                       }`}>
-                        <Check size={12} strokeWidth={3} />
+                        <Check size={14} strokeWidth={3} />
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
-            </div>
 
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-800 text-xs sm:text-sm">
-              <button
-                disabled={currentQuestionIdx === 0}
-                onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
-                className="text-slate-400 hover:text-white disabled:opacity-30 disabled:hover:text-slate-400 font-semibold cursor-pointer"
-              >
-                ← Pergunta Anterior
-              </button>
+              {/* Preview of matched products */}
+              {selectedOptionIds.length > 0 && !selectedOptionIds.includes(6) && (
+                <div className="mt-5 p-3.5 bg-slate-950/90 border border-slate-800 rounded-xl flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                    Produtos Direcionados:
+                  </span>
+                  {calculateMatchedProducts(selectedOptionIds).map(prod => (
+                    <span key={prod} className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-xs">
+                      {prod}
+                    </span>
+                  ))}
+                </div>
+              )}
 
-              <span className="text-slate-500 font-medium text-xs">
-                Ao responder a última, seu voucher oficial é liberado na hora!
-              </span>
+              {/* Submit Button */}
+              <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <span className="text-xs text-slate-400 text-center sm:text-left">
+                  Seus dados e produtos recomendados serão consolidados no Base44.
+                </span>
+
+                <button
+                  onClick={handleSubmitScreening}
+                  className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                >
+                  <span>Concluir & Liberar Voucher</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+
             </div>
           </div>
         )}
@@ -778,7 +940,7 @@ export default function TriagemPage() {
                 </div>
               </div>
 
-              {/* Consolidated Lead Details */}
+              {/* Consolidated Lead Details with Products */}
               <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-5 mb-8 text-left">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm mb-2">
                   <CheckCircle2 size={18} />
@@ -790,22 +952,36 @@ export default function TriagemPage() {
                   </p>
                 )}
                 
-                <div className="bg-slate-950/80 rounded-xl p-3 text-xs space-y-1 font-mono text-slate-300 border border-emerald-500/20">
+                <div className="bg-slate-950/80 rounded-xl p-3.5 text-xs space-y-1.5 font-mono text-slate-300 border border-emerald-500/20">
                   <div><strong>Participante:</strong> {participant.nome} ({participant.empresa})</div>
                   <div><strong>Crachá / ID:</strong> {participant.crachaId}</div>
                   <div><strong>Jogo Escolhido:</strong> {selectedGame.toUpperCase()}</div>
                   <div className="text-yellow-400 font-bold"><strong>Prêmio:</strong> {wonPrize.name} ({voucherCode})</div>
+                  
+                  <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center gap-1.5">
+                    <strong className="text-blue-400">Produtos Direcionados:</strong>
+                    {matchedProductsList.length > 0 ? (
+                      matchedProductsList.map(p => (
+                        <span key={p} className="px-2 py-0.5 rounded bg-blue-600/30 text-blue-300 border border-blue-500/40 font-bold text-[11px]">
+                          {p}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 text-[11px]">Nenhum produto aplicável (Opção 6)</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Return to Base44 or start next lead */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <a
-                  href="https://pristine-lead-scan-go.base44.app/?is_new_user=true"
+                  href={generateBase44ReturnUrl()}
                   className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 cursor-pointer"
+                  title="Retornar ao Base44 com todos os dados preenchidos: nome, crachá, prêmio, voucher e produtos"
                 >
                   <ExternalLink size={16} />
-                  <span>Retornar à Captura</span>
+                  <span>Retornar à Captura no Base44</span>
                 </a>
 
                 <button
@@ -822,6 +998,19 @@ export default function TriagemPage() {
         )}
 
       </main>
+
+      {/* Footer with link to Company Panel */}
+      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto">
+        <p>VX Leads • Gamificação, Triagem e Direcionamento de Soluções Industriais</p>
+        <button
+          onClick={() => navigate('/leads')}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-400 hover:text-blue-400 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium transition-colors cursor-pointer"
+          title="Acessar painel de leads captados da empresa (Requer senha: adeptmec2027)"
+        >
+          <Lock size={12} className="text-blue-400" />
+          <span>Painel da Empresa</span>
+        </button>
+      </footer>
     </div>
   );
 }

@@ -375,6 +375,19 @@ export default function RoletaPremioPage() {
         )}
 
       </main>
+
+      {/* Footer with link to Company Panel */}
+      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p>VX Leads • Gamificação, Triagem e Direcionamento de Produtos</p>
+        <RouterLink
+          to="/leads"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-400 hover:text-blue-400 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
+          title="Acessar painel de leads captados da empresa (Requer senha adeptmec2027)"
+        >
+          <Gift size={12} className="text-blue-400" />
+          <span>Painel da Empresa</span>
+        </RouterLink>
+      </footer>
     </div>
   );
 }

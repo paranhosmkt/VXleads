@@ -23,6 +23,10 @@ interface EventLead {
   jogoEscolhido: string;
   premioGanho: string;
   voucher: string;
+  opcoesSelecionadasIds?: number[];
+  respostasTriagem?: string;
+  produtosDirecionados?: string;
+  produtosArray?: string[];
   resposta1?: string;
   resposta2?: string;
   resposta3?: string;
@@ -140,9 +144,8 @@ export default function LeadsComercial() {
       'Jogo',
       'Prêmio',
       'Voucher',
-      'Resp. Equipe (Q1)',
-      'Resp. Obstáculo (Q2)',
-      'Resp. Previsão (Q3)'
+      'Produtos Direcionados',
+      'Opções Triagem Selecionadas'
     ];
 
     const rows = filteredLeads.map((l) => [
@@ -156,9 +159,8 @@ export default function LeadsComercial() {
       `"${l.jogoEscolhido || ''}"`,
       `"${l.premioGanho || ''}"`,
       `"${l.voucher || ''}"`,
-      `"${l.resposta1 || ''}"`,
-      `"${l.resposta2 || ''}"`,
-      `"${l.resposta3 || ''}"`
+      `"${l.produtosDirecionados || l.resposta2 || ''}"`,
+      `"${l.respostasTriagem || l.resposta1 || ''}"`
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -380,20 +382,21 @@ export default function LeadsComercial() {
                   <th className="py-3 px-4">Crachá ID</th>
                   <th className="py-3 px-4">Jogo & Prêmio</th>
                   <th className="py-3 px-4">Voucher</th>
+                  <th className="py-3 px-4">Produtos Indicados</th>
                   <th className="py-3 px-4 text-right">Triagem</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-xs text-slate-300">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-slate-400">
                       <RefreshCw size={20} className="animate-spin inline mr-2 text-blue-400" />
                       Carregando leads do banco de dados em nuvem...
                     </td>
                   </tr>
                 ) : filteredLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <td colSpan={8} className="py-12 text-center text-slate-500">
                       Nenhum lead encontrado com os filtros atuais.
                     </td>
                   </tr>
@@ -449,6 +452,20 @@ export default function LeadsComercial() {
                         </span>
                       </td>
 
+                      <td className="py-3.5 px-4">
+                        {lead.produtosDirecionados ? (
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {lead.produtosDirecionados.split(',').map((p, idx) => (
+                              <span key={idx} className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                                {p.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 text-[11px]">—</span>
+                        )}
+                      </td>
+
                       <td className="py-3.5 px-4 text-right">
                         <button
                           onClick={(e) => {
@@ -457,7 +474,7 @@ export default function LeadsComercial() {
                           }}
                           className="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white font-medium text-[11px] transition-all border border-blue-500/30 cursor-pointer"
                         >
-                          Ver Respostas
+                          Ver Detalhes
                         </button>
                       </td>
                     </tr>
@@ -471,7 +488,7 @@ export default function LeadsComercial() {
         {/* Modal: Lead Triagem Answers Details */}
         {selectedLead && (
           <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-fade-in max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center font-bold">
@@ -510,32 +527,47 @@ export default function LeadsComercial() {
                 </div>
               </div>
 
-              {/* 3 Screening Questions Answers */}
+              {/* Soluções / Produtos Direcionados */}
+              {(selectedLead.produtosDirecionados || selectedLead.resposta2) && (
+                <div className="p-3.5 bg-blue-950/40 border border-blue-500/30 rounded-xl space-y-2">
+                  <div className="flex items-center gap-1.5 text-blue-400 font-bold text-xs uppercase tracking-wider">
+                    <Sparkles size={14} />
+                    <span>Produtos / Soluções Recomendadas:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(selectedLead.produtosDirecionados || selectedLead.resposta2 || '').split(',').map((prod, idx) => (
+                      <span key={idx} className="px-2.5 py-1 rounded-lg bg-blue-600/30 text-blue-200 border border-blue-500/40 font-bold text-xs">
+                        {prod.trim()}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Respostas da Triagem */}
               <div className="space-y-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue-400 block">
-                  Respostas da Triagem de Qualificação:
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+                  Cenários e Situações Identificadas na Empresa:
                 </span>
 
-                <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl text-xs space-y-1">
-                  <div className="text-slate-400 font-semibold">1. Tamanho da equipe em eventos:</div>
-                  <div className="text-white font-bold pl-2 border-l-2 border-blue-500">
-                    {selectedLead.resposta1 || 'Não respondida'}
+                <div className="p-3.5 bg-slate-950 border border-slate-800/80 rounded-xl text-xs space-y-2">
+                  <div className="text-slate-400 font-semibold leading-relaxed">
+                    "Com base na realidade da sua empresa hoje quais das situações abaixo acontecem:"
+                  </div>
+                  <div className="text-white font-medium pl-3 border-l-2 border-emerald-500 leading-relaxed whitespace-pre-line">
+                    {selectedLead.respostasTriagem || selectedLead.resposta1 || 'Não informada'}
                   </div>
                 </div>
 
-                <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl text-xs space-y-1">
-                  <div className="text-slate-400 font-semibold">2. Maior obstáculo do estande na captação:</div>
-                  <div className="text-white font-bold pl-2 border-l-2 border-blue-500">
-                    {selectedLead.resposta2 || 'Não respondida'}
+                {/* Legacy backward compat if available */}
+                {selectedLead.resposta3 && !selectedLead.respostasTriagem && (
+                  <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl text-xs space-y-1">
+                    <div className="text-slate-400 font-semibold">Observações / Previsão:</div>
+                    <div className="text-white font-medium pl-2 border-l-2 border-blue-500">
+                      {selectedLead.resposta3}
+                    </div>
                   </div>
-                </div>
-
-                <div className="p-3 bg-slate-950 border border-slate-800/80 rounded-xl text-xs space-y-1">
-                  <div className="text-slate-400 font-semibold">3. Previsão do próximo evento:</div>
-                  <div className="text-white font-bold pl-2 border-l-2 border-blue-500">
-                    {selectedLead.resposta3 || 'Não respondida'}
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="pt-2 flex justify-end">
@@ -551,6 +583,15 @@ export default function LeadsComercial() {
         )}
 
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto">
+        <p>VX Leads • Painel Comercial da Empresa (Acesso Restrito)</p>
+        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <ShieldCheck size={14} className="text-emerald-400" />
+          <span>Autenticado com a chave da empresa</span>
+        </div>
+      </footer>
     </div>
   );
 }
