@@ -378,16 +378,10 @@ export default function RoletaPremioPage() {
                         })}
                         className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                       >
-                        Retornar ao Base44
+                        Retornar aos cadastros
                         <ExternalLink size={14} />
                       </button>
                     )}
-                    <RouterLink
-                      to="/leads"
-                      className="px-4 py-2 rounded-xl bg-[#17232d] hover:bg-[#202d38] text-slate-300 hover:text-white text-xs font-bold transition-all border border-slate-700/60 cursor-pointer"
-                    >
-                      Acessar Painel Comercial
-                    </RouterLink>
                   </div>
                 </div>
               ) : (
@@ -691,10 +685,10 @@ export default function RoletaPremioPage() {
                     }
                   }}
                   className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
-                  title="Retornar ao Base44 com prêmio, voucher e dados do participante preenchidos"
+                  title="Retornar aos cadastros com prêmio, voucher e dados do participante preenchidos"
                 >
                   <RotateCcw size={16} />
-                  <span>Retornar à Captura no Base44</span>
+                  <span>Retornar aos cadastros</span>
                 </button>
 
                 <RouterLink
@@ -714,14 +708,16 @@ export default function RoletaPremioPage() {
       {/* Footer with link to Company Panel */}
       <footer className="border-t border-slate-700/60 bg-[#17232d] py-4 px-6 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p>VX Leads • Gamificação, Triagem e Direcionamento de Produtos</p>
-        <RouterLink
-          to="/leads"
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2a353f] hover:bg-blue-600/20 text-slate-300 hover:text-blue-400 border border-slate-700 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
-          title="Acessar painel de leads captados da empresa (Requer senha adeptmec2027)"
-        >
-          <Gift size={12} className="text-blue-400" />
-          <span>Painel da Empresa</span>
-        </RouterLink>
+        {step !== 'won' && !existingDraw && (
+          <RouterLink
+            to="/leads"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2a353f] hover:bg-blue-600/20 text-slate-300 hover:text-blue-400 border border-slate-700 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
+            title="Acessar painel de leads captados da empresa (Requer senha adeptmec2027)"
+          >
+            <Gift size={12} className="text-blue-400" />
+            <span>Painel da Empresa</span>
+          </RouterLink>
+        )}
       </footer>
     </div>
   );

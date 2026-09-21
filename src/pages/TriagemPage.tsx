@@ -490,25 +490,27 @@ export default function TriagemPage() {
 
         {/* Quick Action Navigation Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Link to Commercial Leads Panel */}
-          <button
-            onClick={() => navigate('/leads')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2a353f] hover:bg-[#34424e] text-slate-200 text-xs font-semibold border border-slate-700/60 transition-colors cursor-pointer"
-            title="Acessar painel de leads captados da empresa"
-          >
-            <Lock size={13} className="text-blue-400" />
-            <span className="hidden md:inline">Painel da Empresa</span>
-          </button>
+          {/* Link to Commercial Leads Panel - hidden when on result screen */}
+          {currentStep !== 'voucher_final' && (
+            <button
+              onClick={() => navigate('/leads')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2a353f] hover:bg-[#34424e] text-slate-200 text-xs font-semibold border border-slate-700/60 transition-colors cursor-pointer"
+              title="Acessar painel de leads captados da empresa"
+            >
+              <Lock size={13} className="text-blue-400" />
+              <span className="hidden md:inline">Painel da Empresa</span>
+            </button>
+          )}
 
           {/* Button: Return to Base44 to scan next user */}
           <a
             href={generateBase44ReturnUrl()}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all cursor-pointer"
-            title="Voltar para o app do Base44 para escanear nova pessoa"
+            title="Voltar aos cadastros para escanear nova pessoa"
           >
             <ExternalLink size={14} />
-            <span className="hidden sm:inline">Retornar à Captura</span>
-            <span className="sm:hidden">Captura</span>
+            <span className="hidden sm:inline">Retornar aos cadastros</span>
+            <span className="sm:hidden">Cadastros</span>
           </a>
 
           {/* Participant Mini Badge */}
@@ -979,19 +981,10 @@ export default function TriagemPage() {
                 <button
                   onClick={() => handleExecuteReturn()}
                   className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 cursor-pointer"
-                  title="Retornar ao Base44 com todos os dados preenchidos: nome, crachá, prêmio e voucher"
+                  title="Retornar aos cadastros com todos os dados preenchidos: nome, crachá, prêmio e voucher"
                 >
                   <ExternalLink size={16} />
-                  <span>Retornar à Captura no Base44</span>
-                </button>
-
-                <button
-                  onClick={() => navigate('/leads')}
-                  className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-[#17232d] hover:bg-[#202d38] text-slate-200 font-semibold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer border border-slate-700/60"
-                  title="Acessar painel de leads captados da empresa"
-                >
-                  <Lock size={15} className="text-blue-400" />
-                  <span>Painel da Empresa</span>
+                  <span>Retornar aos cadastros</span>
                 </button>
               </div>
             </div>
@@ -1003,14 +996,16 @@ export default function TriagemPage() {
       {/* Footer with link to Company Panel */}
       <footer className="border-t border-slate-700/60 bg-[#17232d] py-4 px-6 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto font-['Open_Sans',sans-serif]">
         <p>VX Leads • Gamificação e Sorteio de Prêmios para Eventos</p>
-        <button
-          onClick={() => navigate('/leads')}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2a353f] hover:bg-[#34424e] text-slate-300 hover:text-white border border-slate-700/60 text-[11px] font-medium transition-colors cursor-pointer"
-          title="Acessar painel de leads captados da empresa"
-        >
-          <Lock size={12} className="text-blue-400" />
-          <span>Painel da Empresa</span>
-        </button>
+        {currentStep !== 'voucher_final' && (
+          <button
+            onClick={() => navigate('/leads')}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2a353f] hover:bg-[#34424e] text-slate-300 hover:text-white border border-slate-700/60 text-[11px] font-medium transition-colors cursor-pointer"
+            title="Acessar painel de leads captados da empresa"
+          >
+            <Lock size={12} className="text-blue-400" />
+            <span>Painel da Empresa</span>
+          </button>
+        )}
       </footer>
     </div>
   );

@@ -1045,10 +1045,10 @@ Content-Type: application/json
                     }
                   }}
                   className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
-                  title="Retornar ao Base44 com todos os dados preenchidos: prêmio, voucher, crachá e respostas de triagem"
+                  title="Retornar aos cadastros com todos os dados preenchidos: prêmio, voucher e dados do participante"
                 >
                   <RotateCcw size={16} />
-                  <span>Retornar à Captura no Base44</span>
+                  <span>Retornar aos cadastros</span>
                 </button>
 
                 <button
@@ -1176,14 +1176,16 @@ Content-Type: application/json
       {/* Discrete Footer Link */}
       <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p>VX Leads • Protótipo Funcional de Gamificação, Triagem e Integração com Planilhas</p>
-        <RouterLink
-          to="/leads"
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-400 hover:text-blue-400 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
-          title="Acessar painel de leads captados da empresa (Requer senha)"
-        >
-          <Lock size={12} className="text-blue-400" />
-          <span>Painel da Empresa</span>
-        </RouterLink>
+        {step !== 'won' && (
+          <RouterLink
+            to="/leads"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-400 hover:text-blue-400 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
+            title="Acessar painel de leads captados da empresa (Requer senha)"
+          >
+            <Lock size={12} className="text-blue-400" />
+            <span>Painel da Empresa</span>
+          </RouterLink>
+        )}
       </footer>
     </div>
   );
