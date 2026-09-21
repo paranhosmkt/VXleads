@@ -78,11 +78,27 @@ export default function Dashboard() {
           
           // Buscar leads
           const leadsSnap = await getDocs(collection(db, 'companies', user.uid, 'leads'));
-          const leadsData: any[] = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          let leadsData: any[] = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          
+          // Se não houver leads na subcoleção ou para consolidar leads de eventos
+          try {
+            const eventLeadsSnap = await getDocs(collection(db, 'event_leads'));
+            const eventLeads: any[] = eventLeadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Merge sem duplicar
+            const existingIds = new Set(leadsData.map(l => l.crachaId || l.id));
+            for (const el of eventLeads) {
+              if (!existingIds.has(el.crachaId || el.id)) {
+                leadsData.push(el);
+              }
+            }
+          } catch (e) {
+            console.warn('Aviso ao carregar event_leads no Dashboard:', e);
+          }
+
           // sort by createdAt desc
           leadsData.sort((a, b) => {
-             const aDate = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-             const bDate = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+             const aDate = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt ? new Date(a.createdAt).getTime() : 0));
+             const bDate = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : 0));
              return bDate - aDate;
           });
           setLeads(leadsData);

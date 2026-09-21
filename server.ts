@@ -188,9 +188,103 @@ async function startServer() {
     }
   });
 
-  // --- BASE44 INTEGRATION ENDPOINTS ---
+  // --- BASE44 INTEGRATION & FIRESTORE DIRECT PROXY ---
   // In-memory store for leads pushed from Base44 (with TTL / limit)
   const base44Leads: Record<string, any> = {};
+
+  const FIREBASE_API_KEY = "AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E";
+  const FIREBASE_PROJECT_ID = "gen-lang-client-0914985094";
+  const FIREBASE_DB_ID = "ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88";
+
+  function parseFirestoreFields(fields: Record<string, any>) {
+    if (!fields) return {};
+    const res: Record<string, any> = {};
+    for (const [key, val] of Object.entries(fields)) {
+      if (val.stringValue !== undefined) res[key] = val.stringValue;
+      else if (val.integerValue !== undefined) res[key] = Number(val.integerValue);
+      else if (val.booleanValue !== undefined) res[key] = val.booleanValue;
+      else if (val.timestampValue !== undefined) res[key] = val.timestampValue;
+      else if (val.arrayValue?.values) {
+        res[key] = val.arrayValue.values.map((v: any) => v.stringValue ?? v.integerValue ?? v);
+      } else {
+        res[key] = val;
+      }
+    }
+    return res;
+  }
+
+  async function fetchLeadFromFirestore(leadId: string) {
+    try {
+      // 1. Direct doc lookup
+      const docUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DB_ID}/documents/event_leads/${encodeURIComponent(leadId)}?key=${FIREBASE_API_KEY}`;
+      const docRes = await fetch(docUrl);
+      if (docRes.ok) {
+        const docData = await docRes.json();
+        return { id: leadId, ...parseFirestoreFields(docData.fields) };
+      }
+
+      // 2. Query by crachaId or leadId
+      const queryUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DB_ID}/documents:runQuery?key=${FIREBASE_API_KEY}`;
+      const queryRes = await fetch(queryUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: 'event_leads' }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: 'crachaId' },
+                op: 'EQUAL',
+                value: { stringValue: leadId }
+              }
+            }
+          }
+        })
+      });
+      if (queryRes.ok) {
+        const results = await queryRes.json();
+        if (Array.isArray(results) && results[0]?.document?.fields) {
+          const docName = results[0].document.name || '';
+          const resolvedId = docName.split('/').pop() || leadId;
+          return { id: resolvedId, ...parseFirestoreFields(results[0].document.fields) };
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao consultar lead no Firestore:', err);
+    }
+    return null;
+  }
+
+  async function getAllLeadsFromFirestore() {
+    try {
+      const queryUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DB_ID}/documents:runQuery?key=${FIREBASE_API_KEY}`;
+      const queryRes = await fetch(queryUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: 'event_leads' }]
+          }
+        })
+      });
+      if (queryRes.ok) {
+        const results = await queryRes.json();
+        const list: any[] = [];
+        if (Array.isArray(results)) {
+          for (const item of results) {
+            if (item.document?.fields) {
+              const docId = item.document.name.split('/').pop();
+              list.push({ id: docId, ...parseFirestoreFields(item.document.fields) });
+            }
+          }
+        }
+        return list;
+      }
+    } catch (err) {
+      console.error('Erro ao buscar todos os leads do Firestore:', err);
+    }
+    return [];
+  }
 
   const handleBase44Post = (req: express.Request, res: express.Response) => {
     try {
@@ -252,18 +346,56 @@ async function startServer() {
     }
   };
 
-  const handleBase44Get = (req: express.Request, res: express.Response) => {
+  const handleBase44Get = async (req: express.Request, res: express.Response) => {
     const leadId = req.params.leadId || (req.query.id as string) || (req.query.leadId as string) || (req.query.crachaId as string);
     if (leadId) {
-      const lead = base44Leads[leadId];
+      // 1. Check in memory
+      let lead = base44Leads[leadId];
+      if (!lead) {
+        // 2. Query live Firestore
+        lead = await fetchLeadFromFirestore(leadId);
+      }
       if (!lead) {
         return res.status(404).json({ error: "Lead não encontrado", leadId });
       }
       return res.json({ success: true, lead });
     }
-    const leads = Object.values(base44Leads).slice(-50).reverse();
-    res.json({ count: leads.length, leads });
+
+    // Return combined Firestore leads + memory
+    const firestoreLeads = await getAllLeadsFromFirestore();
+    const memoryLeads = Object.values(base44Leads);
+    
+    // Merge without duplicates
+    const map = new Map<string, any>();
+    for (const l of firestoreLeads) {
+      const key = l.crachaId || l.id;
+      if (key) map.set(key, l);
+    }
+    for (const l of memoryLeads) {
+      const key = l.crachaId || l.id;
+      if (key && !map.has(key)) map.set(key, l);
+    }
+
+    const merged = Array.from(map.values());
+    res.json({ count: merged.length, leads: merged });
   };
+
+  // Endpoint de teste de diagnóstico do Firebase
+  app.get("/api/firebase-test", async (_req, res) => {
+    try {
+      const leads = await getAllLeadsFromFirestore();
+      res.json({
+        status: "ok",
+        databaseId: FIREBASE_DB_ID,
+        projectId: FIREBASE_PROJECT_ID,
+        collection: "event_leads",
+        documentsCount: leads.length,
+        documents: leads
+      });
+    } catch (err: any) {
+      res.status(500).json({ status: "error", message: err.message });
+    }
+  });
 
   // Supported Endpoint routes & aliases to prevent 404 (supports /api, /api/leads, /api/base44, etc)
   app.post(["/api", "/api/", "/api/leads", "/api/lead", "/api/integracao/base44", "/api/integration/base44", "/api/base44", "/api/webhook/base44"], handleBase44Post);

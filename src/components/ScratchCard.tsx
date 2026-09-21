@@ -49,13 +49,13 @@ export default function ScratchCard({ prizeText, onComplete }: ScratchCardProps)
 
     // Prompt Text
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 22px system-ui, -apple-system, sans-serif';
+    ctx.font = "900 22px 'Open Sans', system-ui, sans-serif";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('✨ RASPE AQUI ✨', canvas.width / 2, canvas.height / 2 - 12);
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.font = '600 13px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = "600 13px 'Open Sans', system-ui, sans-serif";
     ctx.fillText('Passe o dedo ou o mouse', canvas.width / 2, canvas.height / 2 + 18);
   }, []);
 
@@ -176,7 +176,7 @@ export default function ScratchCard({ prizeText, onComplete }: ScratchCardProps)
   return (
     <div 
       ref={containerRef}
-      className="relative w-[300px] h-[220px] sm:w-[360px] sm:h-[240px] select-none rounded-3xl overflow-hidden shadow-2xl border-4 border-purple-500/50 bg-slate-900 mx-auto"
+      className="relative w-[300px] h-[220px] sm:w-[360px] sm:h-[240px] select-none rounded-3xl overflow-hidden shadow-2xl border-4 border-purple-500/50 bg-[#17232d] mx-auto font-['Open_Sans',sans-serif]"
       style={{ touchAction: 'none' }}
     >
       {/* Revealed Prize Background (Hidden behind the foil) */}

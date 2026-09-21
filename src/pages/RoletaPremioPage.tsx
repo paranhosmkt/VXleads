@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { 
   Sparkles, CheckCircle2, RotateCcw, Download, Target, Smartphone, Gift, Check, ExternalLink, Copy, Cloud,
-  Database, ChevronDown, ChevronUp, Code2
+  Database, ChevronDown, ChevronUp, Code2, AlertTriangle, Trophy
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
+import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
 
 function triggerConfetti() {
   const canvas = document.createElement('canvas');
@@ -84,6 +85,25 @@ const PRIZES = [
   { id: 'p7', name: '40% de Desconto', color: '#EF4444', icon: '👑' },
 ];
 
+const getPrizeDisplay = (name: string) => {
+  const match = name.match(/^(\d+%\s*(?:OFF)?)\s*(?:de\s*)?(.*)$/i);
+  if (match) {
+    return {
+      top: match[1].trim(),
+      bottom: (match[2].trim() || 'DESCONTO').toUpperCase()
+    };
+  }
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    const mid = Math.ceil(parts.length / 2);
+    return {
+      top: parts.slice(0, mid).join(' '),
+      bottom: parts.slice(mid).join(' ').toUpperCase()
+    };
+  }
+  return { top: name, bottom: '' };
+};
+
 export default function RoletaPremioPage() {
   const [searchParams] = useSearchParams();
 
@@ -114,8 +134,40 @@ export default function RoletaPremioPage() {
   const [showFirebaseDetails, setShowFirebaseDetails] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // Single-Draw Validation per user
+  const [hasAlreadyDrawn, setHasAlreadyDrawn] = useState(false);
+  const [existingDraw, setExistingDraw] = useState<ExistingDrawRecord | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function verify() {
+      setCheckingStatus(true);
+      const result = await checkUserDrawStatus(participant);
+      if (isMounted) {
+        if (result.alreadyDrawn && result.lead) {
+          setHasAlreadyDrawn(true);
+          setExistingDraw(result.lead);
+          setStatusMessage('Sorteio já efetuado.');
+        } else {
+          setHasAlreadyDrawn(false);
+          setExistingDraw(null);
+        }
+        setCheckingStatus(false);
+      }
+    }
+    verify();
+    return () => {
+      isMounted = false;
+    };
+  }, [participant.crachaId, participant.email, participant.whatsapp]);
+
   const handleSpinWheel = () => {
     if (isSpinning) return;
+    if (hasAlreadyDrawn) {
+      setStatusMessage('Sorteio já efetuado.');
+      return;
+    }
     setIsSpinning(true);
 
     const randomIndex = Math.floor(Math.random() * PRIZES.length);
@@ -234,9 +286,9 @@ export default function RoletaPremioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#17232d] text-slate-100 flex flex-col font-['Open_Sans',sans-serif] selection:bg-blue-600 selection:text-white">
       {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="border-b border-slate-700/60 bg-[#17232d] sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 p-1.5 rounded-lg text-white">
             <Target size={20} />
@@ -245,12 +297,12 @@ export default function RoletaPremioPage() {
             VX<span className="text-blue-500">Leads</span>
           </span>
           <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-            Passo 2: Roleta de Prêmios
+            Roleta de Prêmios
           </span>
         </div>
 
         <div className="text-xs text-slate-400">
-          Etapa 2 de 2 • Giro Exclusivo
+          Sorteio de Prêmios & Vouchers
         </div>
       </header>
 
@@ -258,7 +310,7 @@ export default function RoletaPremioPage() {
       <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-center gap-6">
         
         {/* Participant Identification Bar */}
-        <div className="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-lg flex items-center justify-between gap-3">
+        <div className="bg-[#2a353f] border border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-lg flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
               <Smartphone size={20} />
@@ -266,10 +318,10 @@ export default function RoletaPremioPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-                  Triagem Validada
+                  Participante Identificado
                 </span>
                 <span className="text-[10px] font-medium px-2 py-0.2 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  <CheckCircle2 size={10} className="inline mr-1" /> 1 Rodada Liberada
+                  <CheckCircle2 size={10} className="inline mr-1" /> 1 Sorteio Liberado
                 </span>
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-white">
@@ -281,16 +333,74 @@ export default function RoletaPremioPage() {
 
         {/* SPIN SCREEN */}
         {step === 'spin' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
+          <div className="bg-[#2a353f] border border-slate-700/60 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
             <div className="max-w-xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold mb-3 border border-emerald-500/20">
-                <CheckCircle2 size={14} />
-                <span>Respostas Registradas com Sucesso!</span>
-              </div>
+              
+              {/* ALREADY DRAWN WARNING BANNER */}
+              {hasAlreadyDrawn ? (
+                <div className="mb-6 bg-red-950/40 border-2 border-red-500/60 rounded-2xl p-5 text-left shadow-2xl animate-fade-in">
+                  <div className="flex items-center gap-3 text-red-400 font-black text-base sm:text-lg">
+                    <AlertTriangle size={24} className="shrink-0 text-red-400" />
+                    <span>Sorteio já efetuado.</span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
+                    Identificamos que o usuário <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono font-bold text-blue-300">{participant.crachaId}</span>) já participou da rodada de prêmios. Conforme as regras oficiais, cada usuário pode participar do sorteio <strong>apenas 1 vez</strong>.
+                  </p>
+
+                  {existingDraw && (
+                    <div className="mt-4 pt-3.5 border-t border-red-500/30 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="bg-[#17232d] p-3 rounded-xl border border-slate-700/60">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Prêmio Conquistado</span>
+                        <span className="text-amber-300 font-bold text-sm flex items-center gap-1.5 mt-0.5">
+                          <Trophy size={14} className="text-yellow-400" />
+                          {existingDraw.premioGanho}
+                        </span>
+                      </div>
+                      <div className="bg-[#17232d] p-3 rounded-xl border border-slate-700/60">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Voucher Registrado</span>
+                        <span className="font-mono text-yellow-300 font-black text-sm block mt-0.5">
+                          {existingDraw.voucher}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {participant.returnUrl && (
+                      <button
+                        onClick={() => executeBase44Return({
+                          returnUrl: participant.returnUrl,
+                          leadId: participant.crachaId,
+                          voucher: existingDraw?.voucher || '',
+                          premio: existingDraw?.premioGanho || '',
+                          nome: participant.nome,
+                          empresa: participant.empresa
+                        })}
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                      >
+                        Retornar ao Base44
+                        <ExternalLink size={14} />
+                      </button>
+                    )}
+                    <RouterLink
+                      to="/leads"
+                      className="px-4 py-2 rounded-xl bg-[#17232d] hover:bg-[#202d38] text-slate-300 hover:text-white text-xs font-bold transition-all border border-slate-700/60 cursor-pointer"
+                    >
+                      Acessar Painel Comercial
+                    </RouterLink>
+                  </div>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold mb-3 border border-emerald-500/20">
+                  <CheckCircle2 size={14} />
+                  <span>Sorteio Liberado para Você!</span>
+                </div>
+              )}
+
               <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
                 Gire a Roleta de Prêmios
               </h3>
-              <p className="text-slate-400 text-sm mb-6">
+              <p className="text-slate-300 text-sm mb-6">
                 Descubra qual desconto especial você ganhou para o seu estande ou projeto.
               </p>
 
@@ -306,52 +416,104 @@ export default function RoletaPremioPage() {
                   className="w-full h-full rounded-full border-8 border-slate-800 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden transition-transform duration-[4500ms] ease-out"
                   style={{ transform: `rotate(${rotation}deg)` }}
                 >
-                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                    {PRIZES.map((prize, i) => {
-                      const total = PRIZES.length;
-                      const angle = 360 / total;
-                      const startAngle = i * angle;
-                      const endAngle = (i + 1) * angle;
-                      
-                      const x1 = 50 + 50 * Math.cos((Math.PI * startAngle) / 180);
-                      const y1 = 50 + 50 * Math.sin((Math.PI * startAngle) / 180);
-                      const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
-                      const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
-                      
-                      const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
-                      const midAngle = startAngle + angle / 2;
+                  <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
+                    {/* Layer 1: Sector Color Slices */}
+                    <g id="roleta-slices">
+                      {PRIZES.map((prize, i) => {
+                        const total = PRIZES.length;
+                        const angle = 360 / total;
+                        const startAngle = i * angle;
+                        const endAngle = (i + 1) * angle;
+                        
+                        const x1 = 50 + 50 * Math.cos((Math.PI * startAngle) / 180);
+                        const y1 = 50 + 50 * Math.sin((Math.PI * startAngle) / 180);
+                        const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
+                        const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
+                        
+                        const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
 
-                      return (
-                        <g key={prize.id}>
-                          <path d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
-                          {/* Radial diagonal alignment: Text positioned along the slice centerline */}
-                          <g transform={`rotate(${midAngle}, 50, 50)`}>
-                            <text
-                              x={74}
-                              y={50}
-                              fill="#ffffff"
-                              stroke="#0f172a"
-                              strokeWidth="0.6"
-                              paintOrder="stroke fill"
-                              fontSize="3.2"
-                              fontWeight="900"
-                              textAnchor="middle"
-                              dominantBaseline="central"
-                              style={{
-                                letterSpacing: '0.02em',
-                                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.85))'
-                              }}
-                            >
-                              {prize.name}
-                            </text>
+                        return (
+                          <path key={prize.id} d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
+                        );
+                      })}
+                    </g>
+
+                    {/* Layer 2: Topmost Labels Layer (Diagonally Centered per slice, Never Behind Wheel) */}
+                    <g id="roleta-labels">
+                      {PRIZES.map((prize, i) => {
+                        const total = PRIZES.length;
+                        const angle = 360 / total;
+                        const startAngle = i * angle;
+                        const midAngle = startAngle + angle / 2;
+                        const lines = getPrizeDisplay(prize.name);
+
+                        return (
+                          <g key={`lbl-${prize.id}`} transform={`rotate(${midAngle}, 50, 50)`}>
+                            {lines.bottom ? (
+                              <>
+                                <text
+                                  x={73}
+                                  y={47.8}
+                                  fill="#ffffff"
+                                  stroke="#0f172a"
+                                  strokeWidth="0.25"
+                                  paintOrder="stroke fill"
+                                  fontSize="4.2"
+                                  fontWeight="900"
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  style={{
+                                    fontFamily: "'Open Sans', sans-serif"
+                                  }}
+                                >
+                                  {lines.top}
+                                </text>
+                                <text
+                                  x={73}
+                                  y={52.4}
+                                  fill="#ffffff"
+                                  stroke="#0f172a"
+                                  strokeWidth="0.2"
+                                  paintOrder="stroke fill"
+                                  fontSize="2.3"
+                                  fontWeight="800"
+                                  letterSpacing="0.05em"
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  style={{
+                                    fontFamily: "'Open Sans', sans-serif"
+                                  }}
+                                >
+                                  {lines.bottom}
+                                </text>
+                              </>
+                            ) : (
+                              <text
+                                x={73}
+                                y={50}
+                                fill="#ffffff"
+                                stroke="#0f172a"
+                                strokeWidth="0.25"
+                                paintOrder="stroke fill"
+                                fontSize="3.4"
+                                fontWeight="900"
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                style={{
+                                  fontFamily: "'Open Sans', sans-serif"
+                                }}
+                              >
+                                {lines.top}
+                              </text>
+                            )}
                           </g>
-                        </g>
-                      );
-                    })}
+                        );
+                      })}
+                    </g>
                   </svg>
 
                   {/* Sleek Center Hub positioned so it never overlaps text */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-slate-900 border-4 border-yellow-400 flex items-center justify-center shadow-2xl z-20 pointer-events-none">
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#17232d] border-4 border-yellow-400 flex items-center justify-center shadow-2xl z-20 pointer-events-none">
                     <Sparkles className="text-yellow-400" size={20} />
                   </div>
                 </div>
@@ -359,13 +521,28 @@ export default function RoletaPremioPage() {
 
               {/* Spin Button */}
               <div className="mt-6">
-                <button
-                  disabled={isSpinning}
-                  onClick={handleSpinWheel}
-                  className="px-10 py-4 rounded-2xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 font-black text-xl shadow-[0_8px_0_#b45309] active:shadow-none active:translate-y-2 transition-all disabled:opacity-50 cursor-pointer uppercase tracking-wider"
-                >
-                  {isSpinning ? 'Girando a Roleta...' : 'GIRAR AGORA!'}
-                </button>
+                {hasAlreadyDrawn ? (
+                  <div className="space-y-2">
+                    <button
+                      disabled={true}
+                      className="px-10 py-4 rounded-2xl bg-red-900/40 text-red-300 font-black text-lg border-2 border-red-500/50 cursor-not-allowed uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 mx-auto"
+                    >
+                      <AlertTriangle size={20} />
+                      Sorteio já efetuado.
+                    </button>
+                    <p className="text-xs text-red-400/90 font-medium">
+                      Cada usuário pode participar do sorteio apenas 1 vez.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    disabled={isSpinning || checkingStatus}
+                    onClick={handleSpinWheel}
+                    className="px-10 py-4 rounded-2xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 font-black text-xl shadow-[0_8px_0_#b45309] active:shadow-none active:translate-y-2 transition-all disabled:opacity-50 cursor-pointer uppercase tracking-wider"
+                  >
+                    {isSpinning ? 'Girando a Roleta...' : checkingStatus ? 'Verificando...' : 'GIRAR AGORA!'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -373,7 +550,7 @@ export default function RoletaPremioPage() {
 
         {/* WON SCREEN */}
         {step === 'won' && wonPrize && (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden animate-fade-in">
+          <div className="bg-[#2a353f] border border-slate-700/60 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden animate-fade-in">
             <div className="max-w-xl mx-auto">
               <div className="w-20 h-20 rounded-full bg-yellow-400/20 text-yellow-400 border border-yellow-400/40 flex items-center justify-center mx-auto mb-4 text-3xl shadow-xl">
                 {wonPrize.icon}
@@ -386,32 +563,30 @@ export default function RoletaPremioPage() {
                 {wonPrize.name}
               </h3>
 
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 my-6 inline-block w-full max-w-sm">
+              <div className="bg-[#17232d] border border-slate-700/60 rounded-2xl p-4 my-6 inline-block w-full max-w-sm">
                 <div className="text-xs text-slate-400 uppercase tracking-wider mb-1 font-semibold">
                   Voucher de Validação
                 </div>
                 <div className="text-2xl font-mono font-black text-yellow-400 tracking-widest">
                   {voucherCode}
                 </div>
-                <div className="text-[11px] text-slate-500 mt-1">
+                <div className="text-[11px] text-slate-400 mt-1">
                   Apresente este código no estande para validar seu desconto.
                 </div>
               </div>
 
-              <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-5 mb-8 text-left">
+              <div className="bg-[#17232d] border border-emerald-500/30 rounded-2xl p-5 mb-8 text-left">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm mb-2">
                   <CheckCircle2 size={18} />
-                  <span>Circuito Concluído e Dados Salvos!</span>
+                  <span>Sorteio Concluído e Dados Salvos!</span>
                 </div>
                 <p className="text-xs text-emerald-200/80 leading-relaxed mb-3">
                   {statusMessage}
                 </p>
                 
-                <div className="bg-slate-950/80 rounded-xl p-3 text-xs space-y-1 font-mono text-slate-300 border border-emerald-500/20">
+                <div className="bg-[#2a353f] rounded-xl p-3 text-xs space-y-1 font-mono text-slate-300 border border-slate-700/60">
                   <div><strong>Participante:</strong> {participant.nome} ({participant.empresa})</div>
-                  <div><strong>1. Problemas:</strong> {participant.r1}</div>
-                  <div><strong>2. Possíveis soluções:</strong> {participant.r2}</div>
-                  <div><strong>3. Código do Voucher:</strong> {voucherCode}</div>
+                  <div><strong>Código do Voucher:</strong> {voucherCode}</div>
                   <div className="text-yellow-400 font-bold"><strong>Prêmio:</strong> {wonPrize.name} ({voucherCode})</div>
                 </div>
 
@@ -430,7 +605,7 @@ export default function RoletaPremioPage() {
                   </button>
 
                   {showFirebaseDetails && (
-                    <div className="mt-3 p-3 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-3 font-sans animate-fade-in">
+                    <div className="mt-3 p-3 bg-[#17232d] rounded-xl border border-slate-700/60 text-[11px] text-slate-300 space-y-3 font-sans animate-fade-in">
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-white flex items-center gap-1">
@@ -452,7 +627,7 @@ export default function RoletaPremioPage() {
                             {copiedKey === 'firestore' ? 'Copiado!' : 'Copiar URL'}
                           </button>
                         </div>
-                        <code className="block p-2 bg-slate-950 rounded text-[10px] text-slate-400 font-mono break-all select-all">
+                        <code className="block p-2 bg-[#2a353f] rounded text-[10px] text-slate-300 font-mono break-all select-all">
                           https://firestore.googleapis.com/v1/projects/gen-lang-client-0914985094/databases/ai-studio-vxleads-3f221bd2-d7b1-412f-8b8b-acc20b7d9c88/documents/event_leads/{participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : 'ID_DO_LEAD'}?key=AIzaSyDDLpIvt2mxiVdka_KEeLfyKnKJm9VHz5E
                         </code>
                         <p className="text-[10px] text-slate-400 mt-1">
@@ -481,7 +656,7 @@ export default function RoletaPremioPage() {
                             {copiedKey === 'api' ? 'Copiado!' : 'Copiar URL'}
                           </button>
                         </div>
-                        <code className="block p-2 bg-slate-950 rounded text-[10px] text-slate-400 font-mono break-all select-all">
+                        <code className="block p-2 bg-[#2a353f] rounded text-[10px] text-slate-300 font-mono break-all select-all">
                           {window.location.origin}/api/leads/{participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : 'ID_DO_LEAD'}
                         </code>
                       </div>
@@ -540,11 +715,11 @@ export default function RoletaPremioPage() {
       </main>
 
       {/* Footer with link to Company Panel */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t border-slate-700/60 bg-[#17232d] py-4 px-6 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p>VX Leads • Gamificação, Triagem e Direcionamento de Produtos</p>
         <RouterLink
           to="/leads"
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-blue-600/20 text-slate-400 hover:text-blue-400 border border-slate-800 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2a353f] hover:bg-blue-600/20 text-slate-300 hover:text-blue-400 border border-slate-700 hover:border-blue-500/40 text-[11px] font-medium transition-colors"
           title="Acessar painel de leads captados da empresa (Requer senha adeptmec2027)"
         >
           <Gift size={12} className="text-blue-400" />
