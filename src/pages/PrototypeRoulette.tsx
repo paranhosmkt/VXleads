@@ -1038,9 +1038,6 @@ Content-Type: application/json
                         premio: wonPrize.name,
                         voucher: voucherCode,
                         jogo: 'roleta',
-                        problemas: answers[1] || '',
-                        possiveisSolucoes: answers[2] || '',
-                        respostasTriagem: `1. Problemas: ${answers[1] || ''} | 2. Possíveis soluções: ${answers[2] || ''} | 3. Código do Voucher: ${voucherCode}`,
                         webhookCallback: participant.webhookCallback
                       });
                     } else {

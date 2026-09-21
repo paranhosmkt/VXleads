@@ -14,11 +14,6 @@ export interface Base44LeadPayload {
   premio: string;
   voucher: string;
   jogo?: string;
-  produtos?: string;
-  opcoesTriagem?: string;
-  respostasTriagem?: string;
-  problemas?: string;
-  possiveisSolucoes?: string;
   webhookCallback?: string;
 }
 
@@ -47,9 +42,9 @@ export function getBase44ReturnDestination(searchParams?: URLSearchParams): stri
 }
 
 /**
- * Builds the comprehensive return URL for Base44 with all parameters mapped to ensure
- * whatever field name Base44 uses in its internal form/table (e.g. premio, voucher, prize, cupom),
- * the data is received and populated.
+ * Builds the clean return URL for Base44 returning ONLY the won prize and voucher
+ * alongside the participant/lead identification.
+ * Explicitly removes all triage questions and answers.
  */
 export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
   const baseTarget = payload.returnUrl || getBase44ReturnDestination();
@@ -63,12 +58,25 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
 
   const p = urlObj.searchParams;
 
+  // Explicitly remove any triage questions/answers and product suggestions
+  const triageParamsToDelete = [
+    'opcoes_triagem', 'opcoesTriagem',
+    'respostas_triagem', 'respostasTriagem', 'triagem',
+    'problemas', 'problema', 'pergunta_1', 'pergunta_2', 'pergunta1', 'pergunta2',
+    'possiveis_solucoes', 'possiveisSolucoes', 'solucoes',
+    'produtos', 'produtos_direcionados', 'produtos_recomendados', 'products',
+    'r1', 'r2', 'r3', 'resposta1', 'resposta2', 'resposta3'
+  ];
+  for (const param of triageParamsToDelete) {
+    p.delete(param);
+  }
+
   // 1. Core Flags
   p.set('is_new_user', 'true');
   p.set('status', 'concluido');
   p.set('status_jogo', 'premiado');
 
-  // 2. Lead Identification (all variations)
+  // 2. Lead Identification (all standard variations so Base44 catches it)
   const leadId = payload.leadId || p.get('leadId') || p.get('crachaId') || p.get('id') || 'CR-VISITANTE';
   p.set('crachaId', leadId);
   p.set('cracha', leadId);
@@ -100,7 +108,7 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
     p.set('email', payload.email);
   }
 
-  // 4. PRIZE - All field variations so Base44 catches it
+  // 4. PRIZE - All standard field variations so Base44 catches it
   const premioVal = payload.premio || '';
   p.set('premio', premioVal);
   p.set('premio_ganho', premioVal);
@@ -110,7 +118,7 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
   p.set('brinde', premioVal);
   p.set('desconto', premioVal);
 
-  // 5. VOUCHER - All field variations so Base44 catches it
+  // 5. VOUCHER - All standard field variations so Base44 catches it
   const voucherVal = payload.voucher || '';
   p.set('voucher', voucherVal);
   p.set('voucher_code', voucherVal);
@@ -119,33 +127,10 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
   p.set('codigo', voucherVal);
   p.set('cupom', voucherVal);
 
-  // 6. Game & Products
+  // 6. Game
   if (payload.jogo) {
     p.set('jogo', payload.jogo);
     p.set('game', payload.jogo);
-  }
-  if (payload.produtos) {
-    p.set('produtos', payload.produtos);
-    p.set('produtos_direcionados', payload.produtos);
-    p.set('produtos_recomendados', payload.produtos);
-    p.set('products', payload.produtos);
-  }
-  if (payload.opcoesTriagem) {
-    p.set('opcoes_triagem', payload.opcoesTriagem);
-  }
-  if (payload.respostasTriagem) {
-    p.set('respostas_triagem', payload.respostasTriagem);
-    p.set('triagem', payload.respostasTriagem);
-  }
-  if (payload.problemas) {
-    p.set('problemas', payload.problemas);
-    p.set('problema', payload.problemas);
-    p.set('pergunta_1', payload.problemas);
-  }
-  if (payload.possiveisSolucoes) {
-    p.set('possiveis_solucoes', payload.possiveisSolucoes);
-    p.set('solucoes', payload.possiveisSolucoes);
-    p.set('pergunta_2', payload.possiveisSolucoes);
   }
 
   return urlObj.toString();
@@ -169,7 +154,6 @@ export async function executeBase44Return(payload: Base44LeadPayload) {
         leadId: payload.leadId,
         premio: payload.premio,
         voucher: payload.voucher,
-        produtos: payload.produtos,
         url: returnUrl
       }, '*');
     }
@@ -184,11 +168,10 @@ export async function executeBase44Return(payload: Base44LeadPayload) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event: 'lead_triagem_completed',
+          event: 'lead_game_completed',
           leadId: payload.leadId,
           premio: payload.premio,
-          voucher: payload.voucher,
-          produtos: payload.produtos
+          voucher: payload.voucher
         })
       });
     } catch (e) {

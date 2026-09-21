@@ -617,7 +617,7 @@ export default function TriagemPage() {
                   Olá, {participant.nome}!
                 </h2>
                 <p className="text-slate-400 text-sm sm:text-base">
-                  Escolha abaixo qual experiência interativa você quer jogar para concorrer a prêmios e descontos exclusivos:
+                  Escolha abaixo qual experiência interativa você quer jogar para concorrer a prêmios e descontos exclusivos no TDM System.
                 </p>
               </div>
             )}

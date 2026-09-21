@@ -684,9 +684,6 @@ export default function RoletaPremioPage() {
                         premio: wonPrize.name,
                         voucher: voucherCode,
                         jogo: 'roleta',
-                        problemas: participant.r1,
-                        possiveisSolucoes: participant.r2,
-                        respostasTriagem: `1. Problemas: ${participant.r1} | 2. Possíveis soluções: ${participant.r2} | 3. Código do Voucher: ${voucherCode}`,
                         webhookCallback: participant.webhookCallback
                       });
                     } else {

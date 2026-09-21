@@ -274,7 +274,8 @@ async function startServer() {
           for (const item of results) {
             if (item.document?.fields) {
               const docId = item.document.name.split('/').pop();
-              list.push({ id: docId, ...parseFirestoreFields(item.document.fields) });
+              const parsed = parseFirestoreFields(item.document.fields);
+              list.push({ ...parsed, id: docId, _docId: docId });
             }
           }
         }
@@ -380,6 +381,39 @@ async function startServer() {
     res.json({ count: merged.length, leads: merged });
   };
 
+  const handleBase44Delete = async (req: express.Request, res: express.Response) => {
+    try {
+      const leadId = req.params.leadId || (req.query.id as string) || (req.query.leadId as string) || (req.query.crachaId as string);
+      if (!leadId) {
+        return res.status(400).json({ error: "Identificador do lead é obrigatório" });
+      }
+
+      // 1. Remove from memory cache
+      delete base44Leads[leadId];
+      for (const [k, v] of Object.entries(base44Leads)) {
+        const item = v as any;
+        if (item.crachaId === leadId || item.id === leadId || item.leadId === leadId) {
+          delete base44Leads[k];
+        }
+      }
+
+      // 2. Direct Firestore REST delete
+      const cleanDocId = encodeURIComponent(leadId.trim().replace(/[^a-zA-Z0-9_-]/g, '_'));
+      const directDeleteUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DB_ID}/documents/event_leads/${cleanDocId}?key=${FIREBASE_API_KEY}`;
+      await fetch(directDeleteUrl, { method: 'DELETE' });
+
+      if (encodeURIComponent(leadId) !== cleanDocId) {
+        const rawDeleteUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DB_ID}/documents/event_leads/${encodeURIComponent(leadId)}?key=${FIREBASE_API_KEY}`;
+        await fetch(rawDeleteUrl, { method: 'DELETE' });
+      }
+
+      return res.json({ success: true, message: "Lead removido com sucesso", leadId });
+    } catch (err: any) {
+      console.error("Erro ao excluir lead no servidor:", err);
+      return res.status(500).json({ error: "Falha ao processar exclusão", details: err.message });
+    }
+  };
+
   // Endpoint de teste de diagnóstico do Firebase
   app.get("/api/firebase-test", async (_req, res) => {
     try {
@@ -401,6 +435,7 @@ async function startServer() {
   app.post(["/api", "/api/", "/api/leads", "/api/lead", "/api/integracao/base44", "/api/integration/base44", "/api/base44", "/api/webhook/base44"], handleBase44Post);
   app.get(["/api", "/api/", "/api/leads", "/api/lead", "/api/integracao/base44", "/api/integration/base44", "/api/base44", "/api/webhook/base44"], handleBase44Get);
   app.get(["/api/leads/:leadId", "/api/lead/:leadId", "/api/integracao/base44/:leadId", "/api/integration/base44/:leadId", "/api/base44/:leadId"], handleBase44Get);
+  app.delete(["/api/leads/:leadId", "/api/lead/:leadId", "/api/integracao/base44/:leadId", "/api/integration/base44/:leadId", "/api/base44/:leadId", "/api/leads"], handleBase44Delete);
 
   // API routes FIRST
   app.post("/api/chat", async (req, res) => {

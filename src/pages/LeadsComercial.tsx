@@ -5,7 +5,7 @@ import {
   ExternalLink, ArrowUpDown, Filter, Sparkles, Lock, KeyRound, LogOut, ArrowRight, ShieldCheck,
   Code2, Copy, Check, X, Database, Cloud, Award, Edit2, Trash2, Save, AlertTriangle
 } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const ACCESS_PASSWORD = 'adeptmec2027';
@@ -13,6 +13,8 @@ const AUTH_STORAGE_KEY = 'vx_empresa_leads_auth';
 
 interface EventLead {
   id: string;
+  _docId?: string;
+  leadId?: string;
   dataHora: string;
   nome: string;
   email: string;
@@ -135,39 +137,92 @@ export default function LeadsComercial() {
     if (!leadToDelete) return;
     setIsDeleting(true);
 
-    try {
-      // 1. Delete from Firebase Firestore
-      await deleteDoc(doc(db, 'event_leads', leadToDelete.id));
+    const target = leadToDelete;
+    const docId = (target as any)._docId || target.id;
+    const crachaClean = target.crachaId ? target.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : '';
+    const leadIdClean = (target as any).leadId ? (target as any).leadId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : '';
 
-      // 2. Remove from local state
-      setLeads((prev) => prev.filter((l) => l.id !== leadToDelete.id));
-      if (selectedLead?.id === leadToDelete.id) {
-        setSelectedLead(null);
+    // Collect all candidate document IDs in Firestore
+    const candidateIds = new Set<string>();
+    if (docId) candidateIds.add(docId);
+    if (target.id) candidateIds.add(target.id);
+    if (crachaClean) candidateIds.add(crachaClean);
+    if (leadIdClean) candidateIds.add(leadIdClean);
+    if (target.crachaId) candidateIds.add(target.crachaId);
+
+    try {
+      // 1. Delete direct docs from Firestore
+      for (const idToDelete of candidateIds) {
+        try {
+          await deleteDoc(doc(db, 'event_leads', idToDelete));
+        } catch (delDocErr) {
+          console.warn(`Tentativa de exclusão do doc ${idToDelete}:`, delDocErr);
+        }
       }
 
-      // 3. Remove from localStorage fallback
+      // 2. Query any remaining documents in Firestore matching this crachaId
+      if (target.crachaId) {
+        try {
+          const qCracha = query(collection(db, 'event_leads'), where('crachaId', '==', target.crachaId));
+          const snapCracha = await getDocs(qCracha);
+          for (const d of snapCracha.docs) {
+            await deleteDoc(doc(db, 'event_leads', d.id));
+          }
+        } catch (qErr) {
+          console.warn('Erro ao consultar por crachaId:', qErr);
+        }
+      }
+
+      // 3. Clear server cache and trigger REST API deletion
+      const apiDeleteId = docId || target.crachaId || target.id;
+      if (apiDeleteId) {
+        try {
+          await fetch(`/api/leads/${encodeURIComponent(apiDeleteId)}`, { method: 'DELETE' });
+        } catch (apiErr) {
+          console.warn('Erro ao chamar DELETE /api/leads:', apiErr);
+        }
+      }
+
+      // 4. Remove from localStorage offline cache
       try {
         const localStr = localStorage.getItem('vx_proto_submissions');
         if (localStr) {
           const list = JSON.parse(localStr);
-          const updatedList = list.filter((item: any) => item.id !== leadToDelete.id);
+          const updatedList = list.filter((item: any) => {
+            if (item.id === target.id || item.id === docId) return false;
+            if (target.crachaId && (item.crachaId === target.crachaId || item.id === target.crachaId)) return false;
+            if (target.nome && item.nome === target.nome && item.dataHora === target.dataHora) return false;
+            return true;
+          });
           localStorage.setItem('vx_proto_submissions', JSON.stringify(updatedList));
         }
       } catch (e) {
         // ignore
       }
 
+      // 5. Update local state immediately
+      setLeads((prev) => prev.filter((l) => {
+        if (l.id === target.id || (l as any)._docId === docId) return false;
+        if (target.crachaId && l.crachaId === target.crachaId) return false;
+        if (candidateIds.has(l.id)) return false;
+        return true;
+      }));
+
+      if (selectedLead && (selectedLead.id === target.id || selectedLead.crachaId === target.crachaId || (selectedLead as any)._docId === docId)) {
+        setSelectedLead(null);
+      }
+
       setActionFeedback({
         type: 'success',
-        message: `Lead "${leadToDelete.nome}" excluído permanentemente da base de dados!`
+        message: `Lead "${target.nome}" excluído permanentemente da base de dados!`
       });
       setLeadToDelete(null);
       setTimeout(() => setActionFeedback(null), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao excluir lead:', err);
       setActionFeedback({
         type: 'error',
-        message: 'Erro ao excluir lead da base de dados. Tente novamente.'
+        message: `Erro ao excluir lead: ${err.message || 'Tente novamente.'}`
       });
     } finally {
       setIsDeleting(false);
@@ -208,8 +263,15 @@ export default function LeadsComercial() {
       leadsRef,
       (snapshot) => {
         const fetched: EventLead[] = [];
-        snapshot.forEach((doc) => {
-          fetched.push({ id: doc.id, ...doc.data() } as EventLead);
+        snapshot.forEach((d) => {
+          const data = d.data();
+          const docId = d.id;
+          fetched.push({
+            ...data,
+            id: docId,
+            _docId: docId,
+            crachaId: data.crachaId || data.leadId || docId
+          } as EventLead);
         });
 
         // Fallback: merge with local storage submissions if any offline
@@ -218,7 +280,10 @@ export default function LeadsComercial() {
           if (localStr) {
             const localLeads = JSON.parse(localStr);
             localLeads.forEach((loc: EventLead) => {
-              if (!fetched.find(f => f.id === loc.id)) {
+              const locId = loc.id;
+              const locCracha = loc.crachaId;
+              const exists = fetched.some(f => f.id === locId || (locCracha && f.crachaId === locCracha));
+              if (!exists) {
                 fetched.push(loc);
               }
             });
@@ -1175,7 +1240,7 @@ export default function LeadsComercial() {
 
         {/* MODAL: CONFIRMAÇÃO DE EXCLUSÃO DE LEAD */}
         {leadToDelete && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-[#17232d] border border-red-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 animate-fade-in">
               <div className="w-14 h-14 rounded-2xl bg-red-600/20 border border-red-500/40 text-red-400 flex items-center justify-center mx-auto shadow-lg">
                 <Trash2 size={28} />
