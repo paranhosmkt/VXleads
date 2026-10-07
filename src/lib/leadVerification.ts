@@ -18,6 +18,9 @@ export interface ExistingDrawRecord {
   email?: string;
   whatsapp?: string;
   premioGanho: string;
+  premioDesconto?: string;
+  premioBrinde?: string;
+  produto?: string;
   voucher: string;
   dataHora: string;
   jogoEscolhido: string;
@@ -29,6 +32,42 @@ export interface CheckDrawResult {
   alreadyDrawn: boolean;
   lead?: ExistingDrawRecord;
   source?: 'firestore' | 'localStorage';
+}
+
+function parseLeadRecord(id: string, data: any, participant: ParticipantIdentifiers, fallbackCracha: string): ExistingDrawRecord {
+  const premio = data.premioGanho || data.premio || 'Prêmio Conquistado';
+  const voucher = data.voucher || data.codigoVoucher || data.voucherCode || 'VX-00000';
+  let premioDesconto = data.premioDesconto || data.desconto;
+  let premioBrinde = data.premioBrinde || data.brinde || data.item;
+
+  if (!premioDesconto && typeof premio === 'string' && premio.includes('+')) {
+    const parts = premio.split('+');
+    premioDesconto = parts[0].trim();
+    if (!premioBrinde && parts[1]) {
+      premioBrinde = parts[1].trim();
+    }
+  } else if (!premioDesconto && typeof premio === 'string' && premio.includes('%')) {
+    premioDesconto = premio;
+  }
+
+  return {
+    id,
+    nome: data.nome || participant.nome || 'Participante',
+    crachaId: data.crachaId || fallbackCracha || 'N/A',
+    empresa: data.empresa,
+    cargo: data.cargo,
+    email: data.email,
+    whatsapp: data.whatsapp,
+    premioGanho: premio,
+    premioDesconto,
+    premioBrinde,
+    produto: data.produto || data.produtosDirecionados,
+    voucher,
+    dataHora: data.dataHora || 'Recentemente',
+    jogoEscolhido: data.jogoEscolhido || data.jogo || 'roleta',
+    produtosDirecionados: data.produtosDirecionados || data.resposta2,
+    respostasTriagem: data.respostasTriagem || data.resposta1
+  };
 }
 
 /**
@@ -57,21 +96,7 @@ export async function checkUserDrawStatus(
           return {
             alreadyDrawn: true,
             source: 'firestore',
-            lead: {
-              id: directSnap.id,
-              nome: data.nome || participant.nome || 'Participante',
-              crachaId: data.crachaId || crachaClean,
-              empresa: data.empresa,
-              cargo: data.cargo,
-              email: data.email,
-              whatsapp: data.whatsapp,
-              premioGanho: premio || 'Prêmio Conquistado',
-              voucher: voucher || 'VX-00000',
-              dataHora: data.dataHora || 'Recentemente',
-              jogoEscolhido: data.jogoEscolhido || data.jogo || 'roleta',
-              produtosDirecionados: data.produtosDirecionados || data.resposta2,
-              respostasTriagem: data.respostasTriagem || data.resposta1
-            }
+            lead: parseLeadRecord(directSnap.id, data, participant, crachaClean)
           };
         }
       }
@@ -91,21 +116,7 @@ export async function checkUserDrawStatus(
           return {
             alreadyDrawn: true,
             source: 'firestore',
-            lead: {
-              id: docItem.id,
-              nome: data.nome || participant.nome || 'Participante',
-              crachaId: data.crachaId || crachaClean,
-              empresa: data.empresa,
-              cargo: data.cargo,
-              email: data.email,
-              whatsapp: data.whatsapp,
-              premioGanho: premio || 'Prêmio Conquistado',
-              voucher: voucher || 'VX-00000',
-              dataHora: data.dataHora || 'Recentemente',
-              jogoEscolhido: data.jogoEscolhido || data.jogo || 'roleta',
-              produtosDirecionados: data.produtosDirecionados || data.resposta2,
-              respostasTriagem: data.respostasTriagem || data.resposta1
-            }
+            lead: parseLeadRecord(docItem.id, data, participant, crachaClean)
           };
         }
       }
@@ -127,21 +138,7 @@ export async function checkUserDrawStatus(
           return {
             alreadyDrawn: true,
             source: 'firestore',
-            lead: {
-              id: docItem.id,
-              nome: data.nome || participant.nome || 'Participante',
-              crachaId: data.crachaId || crachaClean || 'N/A',
-              empresa: data.empresa,
-              cargo: data.cargo,
-              email: data.email,
-              whatsapp: data.whatsapp,
-              premioGanho: premio || 'Prêmio Conquistado',
-              voucher: voucher || 'VX-00000',
-              dataHora: data.dataHora || 'Recentemente',
-              jogoEscolhido: data.jogoEscolhido || data.jogo || 'roleta',
-              produtosDirecionados: data.produtosDirecionados || data.resposta2,
-              respostasTriagem: data.respostasTriagem || data.resposta1
-            }
+            lead: parseLeadRecord(docItem.id, data, participant, crachaClean)
           };
         }
       }
@@ -163,21 +160,7 @@ export async function checkUserDrawStatus(
           return {
             alreadyDrawn: true,
             source: 'firestore',
-            lead: {
-              id: docItem.id,
-              nome: data.nome || participant.nome || 'Participante',
-              crachaId: data.crachaId || crachaClean || 'N/A',
-              empresa: data.empresa,
-              cargo: data.cargo,
-              email: data.email,
-              whatsapp: data.whatsapp,
-              premioGanho: premio || 'Prêmio Conquistado',
-              voucher: voucher || 'VX-00000',
-              dataHora: data.dataHora || 'Recentemente',
-              jogoEscolhido: data.jogoEscolhido || data.jogo || 'roleta',
-              produtosDirecionados: data.produtosDirecionados || data.resposta2,
-              respostasTriagem: data.respostasTriagem || data.resposta1
-            }
+            lead: parseLeadRecord(docItem.id, data, participant, crachaClean)
           };
         }
       }
@@ -212,21 +195,7 @@ export async function checkUserDrawStatus(
           return {
             alreadyDrawn: true,
             source: 'localStorage',
-            lead: {
-              id: match.id || 'local',
-              nome: match.nome || participant.nome || 'Participante',
-              crachaId: match.crachaId || crachaClean || 'N/A',
-              empresa: match.empresa,
-              cargo: match.cargo,
-              email: match.email,
-              whatsapp: match.whatsapp,
-              premioGanho: match.premioGanho || match.premio || 'Prêmio Conquistado',
-              voucher: match.voucher || match.codigoVoucher || 'VX-00000',
-              dataHora: match.dataHora || 'Recentemente',
-              jogoEscolhido: match.jogoEscolhido || match.jogo || 'roleta',
-              produtosDirecionados: match.produtosDirecionados,
-              respostasTriagem: match.respostasTriagem
-            }
+            lead: parseLeadRecord(match.id || 'local', match, participant, crachaClean)
           };
         }
       }

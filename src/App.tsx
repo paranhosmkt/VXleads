@@ -33,7 +33,12 @@ export default function App() {
         <Route path="/roleta" element={<Roulette />} />
         <Route path="/prototipo-roleta" element={<PrototypeRoulette />} />
         <Route path="/triagem" element={<TriagemPage />} />
+        <Route path="/triagem/:produto" element={<TriagemPage />} />
         <Route path="/roleta-premio" element={<RoletaPremioPage />} />
+        <Route path="/roleta-premio/:produto" element={<RoletaPremioPage />} />
+        <Route path="/sorteio" element={<RoletaPremioPage />} />
+        <Route path="/sorteio/:produto" element={<RoletaPremioPage />} />
+        <Route path="/sorteios" element={<RoletaPremioPage />} />
         <Route path="/leads" element={<LeadsComercial />} />
         <Route path="/leads-comercial" element={<LeadsComercial />} />
         <Route path="/dashboard" element={<Dashboard />} />

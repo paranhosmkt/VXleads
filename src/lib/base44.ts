@@ -13,7 +13,10 @@ export interface Base44LeadPayload {
   email?: string;
   premio: string;
   voucher: string;
+  desconto?: string;
+  brinde?: string;
   jogo?: string;
+  produto?: string;
   webhookCallback?: string;
 }
 
@@ -115,8 +118,19 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
   p.set('premio_sorteado', premioVal);
   p.set('premioGanho', premioVal);
   p.set('prize', premioVal);
-  p.set('brinde', premioVal);
-  p.set('desconto', premioVal);
+  if (payload.desconto) {
+    p.set('desconto', payload.desconto);
+    p.set('desconto_ganho', payload.desconto);
+  } else {
+    p.set('desconto', premioVal);
+  }
+  if (payload.brinde) {
+    p.set('brinde', payload.brinde);
+    p.set('brinde_ganho', payload.brinde);
+    p.set('item', payload.brinde);
+  } else {
+    p.set('brinde', premioVal);
+  }
 
   // 5. VOUCHER - All standard field variations so Base44 catches it
   const voucherVal = payload.voucher || '';
@@ -131,6 +145,14 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
   if (payload.jogo) {
     p.set('jogo', payload.jogo);
     p.set('game', payload.jogo);
+  }
+
+  // 7. PRODUCT - Product specified for this dedicated draw
+  if (payload.produto) {
+    p.set('produto', payload.produto);
+    p.set('product', payload.produto);
+    p.set('produto_selecionado', payload.produto);
+    p.set('produtos_direcionados', payload.produto);
   }
 
   return urlObj.toString();

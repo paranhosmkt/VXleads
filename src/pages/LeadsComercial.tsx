@@ -3,10 +3,11 @@ import {
   Users, Search, Download, RefreshCw, Smartphone, 
   Trophy, CheckCircle2, Clock, Phone, Mail, Building, Briefcase, 
   ExternalLink, ArrowUpDown, Filter, Sparkles, Lock, KeyRound, LogOut, ArrowRight, ShieldCheck,
-  Code2, Copy, Check, X, Database, Cloud, Award, Edit2, Trash2, Save, AlertTriangle
+  Code2, Copy, Check, X, Database, Cloud, Award, Edit2, Trash2, Save, AlertTriangle, Layers, Zap, Shield, Box, Cpu
 } from 'lucide-react';
 import { collection, query, where, orderBy, onSnapshot, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { PRODUCTS_CONFIG, getProductBySlugOrParam, ProductConfig } from '../data/productConfig';
 
 const ACCESS_PASSWORD = 'adeptmec2027';
 const AUTH_STORAGE_KEY = 'vx_empresa_leads_auth';
@@ -25,10 +26,17 @@ interface EventLead {
   origem: string;
   jogoEscolhido: string;
   premioGanho: string;
+  premioDesconto?: string;
+  premioBrinde?: string;
+  desconto?: string;
+  brinde?: string;
   voucher: string;
   opcoesSelecionadasIds?: number[];
   respostasTriagem?: string;
   produtosDirecionados?: string;
+  produto?: string;
+  produtoKey?: string;
+  solucao?: string;
   produtosArray?: string[];
   resposta1?: string;
   resposta2?: string;
@@ -236,6 +244,11 @@ export default function LeadsComercial() {
   const [testResponse, setTestResponse] = useState<string | null>(null);
   const [testLoading, setTestLoading] = useState(false);
 
+  // Product Links for Base 44 Modal & Filter
+  const [showProductLinksModal, setShowProductLinksModal] = useState(false);
+  const [copiedProductUrl, setCopiedProductUrl] = useState<string | null>(null);
+  const [filterProduct, setFilterProduct] = useState<string>('todos');
+
   // Authentication submission
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -387,12 +400,19 @@ export default function LeadsComercial() {
 
     const matchGame = filterGame === 'todos' || lead.jogoEscolhido === filterGame;
 
+    const matchProduct = filterProduct === 'todos' || (
+      (lead.produto && lead.produto.toLowerCase() === filterProduct.toLowerCase()) ||
+      (lead.produtosDirecionados && lead.produtosDirecionados.toLowerCase().includes(filterProduct.toLowerCase())) ||
+      (lead.solucao && lead.solucao.toLowerCase().includes(filterProduct.toLowerCase())) ||
+      (lead.resposta2 && lead.resposta2.toLowerCase().includes(filterProduct.toLowerCase()))
+    );
+
     if (onlyRecurring) {
       const stats = leadStatsMap.get(getLeadKey(lead));
       if (!stats || stats.count <= 1) return false;
     }
 
-    return matchSearch && matchGame;
+    return matchSearch && matchGame && matchProduct;
   });
 
   // Export to CSV
@@ -546,6 +566,15 @@ export default function LeadsComercial() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setShowProductLinksModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white text-xs font-semibold border border-blue-500/40 transition-colors cursor-pointer"
+            title="Ver links diretos de sorteio por produto para configurar no Base 44"
+          >
+            <Layers size={14} className="text-blue-400" />
+            <span className="hidden sm:inline">Links Base 44 por Produto</span>
+          </button>
+
           <button
             onClick={() => setShowApiModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2a353f] hover:bg-[#34424e] text-amber-300 text-xs font-semibold border border-amber-500/40 transition-colors cursor-pointer"
@@ -713,6 +742,20 @@ export default function LeadsComercial() {
               <option value="raspadinha">✨ Raspadinha</option>
               <option value="caca_niquel">🎰 Caça-Níquel</option>
             </select>
+
+            <span className="text-xs text-slate-400 shrink-0 hidden md:inline">Solução/Produto:</span>
+            <select
+              value={filterProduct}
+              onChange={(e) => setFilterProduct(e.target.value)}
+              className="bg-[#17232d] border border-slate-700/80 text-xs text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="todos">Todas as Soluções</option>
+              {PRODUCTS_CONFIG.map((prod) => (
+                <option key={prod.id} value={prod.name}>
+                  {prod.name} ({prod.category})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -815,13 +858,22 @@ export default function LeadsComercial() {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs">
-                              {lead.jogoEscolhido === 'roleta' && '🎡'}
-                              {lead.jogoEscolhido === 'raspadinha' && '✨'}
-                              {lead.jogoEscolhido === 'caca_niquel' && '🎰'}
-                            </span>
-                            <span className="font-semibold text-amber-300">{lead.premioGanho}</span>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs">
+                                {lead.jogoEscolhido === 'roleta' && '🎡'}
+                                {lead.jogoEscolhido === 'raspadinha' && '✨'}
+                                {lead.jogoEscolhido === 'caca_niquel' && '🎰'}
+                                {(!lead.jogoEscolhido || lead.jogoEscolhido.includes('dupla')) && '🎁'}
+                              </span>
+                              <span className="font-semibold text-amber-300">{lead.premioGanho}</span>
+                            </div>
+                            {(lead.premioDesconto || lead.premioBrinde) && (
+                              <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                                {lead.premioDesconto && <span className="text-emerald-400">🏷️ {lead.premioDesconto}</span>}
+                                {lead.premioBrinde && <span className="text-amber-300">🎁 {lead.premioBrinde}</span>}
+                              </div>
+                            )}
                           </div>
                         </td>
 
@@ -832,13 +884,24 @@ export default function LeadsComercial() {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          {lead.produtosDirecionados ? (
+                          {(lead.produto || lead.produtosDirecionados) ? (
                             <div className="flex flex-wrap gap-1 max-w-[200px]">
-                              {lead.produtosDirecionados.split(',').map((p, idx) => (
-                                <span key={idx} className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
-                                  {p.trim()}
-                                </span>
-                              ))}
+                              {(lead.produtosDirecionados || lead.produto || '').split(',').map((p, idx) => {
+                                const prodInfo = getProductBySlugOrParam(p.trim());
+                                return (
+                                  <span 
+                                    key={idx} 
+                                    className="px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1"
+                                    style={{
+                                      backgroundColor: prodInfo ? `${prodInfo.color}20` : '#3b82f620',
+                                      borderColor: prodInfo ? `${prodInfo.color}50` : '#3b82f650',
+                                      color: prodInfo ? prodInfo.color : '#93c5fd'
+                                    }}
+                                  >
+                                    <span>{p.trim()}</span>
+                                  </span>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-slate-500 text-[11px]">—</span>
@@ -981,9 +1044,23 @@ export default function LeadsComercial() {
                   <span className="text-slate-400 block text-[10px] uppercase">Crachá ID</span>
                   <span className="text-blue-400 font-bold">{selectedLead.crachaId}</span>
                 </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">Prêmio & Voucher</span>
-                  <span className="text-yellow-400 font-bold">{selectedLead.voucher}</span>
+                <div className="col-span-2 bg-[#17232d] p-3 rounded-xl border border-slate-700/60">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Prêmio(s) Conquistado(s)</span>
+                  <span className="text-amber-300 font-bold text-sm block mt-0.5">{selectedLead.premioGanho}</span>
+                  {(selectedLead.premioDesconto || selectedLead.premioBrinde) && (
+                    <div className="flex flex-wrap gap-3 mt-1.5 pt-1.5 border-t border-slate-700/60 text-xs">
+                      {selectedLead.premioDesconto && (
+                        <span className="text-emerald-400 font-medium">🏷️ Desconto: <strong>{selectedLead.premioDesconto}</strong></span>
+                      )}
+                      {selectedLead.premioBrinde && (
+                        <span className="text-amber-300 font-medium">🎁 Brinde: <strong>{selectedLead.premioBrinde}</strong></span>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-2 text-xs">
+                    <span className="text-slate-400">Voucher Oficial: </span>
+                    <span className="text-yellow-400 font-mono font-bold">{selectedLead.voucher}</span>
+                  </div>
                 </div>
               </div>
 
@@ -1563,6 +1640,164 @@ export default function LeadsComercial() {
                   className="px-6 py-2 rounded-xl bg-[#2a353f] hover:bg-[#34424e] text-white text-xs font-bold cursor-pointer border border-slate-700/60 transition-colors"
                 >
                   Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Product Links for Base 44 Modal */}
+        {showProductLinksModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+            <div className="bg-[#1f2b36] border border-blue-500/40 rounded-3xl max-w-4xl w-full p-6 sm:p-8 space-y-6 shadow-2xl my-8">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-700/60">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/40">
+                    <Layers size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-black text-white">
+                      Links de Sorteio por Produto para o Base 44
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Direcione automaticamente os leads do Base 44 para a página exclusiva de cada solução.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowProductLinksModal(false)}
+                  className="p-2 rounded-xl bg-[#2a353f] hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Instructions Banner */}
+              <div className="bg-blue-950/40 border border-blue-500/40 rounded-2xl p-4 text-xs text-slate-300 space-y-2">
+                <div className="font-bold text-white flex items-center gap-2">
+                  <Sparkles size={15} className="text-blue-400" />
+                  <span>Como funciona o redirecionamento automático do Base 44 e os 2 Sorteios:</span>
+                </div>
+                <p className="text-[12px] leading-relaxed">
+                  Lá no Base 44, quando o atendente/consultor selecionar o produto do lead (ou clicar no botão da solução correspondente), basta direcionar para a URL da página do produto abaixo. O sistema abre a página de sorteio <strong>completamente personalizada para aquele produto</strong>.
+                </p>
+                <div className="pt-2 border-t border-blue-500/30 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
+                    <strong className="text-emerald-400 block mb-0.5">1º Sorteio: Descontos (10% a 40%)</strong>
+                    <span>Desconto exclusivo e personalizado aplicado à solução técnica do produto.</span>
+                  </div>
+                  <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
+                    <strong className="text-amber-400 block mb-0.5">2º Sorteio: Brinde Físico Oficial</strong>
+                    <span>O participante gira uma 2ª vez para ganhar: <strong>Abridor de garrafa</strong>, <strong>Caneta</strong> ou <strong>Eco copo</strong>.</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400 pt-1">
+                  Ao concluir, o botão <strong>"Retornar aos cadastros"</strong> devolve o lead ao Base 44 com o voucher e os dois prêmios preenchidos!
+                </p>
+              </div>
+
+              {/* Product Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {PRODUCTS_CONFIG.map((prod) => {
+                  const directUrl = `${window.location.origin}/sorteio/${prod.id}`;
+                  const isCopied = copiedProductUrl === prod.id;
+
+                  return (
+                    <div
+                      key={prod.id}
+                      className="rounded-2xl p-4 border bg-[#17232d] flex flex-col justify-between gap-3 shadow-lg transition-all"
+                      style={{
+                        borderColor: `${prod.color}50`
+                      }}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full border"
+                            style={{
+                              backgroundColor: `${prod.color}20`,
+                              borderColor: `${prod.color}50`,
+                              color: prod.color
+                            }}
+                          >
+                            {prod.badge}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            /sorteio/{prod.id}
+                          </span>
+                        </div>
+
+                        <h4 className="text-base font-black text-white mt-2">
+                          {prod.fullName}
+                        </h4>
+                        <p className="text-xs text-slate-300 mt-0.5 line-clamp-2">
+                          {prod.tagline}
+                        </p>
+                      </div>
+
+                      {/* URL Code Block */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                          URL de Destino no Base 44:
+                        </span>
+                        <code className="block p-2 bg-[#2a353f] rounded-xl text-[11px] text-slate-200 font-mono break-all select-all border border-slate-700/60">
+                          {directUrl}
+                        </code>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(directUrl);
+                            setCopiedProductUrl(prod.id);
+                            setTimeout(() => setCopiedProductUrl(null), 2000);
+                          }}
+                          className="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm text-white"
+                          style={{
+                            backgroundColor: prod.color
+                          }}
+                        >
+                          {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                          <span>{isCopied ? 'Link Copiado!' : 'Copiar Link'}</span>
+                        </button>
+
+                        <a
+                          href={`${directUrl}?nome=Participante+Teste&empresa=Empresa+CNC&crachaId=CR-1000`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-2 px-3 rounded-xl bg-[#2a353f] hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/60 transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Abrir página deste produto em nova aba para testar"
+                        >
+                          <ExternalLink size={13} />
+                          <span>Testar</span>
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* URL with Query Params Explanation */}
+              <div className="bg-[#17232d] rounded-2xl p-4 border border-slate-700/60 text-xs text-slate-300 space-y-2">
+                <span className="font-bold text-white block">
+                  ⚙️ Redirecionamento Dinâmico (Passando parâmetros do Lead do Base 44):
+                </span>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Você pode usar a URL direta de cada produto ou passar o parâmetro <code>?produto=NOME</code> em qualquer URL de sorteio:
+                </p>
+                <code className="block p-2 bg-[#2a353f] rounded-xl text-[10px] sm:text-[11px] text-yellow-300 font-mono break-all select-all">
+                  {window.location.origin}/sorteio/vericut?nome=NOME&crachaId=CRACHA&empresa=EMPRESA&return_url=URL_CALLBACK
+                </code>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setShowProductLinksModal(false)}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer transition-colors shadow-md"
+                >
+                  Concluído
                 </button>
               </div>
             </div>
