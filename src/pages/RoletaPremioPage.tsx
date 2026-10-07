@@ -11,12 +11,20 @@ import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
 import { PRODUCTS_CONFIG, extractProductFromUrl, getProductBySlugOrParam, ProductConfig } from '../data/productConfig';
 import { 
+  TDM_DISCOUNT_PRIZES,
+  OTHER_PRODUCTS_DISCOUNT_PRIZES,
+  OTHER_PRODUCTS_DISCOUNT_SLICES,
   DISCOUNT_PRIZES, 
   PHYSICAL_ITEM_PRIZES, 
   ITEM_ROULETTE_SLICES, 
   DiscountPrize, 
   PhysicalItemPrize, 
   RouletteSlice,
+  isTdmProduct,
+  getDiscountPrizesForProduct,
+  getUniqueDiscountsForProduct,
+  getDiscountRangeLabel,
+  getDiscountPercentagesText,
   getPrizeSliceDisplay 
 } from '../data/prizesConfig';
 
@@ -219,6 +227,9 @@ export default function RoletaPremioPage() {
     };
   }, [participant.crachaId, participant.email, participant.whatsapp]);
 
+  const isTdm = isTdmProduct(selectedProduct?.id || selectedProduct?.key);
+  const activeDiscountSlices = getDiscountPrizesForProduct(selectedProduct?.id || selectedProduct?.key);
+
   const handleSelectProduct = (prod: ProductConfig | null) => {
     setSelectedProduct(prod);
     const newParams = new URLSearchParams(searchParams);
@@ -241,10 +252,10 @@ export default function RoletaPremioPage() {
     }
     setIsSpinning(true);
 
-    const randomIndex = Math.floor(Math.random() * DISCOUNT_PRIZES.length);
-    const chosenPrize = DISCOUNT_PRIZES[randomIndex];
+    const randomIndex = Math.floor(Math.random() * activeDiscountSlices.length);
+    const chosenPrize = activeDiscountSlices[randomIndex];
 
-    const segmentAngle = 360 / DISCOUNT_PRIZES.length;
+    const segmentAngle = 360 / activeDiscountSlices.length;
     const targetAngle = 360 - (randomIndex * segmentAngle + segmentAngle / 2);
     const extraTurns = 360 * 6;
     const currentModulo = rotation % 360;
@@ -542,7 +553,7 @@ export default function RoletaPremioPage() {
                 <div className="min-w-0">
                   <div className="font-bold text-white truncate text-xs">1º Sorteio: Descontos</div>
                   <div className="text-[11px] text-slate-300 truncate">
-                    {wonDiscount ? wonDiscount.name : '10% a 40% OFF'}
+                    {wonDiscount ? wonDiscount.name : getDiscountRangeLabel(selectedProduct?.id || selectedProduct?.key)}
                   </div>
                 </div>
               </div>
@@ -743,7 +754,7 @@ export default function RoletaPremioPage() {
         )}
 
         {/* ======================================================== */}
-        {/* STAGE 1: 1º SORTEIO (DESCONTOS 10% A 40%) */}
+        {/* STAGE 1: 1º SORTEIO (DESCONTOS - TDM: 10% A 40% | OUTROS: 3,5%, 5,0%, 6,5%) */}
         {/* ======================================================== */}
         {!hasAlreadyDrawn && drawPhase === 'draw1_spin' && (
           <div className="bg-[#2a353f] border border-slate-700/60 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
@@ -751,7 +762,7 @@ export default function RoletaPremioPage() {
               
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-black mb-3 border border-blue-500/30">
                 <Flame size={14} className="text-amber-400" />
-                <span>1º Sorteio: Desconto Exclusivo na Solução</span>
+                <span>1º Sorteio: Desconto Exclusivo ({getDiscountRangeLabel(selectedProduct?.id || selectedProduct?.key)})</span>
               </div>
 
               <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
@@ -763,9 +774,9 @@ export default function RoletaPremioPage() {
               </h3>
               <p className="text-slate-300 text-sm mb-5 leading-relaxed">
                 {selectedProduct ? (
-                  <>Descubra qual desconto especial você ganhou para a solução <strong className="text-white">{selectedProduct.fullName}</strong>. Em seguida você terá o 2º sorteio de brinde!</>
+                  <>Descubra qual desconto especial você ganhou para a solução <strong className="text-white">{selectedProduct.fullName}</strong> ({getDiscountPercentagesText(selectedProduct.id)}). Em seguida você terá o 2º sorteio de brinde!</>
                 ) : (
-                  'Descubra qual desconto especial você conquistou para a sua empresa.'
+                  <>Descubra qual desconto especial você conquistou para a sua empresa ({getDiscountPercentagesText(null)}). Em seguida você terá o 2º sorteio de brinde!</>
                 )}
               </p>
 
@@ -784,8 +795,8 @@ export default function RoletaPremioPage() {
                   <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
                     {/* Layer 1: Sector Color Slices */}
                     <g id="roleta-discount-slices">
-                      {DISCOUNT_PRIZES.map((prize, i) => {
-                        const total = DISCOUNT_PRIZES.length;
+                      {activeDiscountSlices.map((prize, i) => {
+                        const total = activeDiscountSlices.length;
                         const angle = 360 / total;
                         const startAngle = i * angle;
                         const endAngle = (i + 1) * angle;
@@ -798,22 +809,22 @@ export default function RoletaPremioPage() {
                         const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
 
                         return (
-                          <path key={prize.id} d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
+                          <path key={`${prize.id}-${i}`} d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
                         );
                       })}
                     </g>
 
                     {/* Layer 2: Labels Layer */}
                     <g id="roleta-discount-labels">
-                      {DISCOUNT_PRIZES.map((prize, i) => {
-                        const total = DISCOUNT_PRIZES.length;
+                      {activeDiscountSlices.map((prize, i) => {
+                        const total = activeDiscountSlices.length;
                         const angle = 360 / total;
                         const startAngle = i * angle;
                         const midAngle = startAngle + angle / 2;
                         const lines = getPrizeSliceDisplay(prize.name);
 
                         return (
-                          <g key={`lbl-${prize.id}`} transform={`rotate(${midAngle}, 50, 50)`}>
+                          <g key={`lbl-${prize.id}-${i}`} transform={`rotate(${midAngle}, 50, 50)`}>
                             <text
                               x={73}
                               y={47.8}

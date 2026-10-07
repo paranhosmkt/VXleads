@@ -8,6 +8,7 @@ import {
 import { collection, query, where, orderBy, onSnapshot, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { PRODUCTS_CONFIG, getProductBySlugOrParam, ProductConfig } from '../data/productConfig';
+import { isTdmProduct } from '../data/prizesConfig';
 
 const ACCESS_PASSWORD = 'adeptmec2027';
 const AUTH_STORAGE_KEY = 'vx_empresa_leads_auth';
@@ -1683,8 +1684,11 @@ export default function LeadsComercial() {
                 </p>
                 <div className="pt-2 border-t border-blue-500/30 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                   <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
-                    <strong className="text-emerald-400 block mb-0.5">1º Sorteio: Descontos (10% a 40%)</strong>
-                    <span>Desconto exclusivo e personalizado aplicado à solução técnica do produto.</span>
+                    <strong className="text-emerald-400 block mb-0.5">1º Sorteio: Descontos por Solução</strong>
+                    <span className="leading-relaxed">
+                      • <strong>TDM</strong>: Descontos mantidos de <strong>10% a 40%</strong><br />
+                      • <strong>Outros Produtos</strong>: Descontos de <strong>3,5%</strong>, <strong>5,0%</strong> e <strong>6,5%</strong>
+                    </span>
                   </div>
                   <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
                     <strong className="text-amber-400 block mb-0.5">2º Sorteio: Brinde Físico Oficial</strong>
@@ -1701,6 +1705,7 @@ export default function LeadsComercial() {
                 {PRODUCTS_CONFIG.map((prod) => {
                   const directUrl = `${window.location.origin}/sorteio/${prod.id}`;
                   const isCopied = copiedProductUrl === prod.id;
+                  const isTdm = isTdmProduct(prod.id);
 
                   return (
                     <div
@@ -1733,6 +1738,15 @@ export default function LeadsComercial() {
                         <p className="text-xs text-slate-300 mt-0.5 line-clamp-2">
                           {prod.tagline}
                         </p>
+
+                        <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                            🏷️ {isTdm ? 'Descontos: 10% a 40%' : 'Descontos: 3,5% • 5,0% • 6,5%'}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                            🎁 Abridor, Caneta ou Copo
+                          </span>
+                        </div>
                       </div>
 
                       {/* URL Code Block */}

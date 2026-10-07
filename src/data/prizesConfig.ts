@@ -27,17 +27,94 @@ export interface RouletteSlice {
 }
 
 /**
- * 1º Sorteio: Descontos já existentes
+ * 1º Sorteio - TDM: Mantém os descontos já existentes (10% a 40%)
  */
-export const DISCOUNT_PRIZES: DiscountPrize[] = [
-  { id: 'p1', name: '10% de Desconto', shortName: '10% OFF', color: '#2563EB', icon: '🏷️' },
-  { id: 'p2', name: '15% de Desconto', shortName: '15% OFF', color: '#059669', icon: '🎉' },
-  { id: 'p3', name: '20% de Desconto', shortName: '20% OFF', color: '#7C3AED', icon: '⭐' },
-  { id: 'p4', name: '25% de Desconto', shortName: '25% OFF', color: '#D97706', icon: '🔥' },
-  { id: 'p5', name: '30% de Desconto', shortName: '30% OFF', color: '#DB2777', icon: '✨' },
-  { id: 'p6', name: '35% de Desconto', shortName: '35% OFF', color: '#0891B2', icon: '🚀' },
-  { id: 'p7', name: '40% de Desconto', shortName: '40% OFF', color: '#DC2626', icon: '👑' },
+export const TDM_DISCOUNT_PRIZES: DiscountPrize[] = [
+  { id: 'tdm-10', name: '10% de Desconto', shortName: '10% OFF', color: '#2563EB', icon: '🏷️' },
+  { id: 'tdm-15', name: '15% de Desconto', shortName: '15% OFF', color: '#059669', icon: '🎉' },
+  { id: 'tdm-20', name: '20% de Desconto', shortName: '20% OFF', color: '#7C3AED', icon: '⭐' },
+  { id: 'tdm-25', name: '25% de Desconto', shortName: '25% OFF', color: '#D97706', icon: '🔥' },
+  { id: 'tdm-30', name: '30% de Desconto', shortName: '30% OFF', color: '#DB2777', icon: '✨' },
+  { id: 'tdm-35', name: '35% de Desconto', shortName: '35% OFF', color: '#0891B2', icon: '🚀' },
+  { id: 'tdm-40', name: '40% de Desconto', shortName: '40% OFF', color: '#DC2626', icon: '👑' },
 ];
+
+// Alias para compatibilidade anterior
+export const DISCOUNT_PRIZES: DiscountPrize[] = TDM_DISCOUNT_PRIZES;
+
+/**
+ * 1º Sorteio - OUTROS PRODUTOS (ACM, VERICUT, CRIBWISE, HUMAINX, etc.):
+ * Porcentagens solicitadas: 3,5%, 5,0%, 6,5%
+ */
+export const OTHER_PRODUCTS_DISCOUNT_PRIZES: DiscountPrize[] = [
+  { id: 'other-3.5', name: '3,5% de Desconto', shortName: '3,5% OFF', color: '#2563EB', icon: '🏷️' },
+  { id: 'other-5.0', name: '5,0% de Desconto', shortName: '5,0% OFF', color: '#059669', icon: '⭐' },
+  { id: 'other-6.5', name: '6,5% de Desconto', shortName: '6,5% OFF', color: '#7C3AED', icon: '🔥' },
+];
+
+/**
+ * Fatias da roleta para os outros produtos (6 fatias balanceadas de 60°,
+ * alternando as 3 porcentagens: 3,5%, 5,0% e 6,5%)
+ */
+export const OTHER_PRODUCTS_DISCOUNT_SLICES: DiscountPrize[] = [
+  { id: 'slice-other-3.5-a', name: '3,5% de Desconto', shortName: '3,5% OFF', color: '#2563EB', icon: '🏷️' },
+  { id: 'slice-other-5.0-a', name: '5,0% de Desconto', shortName: '5,0% OFF', color: '#059669', icon: '⭐' },
+  { id: 'slice-other-6.5-a', name: '6,5% de Desconto', shortName: '6,5% OFF', color: '#7C3AED', icon: '🔥' },
+  { id: 'slice-other-3.5-b', name: '3,5% de Desconto', shortName: '3,5% OFF', color: '#D97706', icon: '🏷️' },
+  { id: 'slice-other-5.0-b', name: '5,0% de Desconto', shortName: '5,0% OFF', color: '#DB2777', icon: '⭐' },
+  { id: 'slice-other-6.5-b', name: '6,5% de Desconto', shortName: '6,5% OFF', color: '#0891B2', icon: '🔥' },
+];
+
+/**
+ * Identifica se o produto informado é TDM
+ */
+export function isTdmProduct(productIdOrKey?: string | null): boolean {
+  if (!productIdOrKey) return false;
+  const clean = productIdOrKey.trim().toLowerCase();
+  return clean === 'tdm' || clean.includes('tdm');
+}
+
+/**
+ * Retorna as fatias da roleta de desconto para o produto correspondente:
+ * - Se TDM: retorna as 7 fatias com os descontos originais (10% a 40%)
+ * - Se outro produto: retorna as 6 fatias balanceadas com 3,5%, 5,0% e 6,5%
+ */
+export function getDiscountPrizesForProduct(productIdOrKey?: string | null): DiscountPrize[] {
+  if (isTdmProduct(productIdOrKey)) {
+    return TDM_DISCOUNT_PRIZES;
+  }
+  return OTHER_PRODUCTS_DISCOUNT_SLICES;
+}
+
+/**
+ * Retorna a lista única de descontos possíveis para o produto
+ */
+export function getUniqueDiscountsForProduct(productIdOrKey?: string | null): DiscountPrize[] {
+  if (isTdmProduct(productIdOrKey)) {
+    return TDM_DISCOUNT_PRIZES;
+  }
+  return OTHER_PRODUCTS_DISCOUNT_PRIZES;
+}
+
+/**
+ * Retorna a legenda de faixa de desconto (ex: '10% a 40% OFF' para TDM, ou '3,5% a 6,5% OFF' para outros)
+ */
+export function getDiscountRangeLabel(productIdOrKey?: string | null): string {
+  if (isTdmProduct(productIdOrKey)) {
+    return '10% a 40% OFF';
+  }
+  return '3,5% a 6,5% OFF';
+}
+
+/**
+ * Retorna a descrição amigável das porcentagens (ex: '10% a 40%' para TDM, ou '3,5%, 5,0% e 6,5%' para outros)
+ */
+export function getDiscountPercentagesText(productIdOrKey?: string | null): string {
+  if (isTdmProduct(productIdOrKey)) {
+    return '10% a 40%';
+  }
+  return '3,5%, 5,0% e 6,5%';
+}
 
 /**
  * 2º Sorteio: Itens físicos (Abridor de garrafa, caneta e eco copo)
@@ -133,14 +210,16 @@ export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
 ];
 
 /**
- * Formata os textos para exibição nos setores SVG da roleta
+ * Formata os textos para exibição nos setores SVG da roleta.
+ * Suporta inteiros (10%, 20%) e decimais com vírgula ou ponto (3,5%, 5,0%, 6,5%).
  */
 export function getPrizeSliceDisplay(name: string): { top: string; bottom: string } {
-  // Descontos: '20% de Desconto' -> top: '20% OFF', bottom: 'DESCONTO'
-  const discountMatch = name.match(/^(\d+%\s*(?:OFF)?)\s*(?:de\s*)?(.*)$/i);
+  // Descontos: '3,5% de Desconto', '5,0% de Desconto', '20% de Desconto'
+  const discountMatch = name.match(/^(\d+(?:[.,]\d+)?%\s*(?:OFF)?)\s*(?:de\s*)?(.*)$/i);
   if (discountMatch) {
+    const rawPct = discountMatch[1].trim();
     return {
-      top: discountMatch[1].trim(),
+      top: rawPct,
       bottom: (discountMatch[2].trim() || 'DESCONTO').toUpperCase()
     };
   }

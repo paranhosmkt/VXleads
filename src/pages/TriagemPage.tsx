@@ -13,11 +13,19 @@ import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
 import { extractProductFromUrl, PRODUCTS_CONFIG, ProductConfig } from '../data/productConfig';
 import { 
+  TDM_DISCOUNT_PRIZES,
+  OTHER_PRODUCTS_DISCOUNT_PRIZES,
+  OTHER_PRODUCTS_DISCOUNT_SLICES,
   DISCOUNT_PRIZES, 
   PHYSICAL_ITEM_PRIZES, 
   ITEM_ROULETTE_SLICES, 
   DiscountPrize, 
   PhysicalItemPrize,
+  isTdmProduct,
+  getDiscountPrizesForProduct,
+  getUniqueDiscountsForProduct,
+  getDiscountRangeLabel,
+  getDiscountPercentagesText,
   getPrizeSliceDisplay 
 } from '../data/prizesConfig';
 
@@ -163,8 +171,16 @@ export default function TriagemPage() {
   const [currentStep, setCurrentStep] = useState<FlowStep>('select_game');
   const [selectedGame, setSelectedGame] = useState<'roleta' | 'raspadinha' | 'caca_niquel'>('roleta');
 
+  // Dynamic discount configuration for detected product (TDM vs Other products)
+  const isTdm = isTdmProduct(detectedProduct?.id || detectedProduct?.key);
+  const activeDiscountSlices = getDiscountPrizesForProduct(detectedProduct?.id || detectedProduct?.key);
+  const uniqueDiscounts = getUniqueDiscountsForProduct(detectedProduct?.id || detectedProduct?.key);
+
   // Game Play States
-  const [wonDiscount, setWonDiscount] = useState<DiscountPrize>(DISCOUNT_PRIZES[2]); // Default 20%
+  const [wonDiscount, setWonDiscount] = useState<DiscountPrize>(() => {
+    const list = getDiscountPrizesForProduct(detectedProduct?.id || detectedProduct?.key);
+    return list[0] || DISCOUNT_PRIZES[0];
+  });
   const [wonItem, setWonItem] = useState<PhysicalItemPrize>(PHYSICAL_ITEM_PRIZES[0]);
   const [voucherCode, setVoucherCode] = useState('');
   const [copiedVoucher, setCopiedVoucher] = useState(false);
@@ -190,13 +206,14 @@ export default function TriagemPage() {
   const [existingDraw, setExistingDraw] = useState<ExistingDrawRecord | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(true);
 
-  // Pre-seed winner prize randomly on mount
+  // Pre-seed winner prize randomly on mount or when product changes
   useEffect(() => {
-    const randomPrize = DISCOUNT_PRIZES[Math.floor(Math.random() * DISCOUNT_PRIZES.length)];
+    const list = getDiscountPrizesForProduct(detectedProduct?.id || detectedProduct?.key);
+    const randomPrize = list[Math.floor(Math.random() * list.length)] || list[0];
     setWonDiscount(randomPrize);
     const code = `VX-${Math.floor(10000 + Math.random() * 90000)}`;
     setVoucherCode(code);
-  }, []);
+  }, [detectedProduct?.id]);
 
   // Update participant if params change
   useEffect(() => {
@@ -372,12 +389,12 @@ export default function TriagemPage() {
     }
     setIsSpinningWheel(true);
 
-    const randomPrize = DISCOUNT_PRIZES[Math.floor(Math.random() * DISCOUNT_PRIZES.length)];
+    const randomIdx = Math.floor(Math.random() * activeDiscountSlices.length);
+    const randomPrize = activeDiscountSlices[randomIdx];
     setWonDiscount(randomPrize);
 
-    const prizeIdx = DISCOUNT_PRIZES.findIndex(p => p.id === randomPrize.id);
-    const segmentAngle = 360 / DISCOUNT_PRIZES.length;
-    const targetAngle = 360 - (prizeIdx * segmentAngle + segmentAngle / 2);
+    const segmentAngle = 360 / activeDiscountSlices.length;
+    const targetAngle = 360 - (randomIdx * segmentAngle + segmentAngle / 2);
     const extraSpins = 360 * 6;
     const currentModulo = wheelRotation % 360;
     let delta = targetAngle - currentModulo;
@@ -414,7 +431,7 @@ export default function TriagemPage() {
     }
     setIsSpinningSlots(true);
 
-    const randomPrize = DISCOUNT_PRIZES[Math.floor(Math.random() * DISCOUNT_PRIZES.length)];
+    const randomPrize = uniqueDiscounts[Math.floor(Math.random() * uniqueDiscounts.length)];
     setWonDiscount(randomPrize);
 
     setTimeout(() => {
@@ -606,7 +623,7 @@ export default function TriagemPage() {
                 <div className="min-w-0">
                   <div className="font-bold text-white truncate text-xs">1º Sorteio: Desconto</div>
                   <div className="text-[11px] text-slate-300 truncate">
-                    {currentStep === 'draw2_brinde' || currentStep === 'voucher_final' ? wonDiscount.name : '10% a 40% OFF'}
+                    {currentStep === 'draw2_brinde' || currentStep === 'voucher_final' ? wonDiscount.name : getDiscountRangeLabel(detectedProduct?.id || detectedProduct?.key)}
                   </div>
                 </div>
               </div>
@@ -747,7 +764,7 @@ export default function TriagemPage() {
                       Roleta da Sorte
                     </h3>
                     <p className="text-xs text-slate-400 mt-1">
-                      Gire a roleta clássica e concorra a descontos de 10% a 40%!
+                      Gire a roleta clássica e concorra a descontos ({getDiscountPercentagesText(detectedProduct?.id)})!
                     </p>
                   </div>
                   <button className="w-full py-2.5 rounded-xl bg-yellow-500 group-hover:bg-yellow-400 text-slate-950 font-bold text-xs transition-colors flex items-center justify-center gap-1">
@@ -821,7 +838,7 @@ export default function TriagemPage() {
               <div className="max-w-md mx-auto pt-4 space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
                   <Flame size={14} className="text-amber-400" />
-                  <span>1º Sorteio: Descontos de 10% a 40%</span>
+                  <span>1º Sorteio: Descontos ({getDiscountRangeLabel(detectedProduct?.id || detectedProduct?.key)})</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-black text-white">
                   Gire a Roleta de Descontos
@@ -841,8 +858,8 @@ export default function TriagemPage() {
                   >
                     <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
                       <g id="triagem-slices">
-                        {DISCOUNT_PRIZES.map((prize, index) => {
-                          const total = DISCOUNT_PRIZES.length;
+                        {activeDiscountSlices.map((prize, index) => {
+                          const total = activeDiscountSlices.length;
                           const angle = 360 / total;
                           const startAngle = index * angle;
                           const endAngle = (index + 1) * angle;
@@ -856,7 +873,7 @@ export default function TriagemPage() {
 
                           return (
                             <path 
-                              key={prize.id} 
+                              key={`${prize.id}-${index}`} 
                               d={pathData} 
                               fill={prize.color} 
                               stroke="#0f172a" 
@@ -867,15 +884,15 @@ export default function TriagemPage() {
                       </g>
 
                       <g id="triagem-labels">
-                        {DISCOUNT_PRIZES.map((prize, index) => {
-                          const total = DISCOUNT_PRIZES.length;
+                        {activeDiscountSlices.map((prize, index) => {
+                          const total = activeDiscountSlices.length;
                           const angle = 360 / total;
                           const startAngle = index * angle;
                           const midAngle = startAngle + angle / 2;
                           const lines = getPrizeSliceDisplay(prize.name);
 
                           return (
-                            <g key={`lbl-${prize.id}`} transform={`rotate(${midAngle}, 50, 50)`}>
+                            <g key={`lbl-${prize.id}-${index}`} transform={`rotate(${midAngle}, 50, 50)`}>
                               <text
                                 x={73}
                                 y={47.8}
