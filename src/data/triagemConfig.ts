@@ -41,7 +41,7 @@ export const TRIAGEM_ALTERNATIVES: TriagemAlternative[] = [
     id: 5,
     text: "Como vocês estão utilizando a inteligência artificial para otimizar o gerenciamento de ferramentas de usinagem? Estão enfrentando desafios na coleta de dados ou na análise de desempenho das ferramentas?",
     shortLabel: "Uso de Inteligência Artificial / Análise de Desempenho",
-    produto: "HUMAINX"
+    produto: "HUMAINAX"
   },
   {
     id: 6,

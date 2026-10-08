@@ -12,6 +12,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
 import { extractProductFromUrl, PRODUCTS_CONFIG, ProductConfig } from '../data/productConfig';
+import { CURRENT_EVENT, resolveEventName } from '../data/eventConfig';
 import { 
   TDM_DISCOUNT_PRIZES,
   OTHER_PRODUCTS_DISCOUNT_PRIZES,
@@ -163,6 +164,7 @@ export default function TriagemPage() {
     cargo: searchParams.get('cargo') || searchParams.get('role') || 'Visitante',
     crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || 'CR-9482',
     origem: searchParams.get('origem') || 'Base44',
+    evento: resolveEventName(searchParams.get('evento') || searchParams.get('event'), true),
     returnUrl: searchParams.get('return_url') || searchParams.get('redirect_url') || searchParams.get('callback_url') || '',
     webhookCallback: searchParams.get('webhook') || searchParams.get('webhook_url') || ''
   });
@@ -227,6 +229,7 @@ export default function TriagemPage() {
         cargo: searchParams.get('cargo') || searchParams.get('role') || '',
         crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || 'CR-' + Math.floor(1000 + Math.random() * 9000),
         origem: searchParams.get('origem') || 'Base44',
+        evento: resolveEventName(searchParams.get('evento') || searchParams.get('event'), true),
         returnUrl: searchParams.get('return_url') || searchParams.get('redirect_url') || searchParams.get('callback_url') || '',
         webhookCallback: searchParams.get('webhook') || searchParams.get('webhook_url') || ''
       });
@@ -276,6 +279,8 @@ export default function TriagemPage() {
     const record = {
       id: 'sub_' + Date.now(),
       dataHora: new Date().toLocaleString('pt-BR'),
+      evento: participant.evento || CURRENT_EVENT.name,
+      nomeEvento: participant.evento || CURRENT_EVENT.name,
       nome: participant.nome,
       email: participant.email,
       whatsapp: participant.whatsapp,
@@ -293,7 +298,9 @@ export default function TriagemPage() {
       voucher: code,
       codigoVoucher: code,
       produto: prodName,
+      produtoId: detectedProduct?.id || 'tdm',
       produtoKey: detectedProduct?.key || '',
+      produtoNome: prodFullName,
       produtosDirecionados: prodName,
       produtoSelecionado: prodFullName,
       solucao: prodFullName
@@ -354,6 +361,10 @@ export default function TriagemPage() {
             premio: combinedPrize,
             voucher: code,
             jogo: selectedGame,
+            produto: prodName,
+            produtoId: detectedProduct?.id || 'tdm',
+            produtoNome: prodFullName,
+            evento: participant.evento || CURRENT_EVENT.name,
             timestamp: new Date().toISOString()
           })
         });
@@ -509,6 +520,9 @@ export default function TriagemPage() {
       voucher: voucherCode,
       jogo: selectedGame,
       produto: detectedProduct ? detectedProduct.name : undefined,
+      produtoId: detectedProduct ? detectedProduct.id : undefined,
+      produtoNome: detectedProduct ? detectedProduct.fullName : undefined,
+      evento: participant.evento || CURRENT_EVENT.name,
       webhookCallback: participant.webhookCallback
     });
   };
@@ -528,6 +542,9 @@ export default function TriagemPage() {
       voucher: voucherCode,
       jogo: selectedGame,
       produto: detectedProduct ? detectedProduct.name : undefined,
+      produtoId: detectedProduct ? detectedProduct.id : undefined,
+      produtoNome: detectedProduct ? detectedProduct.fullName : undefined,
+      evento: participant.evento || CURRENT_EVENT.name,
       webhookCallback: participant.webhookCallback
     });
   };
@@ -554,6 +571,12 @@ export default function TriagemPage() {
             <span className="font-extrabold text-lg tracking-tight text-white">
               VX<span className="text-blue-500">Leads</span>
             </span>
+          </div>
+
+          {/* Active Event Badge */}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-black tracking-wide ml-1 sm:ml-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Mercopar 2026</span>
           </div>
 
           <span className="hidden sm:inline-block text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">
@@ -666,33 +689,44 @@ export default function TriagemPage() {
             {/* Sorteio Já Efetuado Banner */}
             {hasAlreadyDrawn ? (
               <div className="bg-[#2a353f] border-2 border-red-500/60 rounded-3xl p-6 sm:p-8 max-w-2xl mx-auto shadow-2xl space-y-4 animate-fade-in">
-                <div className="flex items-center gap-3 text-red-400">
-                  <div className="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center shrink-0">
-                    <AlertTriangle size={24} className="text-red-400" />
+                <div className="flex items-center justify-between gap-3 text-red-400">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={24} className="text-red-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl sm:text-2xl font-black text-white">Sorteio já efetuado.</h3>
+                      <p className="text-xs text-red-300 font-medium">Cada lead concorre a apenas 1 produto no evento</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl sm:text-2xl font-black text-white">Sorteio já efetuado.</h3>
-                    <p className="text-xs text-red-300 font-medium">Limite de 1 participação por usuário atingido</p>
-                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    {existingDraw?.evento || 'Mercopar 2026'}
+                  </span>
                 </div>
 
                 <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                  Identificamos que o participante <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono text-blue-300 font-bold">{participant.crachaId}</span>) já realizou o sorteio neste evento. Conforme o regulamento, cada usuário tem direito a apenas 1 sorteio.
+                  Identificamos que o participante <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono text-blue-300 font-bold">{participant.crachaId}</span>) já realizou o sorteio. <strong>Regra Oficial:</strong> cada participante tem direito a concorrer a <strong>apenas 1 produto</strong> durante o evento.
                 </p>
 
                 {existingDraw && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div className="bg-[#17232d] p-3.5 rounded-2xl border border-slate-700/60">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Prêmio Conquistado</span>
-                      <span className="text-amber-300 font-black text-base flex items-center gap-1.5 mt-1">
-                        <Trophy size={16} className="text-yellow-400" />
-                        {existingDraw.premioGanho}
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Solução & Prêmio</span>
+                      <div className="text-blue-300 font-bold text-xs mt-0.5">
+                        📦 {existingDraw.produto || existingDraw.produtoNome || (detectedProduct ? detectedProduct.name : 'Solução')}
+                      </div>
+                      <span className="text-amber-300 font-black text-sm flex items-center gap-1.5 mt-1">
+                        <Trophy size={15} className="text-yellow-400 shrink-0" />
+                        <span className="truncate">{existingDraw.premioGanho}</span>
                       </span>
                     </div>
                     <div className="bg-[#17232d] p-3.5 rounded-2xl border border-slate-700/60">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Código do Voucher</span>
-                      <span className="font-mono text-yellow-300 font-black text-base block mt-1">
+                      <span className="font-mono text-yellow-300 font-black text-sm block mt-1">
                         {existingDraw.voucher}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        Registrado em {existingDraw.dataHora} • {existingDraw.evento || 'Mercopar 2026'}
                       </span>
                     </div>
                   </div>
@@ -709,10 +743,17 @@ export default function TriagemPage() {
                       brinde: existingDraw?.premioBrinde,
                       nome: participant.nome,
                       empresa: participant.empresa,
-                      produto: detectedProduct ? detectedProduct.name : undefined
+                      cargo: participant.cargo,
+                      email: participant.email,
+                      whatsapp: participant.whatsapp,
+                      produto: existingDraw?.produto || (detectedProduct ? detectedProduct.name : undefined),
+                      produtoId: existingDraw?.produtoId || (detectedProduct ? detectedProduct.id : undefined),
+                      produtoNome: existingDraw?.produtoNome || (detectedProduct ? detectedProduct.fullName : undefined),
+                      evento: existingDraw?.evento || 'Mercopar 2026'
                     })}
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-600/20 cursor-pointer flex items-center gap-1.5"
                   >
+                    <RotateCcw size={14} />
                     <span>Retornar aos cadastros</span>
                     <ExternalLink size={14} />
                   </button>
@@ -1215,6 +1256,12 @@ export default function TriagemPage() {
 
               {/* Unified Voucher Code */}
               <div className="bg-[#17232d] border border-slate-700/60 rounded-2xl p-5 inline-block w-full shadow-inner">
+                <div className="flex items-center justify-between text-[11px] pb-1.5 mb-2 border-b border-slate-700/50">
+                  <span className="text-slate-400">Evento Oficial:</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                    {participant.evento || 'Mercopar 2026'}
+                  </span>
+                </div>
                 <div className="text-xs text-slate-400 uppercase tracking-wider mb-1 font-semibold">
                   Código do Voucher Unificado
                 </div>

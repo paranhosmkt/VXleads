@@ -43,7 +43,7 @@ export const TDM_DISCOUNT_PRIZES: DiscountPrize[] = [
 export const DISCOUNT_PRIZES: DiscountPrize[] = TDM_DISCOUNT_PRIZES;
 
 /**
- * 1º Sorteio - OUTROS PRODUTOS (ACM, VERICUT, CRIBWISE, HUMAINX, etc.):
+ * 1º Sorteio - OUTROS PRODUTOS (ACM, VERICUT, CRIBWISE, HUMAINAX, etc.):
  * Porcentagens solicitadas: 3,5%, 5,0%, 6,5%
  */
 export const OTHER_PRODUCTS_DISCOUNT_PRIZES: DiscountPrize[] = [

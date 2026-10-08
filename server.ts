@@ -210,6 +210,18 @@ async function startServer() {
         res[key] = val;
       }
     }
+    if (!res.evento) {
+      res.evento = 'Grob Experience';
+    }
+    if (res.produto && /humain|humanin/i.test(res.produto)) {
+      res.produto = 'HUMAINAX';
+    }
+    if (res.produtoNome && /humain|humanin/i.test(res.produtoNome)) {
+      res.produtoNome = 'HUMAINAX • Inteligência Artificial para Usinagem';
+    }
+    if (res.produtoId && /humain|humanin/i.test(res.produtoId)) {
+      res.produtoId = 'humainax';
+    }
     return res;
   }
 
@@ -302,7 +314,13 @@ async function startServer() {
         cargo: data.cargo || data.jobTitle || data.role || '',
         crachaId: data.crachaId || data.badgeId || leadId,
         origem: data.origem || 'Base44_App',
+        evento: data.evento || 'Mercopar 2026',
+        produto: (/humain|humanin/i.test(data.produto || data.produtoNome || '')) ? 'HUMAINAX' : (data.produto || data.produtoNome || ''),
+        produtoId: (/humain|humanin/i.test(data.produtoId || data.produto_id || data.produto || '')) ? 'humainax' : (data.produtoId || data.produto_id || ''),
+        produtoNome: (/humain|humanin/i.test(data.produtoNome || data.produto_nome || data.produto || '')) ? 'HUMAINAX • Inteligência Artificial para Usinagem' : (data.produtoNome || data.produto_nome || ''),
         premio: data.premio || data.premioGanho || '',
+        premioDesconto: data.premioDesconto || data.desconto || '',
+        premioBrinde: data.premioBrinde || data.brinde || '',
         voucher: data.voucher || data.voucherCode || '',
         codigoVoucher: data.codigoVoucher || data.voucher || '',
         problemas: data.problemas || data.resposta1 || '',
@@ -327,8 +345,12 @@ async function startServer() {
         empresa: leadPayload.empresa,
         cargo: leadPayload.cargo,
         crachaId: leadPayload.crachaId,
-        origem: leadPayload.origem
+        origem: leadPayload.origem,
+        evento: leadPayload.evento
       });
+      if (leadPayload.produtoId || leadPayload.produto) {
+        params.set('produto', leadPayload.produtoId || leadPayload.produto);
+      }
 
       const triagemUrl = `/triagem?${params.toString()}`;
       const roletaUrl = `/roleta-premio?${params.toString()}`;

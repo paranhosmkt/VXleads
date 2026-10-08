@@ -2,6 +2,7 @@
  * Base44 Integration Utilities
  * Handles URL construction, parameters mapping, and seamless returning to Base44 app.
  */
+import { getProductBySlugOrParam } from '../data/productConfig';
 
 export interface Base44LeadPayload {
   returnUrl?: string;
@@ -17,6 +18,9 @@ export interface Base44LeadPayload {
   brinde?: string;
   jogo?: string;
   produto?: string;
+  produtoId?: string;
+  produtoNome?: string;
+  evento?: string;
   webhookCallback?: string;
 }
 
@@ -147,13 +151,43 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
     p.set('game', payload.jogo);
   }
 
-  // 7. PRODUCT - Product specified for this dedicated draw
-  if (payload.produto) {
-    p.set('produto', payload.produto);
-    p.set('product', payload.produto);
-    p.set('produto_selecionado', payload.produto);
-    p.set('produtos_direcionados', payload.produto);
+  // 7. PRODUCT - Solução e Produto sorteado (Cada lead concorre a apenas 1 produto)
+  let prodVal = payload.produto || payload.produtoNome || '';
+  let prodId = payload.produtoId;
+  let prodFullName = payload.produtoNome;
+
+  const matchedProd = getProductBySlugOrParam(prodVal || prodId || prodFullName);
+  if (matchedProd) {
+    prodVal = matchedProd.name;
+    prodId = matchedProd.id;
+    prodFullName = matchedProd.fullName;
   }
+
+  if (prodVal) {
+    p.set('produto', prodVal);
+    p.set('product', prodVal);
+    p.set('produto_sorteado', prodVal);
+    p.set('produto_selecionado', prodVal);
+    p.set('produtos_direcionados', prodVal);
+  }
+  if (prodId) {
+    p.set('produto_id', prodId);
+    p.set('produtoId', prodId);
+  }
+  if (prodFullName) {
+    p.set('produto_nome', prodFullName);
+    p.set('produtoNome', prodFullName);
+  }
+
+  // 8. EVENTO - Mercopar 2026 (ou evento do sorteio)
+  const eventoVal = payload.evento || 'Mercopar 2026';
+  p.set('evento', eventoVal);
+  p.set('event', eventoVal);
+  p.set('nome_evento', eventoVal);
+
+  // 9. Single product raffle flag
+  p.set('sorteio_unico_produto', 'true');
+  p.set('sorteio_realizado', 'true');
 
   return urlObj.toString();
 }
@@ -166,16 +200,41 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
  * 4. Navigates current window to destination URL
  */
 export async function executeBase44Return(payload: Base44LeadPayload) {
-  const returnUrl = buildBase44ReturnUrl(payload);
+  // Normalize product details to guarantee correct brand name (e.g. HUMAINAX)
+  let resolvedProdName = payload.produto || payload.produtoNome;
+  let resolvedProdId = payload.produtoId;
+  let resolvedProdFullName = payload.produtoNome;
+
+  const matched = getProductBySlugOrParam(resolvedProdName || resolvedProdId || resolvedProdFullName);
+  if (matched) {
+    resolvedProdName = matched.name;
+    resolvedProdId = matched.id;
+    resolvedProdFullName = matched.fullName;
+  }
+
+  const normalizedPayload: Base44LeadPayload = {
+    ...payload,
+    produto: resolvedProdName,
+    produtoId: resolvedProdId,
+    produtoNome: resolvedProdFullName
+  };
+
+  const returnUrl = buildBase44ReturnUrl(normalizedPayload);
 
   // 1. PostMessage to opener window if available
   try {
     if (typeof window !== 'undefined' && window.opener && !window.opener.closed) {
       window.opener.postMessage({
         type: 'BASE44_GAME_RESULT',
-        leadId: payload.leadId,
-        premio: payload.premio,
-        voucher: payload.voucher,
+        leadId: normalizedPayload.leadId,
+        produto: resolvedProdName,
+        produtoId: resolvedProdId,
+        produtoNome: resolvedProdFullName,
+        premio: normalizedPayload.premio,
+        desconto: normalizedPayload.desconto,
+        brinde: normalizedPayload.brinde,
+        voucher: normalizedPayload.voucher,
+        evento: normalizedPayload.evento || 'Mercopar 2026',
         url: returnUrl
       }, '*');
     }
@@ -184,16 +243,22 @@ export async function executeBase44Return(payload: Base44LeadPayload) {
   }
 
   // 2. Webhook callback if provided
-  if (payload.webhookCallback) {
+  if (normalizedPayload.webhookCallback) {
     try {
-      await fetch(payload.webhookCallback, {
+      await fetch(normalizedPayload.webhookCallback, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           event: 'lead_game_completed',
-          leadId: payload.leadId,
-          premio: payload.premio,
-          voucher: payload.voucher
+          leadId: normalizedPayload.leadId,
+          produto: resolvedProdName,
+          produtoId: resolvedProdId,
+          produtoNome: resolvedProdFullName,
+          premio: normalizedPayload.premio,
+          desconto: normalizedPayload.desconto,
+          brinde: normalizedPayload.brinde,
+          voucher: normalizedPayload.voucher,
+          evento: normalizedPayload.evento || 'Mercopar 2026'
         })
       });
     } catch (e) {

@@ -10,6 +10,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
 import { PRODUCTS_CONFIG, extractProductFromUrl, getProductBySlugOrParam, ProductConfig } from '../data/productConfig';
+import { CURRENT_EVENT, resolveEventName } from '../data/eventConfig';
 import { 
   TDM_DISCOUNT_PRIZES,
   OTHER_PRODUCTS_DISCOUNT_PRIZES,
@@ -176,6 +177,7 @@ export default function RoletaPremioPage() {
     cargo: searchParams.get('cargo') || searchParams.get('role') || 'Participante',
     crachaId: searchParams.get('crachaId') || searchParams.get('cracha') || searchParams.get('leadId') || searchParams.get('lead_id') || searchParams.get('id') || 'CR-0000',
     origem: searchParams.get('origem') || 'Triagem_Base44',
+    evento: resolveEventName(searchParams.get('evento') || searchParams.get('event'), true),
     r1: searchParams.get('r1') || searchParams.get('resposta1') || 'Não informada',
     r2: searchParams.get('r2') || searchParams.get('resposta2') || 'Não informada',
     r3: searchParams.get('r3') || searchParams.get('resposta3') || 'Não informada',
@@ -349,6 +351,8 @@ export default function RoletaPremioPage() {
     const record = {
       id: cleanDocId,
       dataHora: new Date().toLocaleString('pt-BR'),
+      evento: participant.evento || CURRENT_EVENT.name,
+      nomeEvento: participant.evento || CURRENT_EVENT.name,
       nome: participant.nome,
       email: participant.email,
       whatsapp: participant.whatsapp,
@@ -363,7 +367,9 @@ export default function RoletaPremioPage() {
       problemas: participant.r1,
       possiveisSolucoes: participant.r2,
       produto: prodName,
+      produtoId: selectedProduct?.id || 'tdm',
       produtoKey: selectedProduct?.key || '',
+      produtoNome: prodFullName,
       produtosDirecionados: prodName,
       produtoSelecionado: prodFullName,
       solucao: prodFullName,
@@ -466,6 +472,12 @@ export default function RoletaPremioPage() {
             <span className="font-extrabold text-lg tracking-tight text-white">
               VX<span className="text-blue-500">Leads</span>
             </span>
+          </div>
+
+          {/* Active Event Badge */}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-black tracking-wide ml-1 sm:ml-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Mercopar 2026</span>
           </div>
 
           {/* Active Product Badge in Header */}
@@ -693,20 +705,28 @@ export default function RoletaPremioPage() {
           <div className="bg-[#2a353f] border border-slate-700/60 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
             <div className="max-w-xl mx-auto">
               <div className="mb-6 bg-red-950/40 border-2 border-red-500/60 rounded-2xl p-5 text-left shadow-2xl animate-fade-in">
-                <div className="flex items-center gap-3 text-red-400 font-black text-base sm:text-lg">
-                  <AlertTriangle size={24} className="shrink-0 text-red-400" />
-                  <span>Sorteio já efetuado.</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 text-red-400 font-black text-base sm:text-lg">
+                    <AlertTriangle size={24} className="shrink-0 text-red-400" />
+                    <span>Sorteio já efetuado.</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    {existingDraw?.evento || 'Mercopar 2026'}
+                  </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
-                  Identificamos que o usuário <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono font-bold text-blue-300">{participant.crachaId}</span>) já participou das rodadas de sorteio. Conforme o regulamento, cada participante tem direito aos sorteios <strong>apenas 1 vez</strong>.
+                  Identificamos que o participante <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono font-bold text-blue-300">{participant.crachaId}</span>) já realizou o seu sorteio. <strong>Regra Oficial do Evento:</strong> cada participante tem direito a concorrer a <strong>apenas 1 produto</strong> durante o evento.
                 </p>
 
                 {existingDraw && (
                   <div className="mt-4 pt-3.5 border-t border-red-500/30 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="bg-[#17232d] p-3 rounded-xl border border-slate-700/60">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Prêmios Conquistados</span>
-                      <span className="text-amber-300 font-bold text-sm flex items-center gap-1.5 mt-0.5">
-                        <Trophy size={14} className="text-yellow-400 shrink-0" />
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Solução & Prêmios Conquistados</span>
+                      <div className="text-blue-300 font-bold text-xs mt-1">
+                        📦 Produto: <span className="text-white">{existingDraw.produto || existingDraw.produtoNome || (selectedProduct ? selectedProduct.name : 'Solução Concorrente')}</span>
+                      </div>
+                      <span className="text-amber-300 font-bold text-xs flex items-center gap-1.5 mt-1.5">
+                        <Trophy size={13} className="text-yellow-400 shrink-0" />
                         <span className="truncate">{existingDraw.premioGanho}</span>
                       </span>
                       {existingDraw.premioDesconto && (
@@ -722,7 +742,7 @@ export default function RoletaPremioPage() {
                         {existingDraw.voucher}
                       </span>
                       <span className="text-[10px] text-slate-400 mt-1 block">
-                        Registrado em {existingDraw.dataHora}
+                        Registrado em {existingDraw.dataHora} • {existingDraw.evento || 'Mercopar 2026'}
                       </span>
                     </div>
                   </div>
@@ -739,7 +759,13 @@ export default function RoletaPremioPage() {
                       brinde: existingDraw?.premioBrinde,
                       nome: participant.nome,
                       empresa: participant.empresa,
-                      produto: selectedProduct ? selectedProduct.name : undefined
+                      cargo: participant.cargo,
+                      email: participant.email,
+                      whatsapp: participant.whatsapp,
+                      produto: existingDraw?.produto || (selectedProduct ? selectedProduct.name : undefined),
+                      produtoId: existingDraw?.produtoId || (selectedProduct ? selectedProduct.id : undefined),
+                      produtoNome: existingDraw?.produtoNome || (selectedProduct ? selectedProduct.fullName : undefined),
+                      evento: existingDraw?.evento || 'Mercopar 2026'
                     })}
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2"
                   >
@@ -1182,6 +1208,12 @@ export default function RoletaPremioPage() {
                 </div>
 
                 <div className="bg-[#2a353f] rounded-xl p-3 text-xs space-y-1 font-mono text-slate-300 border border-slate-700/60 text-left">
+                  <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-700/50 font-sans">
+                    <span className="text-slate-400">Evento Oficial:</span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                      {participant.evento || 'Mercopar 2026'}
+                    </span>
+                  </div>
                   <div><strong>Participante:</strong> {participant.nome} ({participant.empresa})</div>
                   <div><strong>Crachá:</strong> {participant.crachaId}</div>
                   {selectedProduct && (
@@ -1287,6 +1319,9 @@ export default function RoletaPremioPage() {
                       voucher: voucherCode,
                       jogo: 'roleta_dupla',
                       produto: selectedProduct ? selectedProduct.name : undefined,
+                      produtoId: selectedProduct ? selectedProduct.id : undefined,
+                      produtoNome: selectedProduct ? selectedProduct.fullName : undefined,
+                      evento: participant.evento || 'Mercopar 2026',
                       webhookCallback: participant.webhookCallback
                     });
                   }}

@@ -1,6 +1,6 @@
 export interface ProductConfig {
-  id: string;             // slug: 'acm', 'tdm', 'vericut', 'cribwise', 'humainx'
-  key: string;            // 'ACM', 'TDM', 'VERICUT', 'CRIBWISE', 'HUMAINX'
+  id: string;             // slug: 'acm', 'tdm', 'vericut', 'cribwise', 'humainax'
+  key: string;            // 'ACM', 'TDM', 'VERICUT', 'CRIBWISE', 'HUMAINAX'
   name: string;           // 'ACM'
   fullName: string;       // 'ACM • Adaptive Control & Monitoring'
   tagline: string;        // 'Otimização e Proteção em Tempo Real para CNC'
@@ -107,10 +107,10 @@ export const PRODUCTS_CONFIG: ProductConfig[] = [
     ]
   },
   {
-    id: 'humainx',
-    key: 'HUMAINX',
-    name: 'HUMAINX',
-    fullName: 'HUMAINX • Inteligência Artificial para Usinagem',
+    id: 'humainax',
+    key: 'HUMAINAX',
+    name: 'HUMAINAX',
+    fullName: 'HUMAINAX • Inteligência Artificial para Usinagem',
     tagline: 'Inteligência Artificial & Analytics CNC',
     description: 'Plataforma impulsionada por IA para análise preditiva do desgaste de ferramentas, eficiência operacional e automação analítica.',
     category: 'Inteligência Artificial Industrial',
@@ -132,7 +132,7 @@ export const PRODUCTS_CONFIG: ProductConfig[] = [
 
 /**
  * Normalizes input string and finds corresponding ProductConfig
- * Accepts slugs ('acm', 'vericut'), keys ('ACM', 'VERICUT'), names, or messy inputs ('produto=vericut')
+ * Accepts slugs ('acm', 'vericut', 'humainax'), keys ('ACM', 'HUMAINAX'), names, or messy inputs ('produto=humainax')
  */
 export function getProductBySlugOrParam(input?: string | null): ProductConfig | null {
   if (!input) return null;
@@ -144,6 +144,19 @@ export function getProductBySlugOrParam(input?: string | null): ProductConfig | 
     .replace(/[^a-z0-9]/g, '');
 
   if (!clean) return null;
+
+  // Support aliases for HUMAINAX (humainx, humaninx, humanax, humainax)
+  if (
+    clean === 'humainax' ||
+    clean === 'humainx' ||
+    clean === 'humaninx' ||
+    clean === 'humanax' ||
+    clean.includes('humain') ||
+    clean.includes('humanin')
+  ) {
+    const humainaxProd = PRODUCTS_CONFIG.find(p => p.id === 'humainax');
+    if (humainaxProd) return humainaxProd;
+  }
 
   return PRODUCTS_CONFIG.find(p => {
     const slugNorm = p.id.toLowerCase();

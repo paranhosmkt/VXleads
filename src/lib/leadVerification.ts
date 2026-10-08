@@ -1,5 +1,7 @@
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
+import { resolveEventName } from '../data/eventConfig';
+import { getProductBySlugOrParam } from '../data/productConfig';
 
 export interface ParticipantIdentifiers {
   crachaId?: string;
@@ -21,6 +23,10 @@ export interface ExistingDrawRecord {
   premioDesconto?: string;
   premioBrinde?: string;
   produto?: string;
+  produtoId?: string;
+  produtoNome?: string;
+  produtoKey?: string;
+  evento?: string;
   voucher: string;
   dataHora: string;
   jogoEscolhido: string;
@@ -50,6 +56,13 @@ function parseLeadRecord(id: string, data: any, participant: ParticipantIdentifi
     premioDesconto = premio;
   }
 
+  const rawProd = data.produto || data.produtoNome || data.produtosDirecionados || data.solucao;
+  const matchedProd = getProductBySlugOrParam(data.produtoId || data.produtoKey || rawProd);
+  const produtoNome = matchedProd ? matchedProd.name : (rawProd || 'Solução Industrial');
+  const produtoId = matchedProd ? matchedProd.id : (data.produtoId || '');
+  const produtoKey = matchedProd ? matchedProd.key : (data.produtoKey || '');
+  const resolvedEvento = resolveEventName(data.evento, false);
+
   return {
     id,
     nome: data.nome || participant.nome || 'Participante',
@@ -61,7 +74,11 @@ function parseLeadRecord(id: string, data: any, participant: ParticipantIdentifi
     premioGanho: premio,
     premioDesconto,
     premioBrinde,
-    produto: data.produto || data.produtosDirecionados,
+    produto: produtoNome,
+    produtoId,
+    produtoNome,
+    produtoKey,
+    evento: resolvedEvento,
     voucher,
     dataHora: data.dataHora || 'Recentemente',
     jogoEscolhido: data.jogoEscolhido || data.jogo || 'roleta',

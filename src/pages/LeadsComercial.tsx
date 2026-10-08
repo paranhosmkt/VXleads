@@ -9,6 +9,7 @@ import { collection, query, where, orderBy, onSnapshot, getDocs, doc, setDoc, de
 import { db } from '../lib/firebase';
 import { PRODUCTS_CONFIG, getProductBySlugOrParam, ProductConfig } from '../data/productConfig';
 import { isTdmProduct } from '../data/prizesConfig';
+import { CURRENT_EVENT, PAST_EVENT, ALL_EVENTS, resolveEventName } from '../data/eventConfig';
 
 const ACCESS_PASSWORD = 'adeptmec2027';
 const AUTH_STORAGE_KEY = 'vx_empresa_leads_auth';
@@ -25,6 +26,7 @@ interface EventLead {
   cargo: string;
   crachaId: string;
   origem: string;
+  evento?: string;
   jogoEscolhido: string;
   premioGanho: string;
   premioDesconto?: string;
@@ -36,6 +38,8 @@ interface EventLead {
   respostasTriagem?: string;
   produtosDirecionados?: string;
   produto?: string;
+  produtoId?: string;
+  produtoNome?: string;
   produtoKey?: string;
   solucao?: string;
   produtosArray?: string[];
@@ -56,7 +60,9 @@ export default function LeadsComercial() {
   const [leads, setLeads] = useState<EventLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterEvent, setFilterEvent] = useState<string>('Mercopar 2026');
   const [filterGame, setFilterGame] = useState<string>('todos');
+  const [filterProduct, setFilterProduct] = useState<string>('todos');
   const [onlyRecurring, setOnlyRecurring] = useState(false);
   const [selectedLead, setSelectedLead] = useState<EventLead | null>(null);
 
@@ -77,6 +83,7 @@ export default function LeadsComercial() {
       whatsapp: lead.whatsapp || '',
       email: lead.email || '',
       crachaId: lead.crachaId || '',
+      evento: resolveEventName(lead.evento, false),
       jogoEscolhido: lead.jogoEscolhido || 'roleta',
       premioGanho: lead.premioGanho || '',
       voucher: lead.voucher || '',
@@ -93,6 +100,7 @@ export default function LeadsComercial() {
     try {
       const updatedFields = {
         ...editFormData,
+        evento: editFormData.evento || CURRENT_EVENT.name,
         premio: editFormData.premioGanho,
         codigoVoucher: editFormData.voucher,
         resposta1: editFormData.respostasTriagem,
@@ -248,7 +256,6 @@ export default function LeadsComercial() {
   // Product Links for Base 44 Modal & Filter
   const [showProductLinksModal, setShowProductLinksModal] = useState(false);
   const [copiedProductUrl, setCopiedProductUrl] = useState<string | null>(null);
-  const [filterProduct, setFilterProduct] = useState<string>('todos');
 
   // Authentication submission
   const handleLogin = (e: React.FormEvent) => {
@@ -280,10 +287,12 @@ export default function LeadsComercial() {
         snapshot.forEach((d) => {
           const data = d.data();
           const docId = d.id;
+          const resolvedEvento = resolveEventName(data.evento, false);
           fetched.push({
             ...data,
             id: docId,
             _docId: docId,
+            evento: resolvedEvento,
             crachaId: data.crachaId || data.leadId || docId
           } as EventLead);
         });
@@ -298,6 +307,7 @@ export default function LeadsComercial() {
               const locCracha = loc.crachaId;
               const exists = fetched.some(f => f.id === locId || (locCracha && f.crachaId === locCracha));
               if (!exists) {
+                loc.evento = resolveEventName(loc.evento, false);
                 fetched.push(loc);
               }
             });
@@ -384,6 +394,14 @@ export default function LeadsComercial() {
   }, [leads]);
 
   // KPIs
+  const countMercopar = useMemo(() => {
+    return leads.filter(l => resolveEventName(l.evento, false) === CURRENT_EVENT.name).length;
+  }, [leads]);
+
+  const countGrob = useMemo(() => {
+    return leads.filter(l => resolveEventName(l.evento, false) === PAST_EVENT.name).length;
+  }, [leads]);
+
   const totalDraws = leads.length;
   const uniqueParticipantsCount = leadStatsMap.size;
   const recurringParticipantsCount = Array.from(leadStatsMap.values()).filter((v: { count: number; draws: EventLead[] }) => v.count > 1).length;
@@ -399,6 +417,10 @@ export default function LeadsComercial() {
       (lead.whatsapp || '').includes(term) ||
       (lead.voucher || '').toLowerCase().includes(term);
 
+    const matchEvent = 
+      filterEvent === 'todos' ||
+      resolveEventName(lead.evento, false) === filterEvent;
+
     const matchGame = filterGame === 'todos' || lead.jogoEscolhido === filterGame;
 
     const matchProduct = filterProduct === 'todos' || (
@@ -413,7 +435,7 @@ export default function LeadsComercial() {
       if (!stats || stats.count <= 1) return false;
     }
 
-    return matchSearch && matchGame && matchProduct;
+    return matchSearch && matchEvent && matchGame && matchProduct;
   });
 
   // Export to CSV
@@ -421,6 +443,7 @@ export default function LeadsComercial() {
     if (filteredLeads.length === 0) return;
     const headers = [
       'Data/Hora',
+      'Evento',
       'Nome',
       'Empresa',
       'Cargo',
@@ -436,6 +459,7 @@ export default function LeadsComercial() {
 
     const rows = filteredLeads.map((l) => [
       `"${l.dataHora || ''}"`,
+      `"${resolveEventName(l.evento, false)}"`,
       `"${l.nome || ''}"`,
       `"${l.empresa || ''}"`,
       `"${l.cargo || ''}"`,
@@ -453,7 +477,7 @@ export default function LeadsComercial() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `leads_comercial_evento_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `leads_comercial_${filterEvent.replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -643,6 +667,117 @@ export default function LeadsComercial() {
             </button>
           </div>
         )}
+
+        {/* EVENT SEPARATION HEADER & TABS */}
+        <div className="bg-[#2a353f] border border-slate-700/60 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                  Gestão Multievento
+                </span>
+                <span className="text-xs text-slate-400">Separação de Sorteios & Leads</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
+                Controle por Evento Oficial
+              </h2>
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+                Os sorteios anteriores foram arquivados para o <strong>Grob Experience (Finalizado)</strong>. 
+                Os novos sorteios a partir de agora são exclusivos para a <strong>Mercopar 2026 (Ativo)</strong>, onde cada participante tem direito a concorrer a apenas 1 produto.
+              </p>
+            </div>
+
+            {/* Event Tabs Switcher */}
+            <div className="flex items-center gap-1.5 p-1.5 bg-[#17232d] rounded-2xl border border-slate-700/80 shrink-0">
+              <button
+                type="button"
+                onClick={() => setFilterEvent('Mercopar 2026')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  filterEvent === 'Mercopar 2026'
+                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-black'
+                    : 'text-slate-300 hover:text-white hover:bg-[#202d38]'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${filterEvent === 'Mercopar 2026' ? 'bg-slate-950' : 'bg-emerald-400 animate-pulse'}`}></span>
+                <span>Mercopar 2026</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterEvent === 'Mercopar 2026' ? 'bg-emerald-600 text-white' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
+                  {countMercopar}
+                </span>
+                <span className={`text-[9px] uppercase px-1 rounded ${filterEvent === 'Mercopar 2026' ? 'bg-slate-900/20 text-slate-950' : 'bg-emerald-500/20 text-emerald-400 font-bold'}`}>
+                  Ativo
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterEvent('Grob Experience')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  filterEvent === 'Grob Experience'
+                    ? 'bg-slate-200 text-slate-950 shadow-md font-black'
+                    : 'text-slate-300 hover:text-white hover:bg-[#202d38]'
+                }`}
+              >
+                <span>Grob Experience</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterEvent === 'Grob Experience' ? 'bg-slate-300 text-slate-900' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}>
+                  {countGrob}
+                </span>
+                <span className="text-[9px] uppercase px-1 rounded bg-slate-700 text-slate-300 font-bold">
+                  Finalizado
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterEvent('todos')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterEvent === 'todos'
+                    ? 'bg-blue-600 text-white shadow-md font-black'
+                    : 'text-slate-300 hover:text-white hover:bg-[#202d38]'
+                }`}
+              >
+                <span>Todos</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filterEvent === 'todos' ? 'bg-blue-700 text-white' : 'bg-slate-800 text-slate-300'}`}>
+                  {leads.length}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Contextual Status Strip */}
+          <div className="pt-3 border-t border-slate-700/60">
+            {filterEvent === 'Mercopar 2026' ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-emerald-950/30 rounded-xl border border-emerald-500/30 text-xs">
+                <div className="flex items-center gap-2 text-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span>
+                    <strong>Mercopar 2026 (Ativo / Em Andamento):</strong> Novos sorteios realizados com descontos (10% a 40% no TDM | 3,5%, 5,0%, 6,5% nos demais produtos) e brindes oficiais.
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowProductLinksModal(true)}
+                  className="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shrink-0 transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Layers size={13} />
+                  <span>Links do Sorteio</span>
+                </button>
+              </div>
+            ) : filterEvent === 'Grob Experience' ? (
+              <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 text-xs text-slate-300 flex items-center gap-2">
+                <Clock size={15} className="text-slate-400 shrink-0" />
+                <span>
+                  <strong>Grob Experience (Finalizado):</strong> Visualizando histórico arquivado dos sorteios efetuados na feira anterior. Nenhum novo lead será direcionado a este evento.
+                </span>
+              </div>
+            ) : (
+              <div className="p-3 bg-blue-950/30 rounded-xl border border-blue-500/30 text-xs text-blue-300 flex items-center gap-2">
+                <Layers size={15} className="text-blue-400 shrink-0" />
+                <span>
+                  <strong>Visão Geral (Todos os Eventos):</strong> Exibindo o conjunto completo de {leads.length} leads ({countMercopar} Mercopar 2026 + {countGrob} Grob Experience).
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
         
         {/* KPI Cards Banner */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -767,6 +902,7 @@ export default function LeadsComercial() {
               <thead>
                 <tr className="border-b border-slate-700/80 bg-[#17232d] text-[11px] font-bold uppercase tracking-wider text-slate-300">
                   <th className="py-3.5 px-4">Participante</th>
+                  <th className="py-3.5 px-4">Evento</th>
                   <th className="py-3.5 px-4">Empresa & Cargo</th>
                   <th className="py-3.5 px-4">Contato (Whats / Email)</th>
                   <th className="py-3.5 px-4">Crachá ID</th>
@@ -780,15 +916,22 @@ export default function LeadsComercial() {
               <tbody className="divide-y divide-slate-700/60 text-xs text-slate-300">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <td colSpan={10} className="py-12 text-center text-slate-400">
                       <RefreshCw size={20} className="animate-spin inline mr-2 text-blue-400" />
                       Carregando leads do banco de dados em nuvem...
                     </td>
                   </tr>
                 ) : filteredLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
-                      Nenhum lead encontrado com os filtros atuais.
+                    <td colSpan={10} className="py-12 text-center text-slate-400">
+                      <div className="max-w-md mx-auto space-y-2">
+                        <div className="font-bold text-slate-300">Nenhum lead encontrado para {filterEvent === 'todos' ? 'estes filtros' : `o evento ${filterEvent}`}.</div>
+                        {filterEvent === 'Mercopar 2026' && countMercopar === 0 && (
+                          <div className="text-xs text-slate-400">
+                            Os novos sorteios que você realizar agora serão salvos automaticamente para a <strong>Mercopar 2026</strong>. Para ver os sorteios do evento anterior, clique na aba <strong>Grob Experience</strong> acima.
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -797,6 +940,7 @@ export default function LeadsComercial() {
                     const stats = leadStatsMap.get(leadKey);
                     const totalParticipacoes = stats?.count || 1;
                     const drawIndex = stats ? stats.draws.findIndex(d => d.id === lead.id) + 1 : 1;
+                    const eventName = resolveEventName(lead.evento, false);
 
                     return (
                       <tr 
@@ -821,6 +965,20 @@ export default function LeadsComercial() {
                               <div className="text-[10px] font-normal text-slate-400">{lead.dataHora}</div>
                             </div>
                           </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {eventName === CURRENT_EVENT.name ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                              Mercopar 2026
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-700/60 text-slate-300 border border-slate-600/50 whitespace-nowrap">
+                              Grob Experience
+                              <span className="text-[9px] text-slate-400 font-normal">• Encerrado</span>
+                            </span>
+                          )}
                         </td>
 
                         <td className="py-3.5 px-4">
@@ -1045,6 +1203,12 @@ export default function LeadsComercial() {
                   <span className="text-slate-400 block text-[10px] uppercase">Crachá ID</span>
                   <span className="text-blue-400 font-bold">{selectedLead.crachaId}</span>
                 </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">Evento Oficial</span>
+                  <span className={`font-bold ${resolveEventName(selectedLead.evento, false) === CURRENT_EVENT.name ? 'text-emerald-400' : 'text-slate-300'}`}>
+                    {resolveEventName(selectedLead.evento, false)}
+                  </span>
+                </div>
                 <div className="col-span-2 bg-[#17232d] p-3 rounded-xl border border-slate-700/60">
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Prêmio(s) Conquistado(s)</span>
                   <span className="text-amber-300 font-bold text-sm block mt-0.5">{selectedLead.premioGanho}</span>
@@ -1185,6 +1349,18 @@ export default function LeadsComercial() {
                       onChange={(e) => setEditFormData({ ...editFormData, crachaId: e.target.value })}
                       className="w-full bg-[#2a353f] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-white font-mono focus:outline-none focus:border-blue-500"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold uppercase tracking-wider mb-1">Evento Oficial</label>
+                    <select
+                      value={editFormData.evento || CURRENT_EVENT.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, evento: e.target.value })}
+                      className="w-full bg-[#2a353f] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      <option value="Mercopar 2026">🟢 Mercopar 2026 (Ativo)</option>
+                      <option value="Grob Experience">⚪ Grob Experience (Finalizado)</option>
+                    </select>
                   </div>
 
                   <div>
@@ -1674,20 +1850,25 @@ export default function LeadsComercial() {
               </div>
 
               {/* Instructions Banner */}
-              <div className="bg-blue-950/40 border border-blue-500/40 rounded-2xl p-4 text-xs text-slate-300 space-y-2">
-                <div className="font-bold text-white flex items-center gap-2">
-                  <Sparkles size={15} className="text-blue-400" />
-                  <span>Como funciona o redirecionamento automático do Base 44 e os 2 Sorteios:</span>
+              <div className="bg-blue-950/40 border border-blue-500/40 rounded-2xl p-4 text-xs text-slate-300 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold text-white flex items-center gap-2">
+                    <Sparkles size={15} className="text-blue-400" />
+                    <span>Redirecionamento do Base 44 • Mercopar 2026:</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    Evento: Mercopar 2026
+                  </span>
                 </div>
                 <p className="text-[12px] leading-relaxed">
-                  Lá no Base 44, quando o atendente/consultor selecionar o produto do lead (ou clicar no botão da solução correspondente), basta direcionar para a URL da página do produto abaixo. O sistema abre a página de sorteio <strong>completamente personalizada para aquele produto</strong>.
+                  No Base 44, ao selecionar a solução do lead, abra a URL do produto correspondente. <strong>Regra: Cada lead só pode participar do sorteio para 1 produto</strong> no evento. Ao concluir o sorteio duplo, o sistema devolve ao Base 44 qual foi o <strong>produto sorteado</strong>, o <strong>desconto ganho</strong>, o <strong>brinde físico ganho</strong>, o <strong>voucher</strong> e o evento <strong>Mercopar 2026</strong>.
                 </p>
                 <div className="pt-2 border-t border-blue-500/30 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                   <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
                     <strong className="text-emerald-400 block mb-0.5">1º Sorteio: Descontos por Solução</strong>
                     <span className="leading-relaxed">
-                      • <strong>TDM</strong>: Descontos mantidos de <strong>10% a 40%</strong><br />
-                      • <strong>Outros Produtos</strong>: Descontos de <strong>3,5%</strong>, <strong>5,0%</strong> e <strong>6,5%</strong>
+                      • <strong>TDM</strong>: Descontos de <strong>10% a 40%</strong><br />
+                      • <strong>ACM, VERICUT, CRIBWISE, HUMAINAX</strong>: Descontos de <strong>3,5%</strong>, <strong>5,0%</strong> e <strong>6,5%</strong>
                     </span>
                   </div>
                   <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
@@ -1695,8 +1876,8 @@ export default function LeadsComercial() {
                     <span>O participante gira uma 2ª vez para ganhar: <strong>Abridor de garrafa</strong>, <strong>Caneta</strong> ou <strong>Eco copo</strong>.</span>
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-400 pt-1">
-                  Ao concluir, o botão <strong>"Retornar aos cadastros"</strong> devolve o lead ao Base 44 com o voucher e os dois prêmios preenchidos!
+                <p className="text-[11px] text-emerald-400 font-semibold pt-1">
+                  ✓ O botão "Retornar aos cadastros" envia produto, prêmio de desconto, brinde físico, voucher e evento de volta para o Base 44!
                 </p>
               </div>
 
