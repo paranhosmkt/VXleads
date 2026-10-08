@@ -8,7 +8,7 @@ export interface DiscountPrize {
 
 export interface PhysicalItemPrize {
   id: string;
-  key: 'abridor' | 'caneta' | 'ecocopo';
+  key: 'abridor' | 'caneta' | 'ecocopo' | 'bloco';
   name: string;
   shortName: string;
   color: string;
@@ -117,7 +117,7 @@ export function getDiscountPercentagesText(productIdOrKey?: string | null): stri
 }
 
 /**
- * 2º Sorteio: Itens físicos (Abridor de garrafa, caneta e eco copo)
+ * 2º Sorteio: Itens físicos (Abridor de garrafa, caneta, eco copo e bloco de anotações)
  */
 export const PHYSICAL_ITEM_PRIZES: PhysicalItemPrize[] = [
   {
@@ -146,11 +146,20 @@ export const PHYSICAL_ITEM_PRIZES: PhysicalItemPrize[] = [
     color: '#10B981',
     icon: '🥤',
     description: 'Eco copo sustentável colecionável'
+  },
+  {
+    id: 'item-bloco',
+    key: 'bloco',
+    name: 'Bloco de anotações',
+    shortName: 'Bloco de Notas',
+    color: '#3B82F6',
+    icon: '📝',
+    description: 'Bloco de anotações oficial personalizado'
   }
 ];
 
 /**
- * Fatias da roleta do 2º sorteio (6 fatias balanceadas alternando os 3 itens)
+ * Fatias da roleta do 2º sorteio (8 fatias balanceadas de 45° alternando os 4 itens oficiais)
  */
 export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
   {
@@ -181,12 +190,21 @@ export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
     icon: '🥤'
   },
   {
+    id: 'slice-bloco-1',
+    prizeKey: 'bloco',
+    name: 'Bloco de anotações',
+    topText: 'BLOCO DE',
+    bottomText: 'ANOTAÇÕES',
+    color: '#3B82F6',
+    icon: '📝'
+  },
+  {
     id: 'slice-abridor-2',
     prizeKey: 'abridor',
     name: 'Abridor de garrafa',
     topText: 'ABRIDOR DE',
     bottomText: 'GARRAFA',
-    color: '#3B82F6',
+    color: '#D97706',
     icon: '🍾'
   },
   {
@@ -206,6 +224,15 @@ export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
     bottomText: 'COPO',
     color: '#06B6D4',
     icon: '🥤'
+  },
+  {
+    id: 'slice-bloco-2',
+    prizeKey: 'bloco',
+    name: 'Bloco de anotações',
+    topText: 'BLOCO DE',
+    bottomText: 'ANOTAÇÕES',
+    color: '#2563EB',
+    icon: '📝'
   }
 ];
 
@@ -233,6 +260,9 @@ export function getPrizeSliceDisplay(name: string): { top: string; bottom: strin
   }
   if (/copo/i.test(name)) {
     return { top: 'ECO', bottom: 'COPO' };
+  }
+  if (/bloco/i.test(name) || /anota/i.test(name)) {
+    return { top: 'BLOCO DE', bottom: 'ANOTAÇÕES' };
   }
 
   const parts = name.trim().split(/\s+/);

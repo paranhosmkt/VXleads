@@ -222,6 +222,12 @@ async function startServer() {
     if (res.produtoId && /humain|humanin/i.test(res.produtoId)) {
       res.produtoId = 'humainax';
     }
+    if (!res.brinde && res.premioBrinde) {
+      res.brinde = res.premioBrinde;
+    }
+    if (!res.desconto && res.premioDesconto) {
+      res.desconto = res.premioDesconto;
+    }
     return res;
   }
 
@@ -319,8 +325,11 @@ async function startServer() {
         produtoId: (/humain|humanin/i.test(data.produtoId || data.produto_id || data.produto || '')) ? 'humainax' : (data.produtoId || data.produto_id || ''),
         produtoNome: (/humain|humanin/i.test(data.produtoNome || data.produto_nome || data.produto || '')) ? 'HUMAINAX • Inteligência Artificial para Usinagem' : (data.produtoNome || data.produto_nome || ''),
         premio: data.premio || data.premioGanho || '',
-        premioDesconto: data.premioDesconto || data.desconto || '',
-        premioBrinde: data.premioBrinde || data.brinde || '',
+        desconto: data.desconto || data.descontoGanho || data.premioDesconto || '',
+        premioDesconto: data.premioDesconto || data.desconto || data.descontoGanho || '',
+        brinde: data.brinde || data.brindeGanho || data.brindeFisico || data.premioBrinde || data.item || '',
+        premioBrinde: data.premioBrinde || data.brinde || data.brindeGanho || data.brindeFisico || data.item || '',
+        brindeFisico: data.brindeFisico || data.brinde || data.brindeGanho || data.premioBrinde || '',
         voucher: data.voucher || data.voucherCode || '',
         codigoVoucher: data.codigoVoucher || data.voucher || '',
         problemas: data.problemas || data.resposta1 || '',

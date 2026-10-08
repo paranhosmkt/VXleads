@@ -9,6 +9,7 @@ import { db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
+import ScratchCard from '../components/ScratchCard';
 import { PRODUCTS_CONFIG, extractProductFromUrl, getProductBySlugOrParam, ProductConfig } from '../data/productConfig';
 import { CURRENT_EVENT, resolveEventName } from '../data/eventConfig';
 import { 
@@ -159,7 +160,7 @@ export default function RoletaPremioPage() {
 
   // Detect product from route or search parameters
   const detectedProduct = extractProductFromUrl(searchParams, routeProduto);
-  const [selectedProduct, setSelectedProduct] = useState<ProductConfig | null>(detectedProduct);
+  const [selectedProduct, setSelectedProduct] = useState<ProductConfig | null>(detectedProduct || PRODUCTS_CONFIG[0]);
 
   useEffect(() => {
     const current = extractProductFromUrl(searchParams, routeProduto);
@@ -232,20 +233,54 @@ export default function RoletaPremioPage() {
   const isTdm = isTdmProduct(selectedProduct?.id || selectedProduct?.key);
   const activeDiscountSlices = getDiscountPrizesForProduct(selectedProduct?.id || selectedProduct?.key);
 
-  const handleSelectProduct = (prod: ProductConfig | null) => {
-    setSelectedProduct(prod);
-    const newParams = new URLSearchParams(searchParams);
-    if (prod) {
-      newParams.set('produto', prod.id);
-    } else {
-      newParams.delete('produto');
-      newParams.delete('product');
-      newParams.delete('produtos');
-    }
-    setSearchParams(newParams, { replace: true });
+  // Game mode: 'roleta' | 'raspadinha'
+  const [selectedGame, setSelectedGame] = useState<'roleta' | 'raspadinha'>(() => {
+    const p = searchParams.get('jogo') || searchParams.get('game');
+    return p === 'raspadinha' ? 'raspadinha' : 'roleta';
+  });
+
+  // Pre-seed winner prizes for Raspadinha
+  const [scratchDiscountPrize, setScratchDiscountPrize] = useState<DiscountPrize>(() => {
+    const list = getDiscountPrizesForProduct(selectedProduct?.id || selectedProduct?.key);
+    return list[Math.floor(Math.random() * list.length)] || list[0];
+  });
+
+  const [scratchItemPrize, setScratchItemPrize] = useState<PhysicalItemPrize>(() => {
+    return PHYSICAL_ITEM_PRIZES[Math.floor(Math.random() * PHYSICAL_ITEM_PRIZES.length)] || PHYSICAL_ITEM_PRIZES[0];
+  });
+
+  // Keep scratch discount prize in sync if product changes
+  useEffect(() => {
+    const list = getDiscountPrizesForProduct(selectedProduct?.id || selectedProduct?.key);
+    const prize = list[Math.floor(Math.random() * list.length)] || list[0];
+    setScratchDiscountPrize(prize);
+  }, [selectedProduct?.id]);
+
+  // 1º Sorteio: Raspadinha de Descontos
+  const handleScratchDiscountComplete = () => {
+    if (drawPhase !== 'draw1_spin' || isSpinning) return;
+    playWinSound();
+    triggerConfetti();
+    setWonDiscount(scratchDiscountPrize);
+    setDrawPhase('draw1_completed');
   };
 
-  // 1º Sorteio: Gira para descontos
+  // 2º Sorteio: Raspadinha de Brinde Físico
+  const handleScratchItemComplete = () => {
+    if (drawPhase !== 'draw2_spin' || isSpinning) return;
+    playWinSound();
+    triggerConfetti();
+    setWonItem(scratchItemPrize);
+
+    const code = `VX-${Math.floor(10000 + Math.random() * 90000)}`;
+    setVoucherCode(code);
+    setDrawPhase('won_final');
+
+    const discountName = wonDiscount ? wonDiscount.name : scratchDiscountPrize.name;
+    persistConsolidatedResult(discountName, scratchItemPrize.name, code);
+  };
+
+  // 1º Sorteio: Gira para descontos (Roleta)
   const handleSpinDiscountWheel = () => {
     if (isSpinning) return;
     if (hasAlreadyDrawn) {
@@ -382,9 +417,11 @@ export default function RoletaPremioPage() {
       premioBrinde: itemName,
       desconto: discountName,
       brinde: itemName,
+      brindeGanho: itemName,
+      brindeFisico: itemName,
       status: 'completed',
-      jogo: 'roleta_dupla',
-      jogoEscolhido: 'roleta'
+      jogo: selectedGame === 'raspadinha' ? 'raspadinha' : 'roleta_dupla',
+      jogoEscolhido: selectedGame
     };
 
     // 1. Firebase Firestore Real-Time Cloud Storage
@@ -592,7 +629,7 @@ export default function RoletaPremioPage() {
                 <div className="min-w-0">
                   <div className="font-bold text-white truncate text-xs">2º Sorteio: Brinde Físico</div>
                   <div className="text-[11px] text-slate-300 truncate">
-                    {wonItem ? wonItem.name : 'Abridor, Caneta ou Eco Copo'}
+                    {wonItem ? wonItem.name : 'Abridor, Caneta, Eco copo ou Bloco de anotações'}
                   </div>
                 </div>
               </div>
@@ -600,102 +637,101 @@ export default function RoletaPremioPage() {
           </div>
         )}
 
-        {/* Product selector buttons (if user wants to browse products or none in URL) */}
-        {!isFinalScreen && (
-          <div className="mb-4 bg-[#2a353f]/60 p-3 rounded-2xl border border-slate-700/60 flex items-center gap-2 overflow-x-auto scrollbar-thin">
-            <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-              <Layers size={12} className="text-blue-400" />
-              Solução:
-            </span>
-            {PRODUCTS_CONFIG.map((prod) => {
-              const isSelected = selectedProduct?.id === prod.id;
-              return (
-                <button
-                  key={prod.id}
-                  onClick={() => handleSelectProduct(prod)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer border ${
-                    isSelected
-                      ? 'border-transparent text-white shadow-md'
-                      : 'bg-[#17232d] hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:border-slate-600'
-                  }`}
-                  style={{
-                    backgroundColor: isSelected ? prod.color : undefined,
-                    boxShadow: isSelected ? `0 0 15px ${prod.color}40` : undefined
-                  }}
-                >
-                  <ProductIcon name={prod.iconName} size={13} />
-                  <span>{prod.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ACTIVE PRODUCT BRANDING HERO (if selected) */}
+        {/* ACTIVE PRODUCT CARD - CLEAN: SOMENTE NOME DO PRODUTO E PRÊMIOS RELACIONADOS */}
         {selectedProduct && !isFinalScreen && (
           <div 
-            className="mb-6 rounded-2xl p-4 sm:p-5 border transition-all relative overflow-hidden bg-gradient-to-r"
+            className="mb-6 rounded-2xl p-5 sm:p-6 border transition-all relative overflow-hidden bg-[#2a353f]/95 shadow-xl"
             style={{
-              borderColor: `${selectedProduct.color}50`,
-              backgroundImage: `linear-gradient(to right, ${selectedProduct.color}15, rgba(23, 35, 45, 0.95))`
+              borderColor: `${selectedProduct.color}50`
             }}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
-              <div className="flex items-start gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Product Name */}
+              <div className="flex items-center gap-3.5">
                 <div 
-                  className="p-3 rounded-xl text-white shadow-lg shrink-0 mt-0.5"
+                  className="p-3 rounded-2xl text-white shadow-lg shrink-0"
                   style={{ backgroundColor: selectedProduct.color }}
                 >
-                  <ProductIcon name={selectedProduct.iconName} size={24} />
+                  <ProductIcon name={selectedProduct.iconName} size={28} />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span 
-                      className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border"
-                      style={{
-                        backgroundColor: `${selectedProduct.color}25`,
-                        borderColor: `${selectedProduct.color}50`,
-                        color: selectedProduct.color
-                      }}
-                    >
-                      {selectedProduct.badge}
-                    </span>
-                    <span className="text-slate-400 text-xs">• {selectedProduct.category}</span>
-                  </div>
-                  <h2 className="text-lg sm:text-xl font-extrabold text-white mt-0.5">
-                    {selectedProduct.fullName}
+                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    {selectedProduct.name}
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-300 max-w-xl mt-0.5 leading-relaxed">
-                    {selectedProduct.tagline}
+                  <p className="text-xs text-slate-300 font-medium">
+                    {selectedProduct.fullName}
                   </p>
                 </div>
               </div>
 
-              <div className="shrink-0 text-left sm:text-right bg-[#17232d]/80 sm:bg-transparent p-2 sm:p-0 rounded-xl">
-                <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider">
-                  Voucher Aplicável
-                </span>
-                <span 
-                  className="text-xs font-black px-2.5 py-1 rounded-lg border inline-block mt-0.5"
-                  style={{
-                    backgroundColor: `${selectedProduct.color}20`,
-                    borderColor: `${selectedProduct.color}50`,
-                    color: selectedProduct.color
-                  }}
-                >
-                  100% Válido para {selectedProduct.name}
-                </span>
+              {/* Prizes Related to this Product */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 text-xs">
+                {/* 1º Prêmio: Desconto */}
+                <div className="bg-[#17232d] px-3.5 py-2.5 rounded-xl border border-slate-700/80 flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: selectedProduct.color }}></div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">1º Sorteio: Desconto</span>
+                    <span className="font-extrabold text-white">
+                      {getDiscountPercentagesText(selectedProduct.id)} OFF
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2º Prêmio: Brinde Físico */}
+                <div className="bg-[#17232d] px-3.5 py-2.5 rounded-xl border border-slate-700/80 flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">2º Sorteio: Brinde</span>
+                    <span className="font-extrabold text-amber-300">
+                      Abridor, Caneta, Eco copo ou Bloco de anotações
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Key Benefits */}
-            <div className="mt-3.5 pt-3 border-t border-slate-700/40 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
-              {selectedProduct.benefits.map((benefit, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 bg-[#17232d]/70 p-2 rounded-xl border border-slate-700/50">
-                  <Check size={12} className="text-emerald-400 shrink-0" />
-                  <span className="truncate">{benefit}</span>
-                </div>
-              ))}
+        {/* SELECTOR ENTRE ROLETA OU RASPADINHA */}
+        {!hasAlreadyDrawn && (drawPhase === 'draw1_spin' || drawPhase === 'draw2_spin') && (
+          <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-[#2a353f]/90 border border-slate-700/80 rounded-2xl shadow-xl">
+            <div className="flex items-center gap-2 text-center sm:text-left">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-300">
+                Dinâmica do Sorteio:
+              </span>
+              <span className="text-[11px] text-slate-400 hidden sm:inline">
+                Escolha como prefere concorrer ({drawPhase === 'draw1_spin' ? '1º Sorteio' : '2º Sorteio'})
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 bg-[#17232d] p-1 rounded-xl border border-slate-700/80 shrink-0 w-full sm:w-auto">
+              <button
+                type="button"
+                disabled={isSpinning}
+                onClick={() => setSelectedGame('roleta')}
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  selectedGame === 'roleta'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <RotateCcw size={14} className={isSpinning ? 'animate-spin' : ''} />
+                <span>🎡 Roleta Premiada</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isSpinning}
+                onClick={() => setSelectedGame('raspadinha')}
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  selectedGame === 'raspadinha'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-400'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <Sparkles size={14} />
+                <span>✨ Raspadinha Digital</span>
+              </button>
             </div>
           </div>
         )}
@@ -755,8 +791,8 @@ export default function RoletaPremioPage() {
                       leadId: participant.crachaId,
                       voucher: existingDraw?.voucher || '',
                       premio: existingDraw?.premioGanho || '',
-                      desconto: existingDraw?.premioDesconto,
-                      brinde: existingDraw?.premioBrinde,
+                      desconto: existingDraw?.premioDesconto || existingDraw?.desconto,
+                      brinde: existingDraw?.premioBrinde || existingDraw?.brinde,
                       nome: participant.nome,
                       empresa: participant.empresa,
                       cargo: participant.cargo,
@@ -780,150 +816,179 @@ export default function RoletaPremioPage() {
         )}
 
         {/* ======================================================== */}
-        {/* STAGE 1: 1º SORTEIO (DESCONTOS - TDM: 10% A 40% | OUTROS: 3,5%, 5,0%, 6,5%) */}
+        {/* STAGE 1: 1º SORTEIO (DESCONTOS - ROLETA OU RASPADINHA) */}
         {/* ======================================================== */}
         {!hasAlreadyDrawn && drawPhase === 'draw1_spin' && (
           <div className="bg-[#2a353f] border border-slate-700/60 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
             <div className="max-w-xl mx-auto">
               
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-black mb-3 border border-blue-500/30">
-                <Flame size={14} className="text-amber-400" />
+                {selectedGame === 'roleta' ? (
+                  <Flame size={14} className="text-amber-400" />
+                ) : (
+                  <Sparkles size={14} className="text-purple-400" />
+                )}
                 <span>1º Sorteio: Desconto Exclusivo ({getDiscountRangeLabel(selectedProduct?.id || selectedProduct?.key)})</span>
               </div>
 
-              <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
-                {selectedProduct ? (
-                  <>Gire a Roleta • <span style={{ color: selectedProduct.color }}>{selectedProduct.name}</span></>
-                ) : (
-                  'Gire a Roleta de Descontos'
-                )}
-              </h3>
-              <p className="text-slate-300 text-sm mb-5 leading-relaxed">
-                {selectedProduct ? (
-                  <>Descubra qual desconto especial você ganhou para a solução <strong className="text-white">{selectedProduct.fullName}</strong> ({getDiscountPercentagesText(selectedProduct.id)}). Em seguida você terá o 2º sorteio de brinde!</>
-                ) : (
-                  <>Descubra qual desconto especial você conquistou para a sua empresa ({getDiscountPercentagesText(null)}). Em seguida você terá o 2º sorteio de brinde!</>
-                )}
-              </p>
-
-              {/* ROULETTE SVG DISK FOR DISCOUNTS */}
-              <div className="relative w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] mx-auto my-4">
-                {/* Pointer / Arrow */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">
-                  <div className="w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-t-[32px] border-t-yellow-400"></div>
-                </div>
-
-                {/* Rotating Wheel Disk */}
-                <div 
-                  className="w-full h-full rounded-full border-8 border-slate-800 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden transition-transform duration-[4500ms] ease-out"
-                  style={{ transform: `rotate(${rotation}deg)` }}
-                >
-                  <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
-                    {/* Layer 1: Sector Color Slices */}
-                    <g id="roleta-discount-slices">
-                      {activeDiscountSlices.map((prize, i) => {
-                        const total = activeDiscountSlices.length;
-                        const angle = 360 / total;
-                        const startAngle = i * angle;
-                        const endAngle = (i + 1) * angle;
-                        
-                        const x1 = 50 + 50 * Math.cos((Math.PI * startAngle) / 180);
-                        const y1 = 50 + 50 * Math.sin((Math.PI * startAngle) / 180);
-                        const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
-                        const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
-                        
-                        const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
-
-                        return (
-                          <path key={`${prize.id}-${i}`} d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
-                        );
-                      })}
-                    </g>
-
-                    {/* Layer 2: Labels Layer */}
-                    <g id="roleta-discount-labels">
-                      {activeDiscountSlices.map((prize, i) => {
-                        const total = activeDiscountSlices.length;
-                        const angle = 360 / total;
-                        const startAngle = i * angle;
-                        const midAngle = startAngle + angle / 2;
-                        const lines = getPrizeSliceDisplay(prize.name);
-
-                        return (
-                          <g key={`lbl-${prize.id}-${i}`} transform={`rotate(${midAngle}, 50, 50)`}>
-                            <text
-                              x={73}
-                              y={47.8}
-                              fill="#FFFFFF"
-                              fontSize="4.4"
-                              fontWeight="900"
-                              textAnchor="middle"
-                              dominantBaseline="central"
-                              style={{
-                                paintOrder: 'stroke fill',
-                                stroke: '#0f172a',
-                                strokeWidth: '1.4px',
-                                strokeLinejoin: 'round'
-                              }}
-                            >
-                              {lines.top}
-                            </text>
-                            <text
-                              x={73}
-                              y={53.2}
-                              fill="#FEF08A"
-                              fontSize="2.7"
-                              fontWeight="900"
-                              letterSpacing="0.4"
-                              textAnchor="middle"
-                              dominantBaseline="central"
-                              style={{
-                                paintOrder: 'stroke fill',
-                                stroke: '#0f172a',
-                                strokeWidth: '1.2px',
-                                strokeLinejoin: 'round'
-                              }}
-                            >
-                              {lines.bottom}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </g>
-                  </svg>
-
-                  {/* Center Hub Cap */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-slate-900 border-4 border-yellow-400 rounded-full flex items-center justify-center shadow-xl z-20">
+              {selectedGame === 'roleta' ? (
+                <>
+                  <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
                     {selectedProduct ? (
-                      <div style={{ color: selectedProduct.color }}>
-                        <ProductIcon name={selectedProduct.iconName} size={20} />
-                      </div>
+                      <>Gire a Roleta • <span style={{ color: selectedProduct.color }}>{selectedProduct.name}</span></>
                     ) : (
-                      <Sparkles size={20} className="text-yellow-400 animate-pulse" />
+                      'Gire a Roleta de Descontos'
                     )}
-                  </div>
-                </div>
-              </div>
+                  </h3>
+                  <p className="text-slate-300 text-sm mb-5 leading-relaxed">
+                    {selectedProduct ? (
+                      <>Descubra qual desconto especial você ganhou para a solução <strong className="text-white">{selectedProduct.fullName}</strong> ({getDiscountPercentagesText(selectedProduct.id)}). Em seguida você terá o 2º sorteio de brinde!</>
+                    ) : (
+                      <>Descubra qual desconto especial você conquistou para a sua empresa ({getDiscountPercentagesText(null)}). Em seguida você terá o 2º sorteio de brinde!</>
+                    )}
+                  </p>
 
-              {/* Spin Button */}
-              <div className="mt-6">
-                <button
-                  onClick={handleSpinDiscountWheel}
-                  disabled={isSpinning}
-                  className={`w-full max-w-sm py-4 px-8 rounded-2xl font-black text-lg transition-all shadow-xl cursor-pointer ${
-                    isSpinning
-                      ? 'bg-slate-700 text-slate-400 cursor-wait'
-                      : selectedProduct
-                      ? 'text-white hover:brightness-110 shadow-lg transform active:scale-95'
-                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white transform active:scale-95'
-                  }`}
-                  style={{
-                    backgroundColor: (!isSpinning && selectedProduct) ? selectedProduct.color : undefined
-                  }}
-                >
-                  {isSpinning ? 'Girando a Roleta de Desconto...' : selectedProduct ? `Girar 1º Sorteio: Desconto ${selectedProduct.name}!` : 'Girar 1º Sorteio: Desconto!'}
-                </button>
-              </div>
+                  {/* ROULETTE SVG DISK FOR DISCOUNTS */}
+                  <div className="relative w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] mx-auto my-4">
+                    {/* Pointer / Arrow */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">
+                      <div className="w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-t-[32px] border-t-yellow-400"></div>
+                    </div>
+
+                    {/* Rotating Wheel Disk */}
+                    <div 
+                      className="w-full h-full rounded-full border-8 border-slate-800 shadow-[0_0_50px_rgba(59,130,246,0.25)] relative overflow-hidden transition-transform duration-[4500ms] ease-out"
+                      style={{ transform: `rotate(${rotation}deg)` }}
+                    >
+                      <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
+                        {/* Layer 1: Sector Color Slices */}
+                        <g id="roleta-discount-slices">
+                          {activeDiscountSlices.map((prize, i) => {
+                            const total = activeDiscountSlices.length;
+                            const angle = 360 / total;
+                            const startAngle = i * angle;
+                            const endAngle = (i + 1) * angle;
+                            
+                            const x1 = 50 + 50 * Math.cos((Math.PI * startAngle) / 180);
+                            const y1 = 50 + 50 * Math.sin((Math.PI * startAngle) / 180);
+                            const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
+                            const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
+                            
+                            const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
+
+                            return (
+                              <path key={`${prize.id}-${i}`} d={pathData} fill={prize.color} stroke="#0f172a" strokeWidth="0.8" />
+                            );
+                          })}
+                        </g>
+
+                        {/* Layer 2: Labels Layer */}
+                        <g id="roleta-discount-labels">
+                          {activeDiscountSlices.map((prize, i) => {
+                            const total = activeDiscountSlices.length;
+                            const angle = 360 / total;
+                            const startAngle = i * angle;
+                            const midAngle = startAngle + angle / 2;
+                            const lines = getPrizeSliceDisplay(prize.name);
+
+                            return (
+                              <g key={`lbl-${prize.id}-${i}`} transform={`rotate(${midAngle}, 50, 50)`}>
+                                <text
+                                  x={73}
+                                  y={47.8}
+                                  fill="#FFFFFF"
+                                  fontSize="4.4"
+                                  fontWeight="900"
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  style={{
+                                    paintOrder: 'stroke fill',
+                                    stroke: '#0f172a',
+                                    strokeWidth: '1.4px',
+                                    strokeLinejoin: 'round'
+                                  }}
+                                >
+                                  {lines.top}
+                                </text>
+                                <text
+                                  x={73}
+                                  y={53.2}
+                                  fill="#FEF08A"
+                                  fontSize="2.7"
+                                  fontWeight="900"
+                                  letterSpacing="0.4"
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  style={{
+                                    paintOrder: 'stroke fill',
+                                    stroke: '#0f172a',
+                                    strokeWidth: '1.2px',
+                                    strokeLinejoin: 'round'
+                                  }}
+                                >
+                                  {lines.bottom}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </g>
+                      </svg>
+
+                      {/* Center Hub Cap */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-slate-900 border-4 border-yellow-400 rounded-full flex items-center justify-center shadow-xl z-20">
+                        {selectedProduct ? (
+                          <div style={{ color: selectedProduct.color }}>
+                            <ProductIcon name={selectedProduct.iconName} size={20} />
+                          </div>
+                        ) : (
+                          <Sparkles size={20} className="text-yellow-400 animate-pulse" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Spin Button */}
+                  <div className="mt-6">
+                    <button
+                      onClick={handleSpinDiscountWheel}
+                      disabled={isSpinning}
+                      className={`w-full max-w-sm py-4 px-8 rounded-2xl font-black text-lg transition-all shadow-xl cursor-pointer ${
+                        isSpinning
+                          ? 'bg-slate-700 text-slate-400 cursor-wait'
+                          : selectedProduct
+                          ? 'text-white hover:brightness-110 shadow-lg transform active:scale-95'
+                          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white transform active:scale-95'
+                      }`}
+                      style={{
+                        backgroundColor: (!isSpinning && selectedProduct) ? selectedProduct.color : undefined
+                      }}
+                    >
+                      {isSpinning ? 'Girando a Roleta de Desconto...' : selectedProduct ? `Girar 1º Sorteio: Desconto ${selectedProduct.name}!` : 'Girar 1º Sorteio: Desconto!'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* RASPADINHA MODE */
+                <div className="py-2 space-y-4">
+                  <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
+                    Raspe com o Dedo ou Mouse
+                  </h3>
+                  <p className="text-slate-300 text-sm mb-4 leading-relaxed">
+                    Passe sobre a área abaixo para raspar e revelar seu desconto exclusivo para a solução <strong className="text-white">{selectedProduct?.fullName}</strong> ({getDiscountPercentagesText(selectedProduct?.id)})!
+                  </p>
+
+                  <div className="flex justify-center my-6">
+                    <ScratchCard
+                      prizeText={scratchDiscountPrize.name}
+                      onComplete={handleScratchDiscountComplete}
+                    />
+                  </div>
+
+                  <p className="text-slate-400 text-xs font-semibold">
+                    ✨ Raspe a área prateada para revelar seu desconto oficial e liberar a 2ª etapa de brinde!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -984,7 +1049,7 @@ export default function RoletaPremioPage() {
                   <span>Agora é hora do seu 2º Sorteio: Brinde Físico!</span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
-                  Você tem direito a girar a roleta mais uma vez para levar um brinde físico oficial do nosso estande: <strong>Abridor de garrafa</strong>, <strong>Caneta</strong> ou <strong>Eco copo</strong>!
+                  Você tem direito a girar a roleta ou raspar mais uma vez para levar um brinde físico oficial do nosso estande: <strong>Abridor de garrafa</strong>, <strong>Caneta</strong>, <strong>Eco copo</strong> ou <strong>Bloco de anotações</strong>!
                 </p>
               </div>
 
@@ -1005,7 +1070,7 @@ export default function RoletaPremioPage() {
         )}
 
         {/* ======================================================== */}
-        {/* STAGE 2: 2º SORTEIO (ITENS: ABRIDOR, CANETA, ECO COPO) */}
+        {/* STAGE 2: 2º SORTEIO (ITENS: ROLETA OU RASPADINHA) */}
         {/* ======================================================== */}
         {!hasAlreadyDrawn && drawPhase === 'draw2_spin' && (
           <div className="bg-[#2a353f] border border-slate-700/60 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden animate-fade-in">
@@ -1016,115 +1081,140 @@ export default function RoletaPremioPage() {
                 <span>2º Sorteio: Brindes Oficiais da Feira</span>
               </div>
 
-              <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
-                Gire para seu Brinde Físico!
-              </h3>
-              <p className="text-slate-300 text-sm mb-5 leading-relaxed">
-                Descubra qual item exclusivo você vai retirar no nosso estande: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Caneta</strong> ou <strong className="text-white">Eco copo</strong>!
-              </p>
+              {selectedGame === 'roleta' ? (
+                <>
+                  <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
+                    Gire para seu Brinde Físico!
+                  </h3>
+                  <p className="text-slate-300 text-sm mb-5 leading-relaxed">
+                    Descubra qual item exclusivo você vai retirar no nosso estande: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Caneta</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Bloco de anotações</strong>!
+                  </p>
 
-              {/* ROULETTE SVG DISK FOR PHYSICAL ITEMS (6 Slices) */}
-              <div className="relative w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] mx-auto my-4">
-                {/* Pointer / Arrow */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">
-                  <div className="w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-t-[32px] border-t-yellow-400"></div>
-                </div>
+                  {/* ROULETTE SVG DISK FOR PHYSICAL ITEMS (6 Slices) */}
+                  <div className="relative w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] mx-auto my-4">
+                    {/* Pointer / Arrow */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-30 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">
+                      <div className="w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-t-[32px] border-t-yellow-400"></div>
+                    </div>
 
-                {/* Rotating Wheel Disk */}
-                <div 
-                  className="w-full h-full rounded-full border-8 border-slate-800 shadow-[0_0_50px_rgba(245,158,11,0.25)] relative overflow-hidden transition-transform duration-[4500ms] ease-out"
-                  style={{ transform: `rotate(${rotation}deg)` }}
-                >
-                  <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
-                    {/* Layer 1: Sector Color Slices */}
-                    <g id="roleta-item-slices">
-                      {ITEM_ROULETTE_SLICES.map((slice, i) => {
-                        const total = ITEM_ROULETTE_SLICES.length;
-                        const angle = 360 / total;
-                        const startAngle = i * angle;
-                        const endAngle = (i + 1) * angle;
-                        
-                        const x1 = 50 + 50 * Math.cos((Math.PI * startAngle) / 180);
-                        const y1 = 50 + 50 * Math.sin((Math.PI * startAngle) / 180);
-                        const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
-                        const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
-                        
-                        const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
+                    {/* Rotating Wheel Disk */}
+                    <div 
+                      className="w-full h-full rounded-full border-8 border-slate-800 shadow-[0_0_50px_rgba(245,158,11,0.25)] relative overflow-hidden transition-transform duration-[4500ms] ease-out"
+                      style={{ transform: `rotate(${rotation}deg)` }}
+                    >
+                      <svg viewBox="0 0 100 100" className="w-full h-full" style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}>
+                        {/* Layer 1: Sector Color Slices */}
+                        <g id="roleta-item-slices">
+                          {ITEM_ROULETTE_SLICES.map((slice, i) => {
+                            const total = ITEM_ROULETTE_SLICES.length;
+                            const angle = 360 / total;
+                            const startAngle = i * angle;
+                            const endAngle = (i + 1) * angle;
+                            
+                            const x1 = 50 + 50 * Math.cos((Math.PI * startAngle) / 180);
+                            const y1 = 50 + 50 * Math.sin((Math.PI * startAngle) / 180);
+                            const x2 = 50 + 50 * Math.cos((Math.PI * endAngle) / 180);
+                            const y2 = 50 + 50 * Math.sin((Math.PI * endAngle) / 180);
+                            
+                            const pathData = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
 
-                        return (
-                          <path key={slice.id} d={pathData} fill={slice.color} stroke="#0f172a" strokeWidth="0.8" />
-                        );
-                      })}
-                    </g>
+                            return (
+                              <path key={slice.id} d={pathData} fill={slice.color} stroke="#0f172a" strokeWidth="0.8" />
+                            );
+                          })}
+                        </g>
 
-                    {/* Layer 2: Labels Layer */}
-                    <g id="roleta-item-labels">
-                      {ITEM_ROULETTE_SLICES.map((slice, i) => {
-                        const total = ITEM_ROULETTE_SLICES.length;
-                        const angle = 360 / total;
-                        const startAngle = i * angle;
-                        const midAngle = startAngle + angle / 2;
+                        {/* Layer 2: Labels Layer */}
+                        <g id="roleta-item-labels">
+                          {ITEM_ROULETTE_SLICES.map((slice, i) => {
+                            const total = ITEM_ROULETTE_SLICES.length;
+                            const angle = 360 / total;
+                            const startAngle = i * angle;
+                            const midAngle = startAngle + angle / 2;
 
-                        return (
-                          <g key={`lbl-${slice.id}`} transform={`rotate(${midAngle}, 50, 50)`}>
-                            <text
-                              x={72}
-                              y={47.5}
-                              fill="#FFFFFF"
-                              fontSize="3.6"
-                              fontWeight="900"
-                              textAnchor="middle"
-                              dominantBaseline="central"
-                              style={{
-                                paintOrder: 'stroke fill',
-                                stroke: '#0f172a',
-                                strokeWidth: '1.4px',
-                                strokeLinejoin: 'round'
-                              }}
-                            >
-                              {slice.topText}
-                            </text>
-                            <text
-                              x={72}
-                              y={52.8}
-                              fill="#FEF08A"
-                              fontSize="3.2"
-                              fontWeight="900"
-                              letterSpacing="0.3"
-                              textAnchor="middle"
-                              dominantBaseline="central"
-                              style={{
-                                paintOrder: 'stroke fill',
-                                stroke: '#0f172a',
-                                strokeWidth: '1.2px',
-                                strokeLinejoin: 'round'
-                              }}
-                            >
-                              {slice.bottomText}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </g>
-                  </svg>
+                            return (
+                              <g key={`lbl-${slice.id}`} transform={`rotate(${midAngle}, 50, 50)`}>
+                                <text
+                                  x={72}
+                                  y={47.5}
+                                  fill="#FFFFFF"
+                                  fontSize="3.6"
+                                  fontWeight="900"
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  style={{
+                                    paintOrder: 'stroke fill',
+                                    stroke: '#0f172a',
+                                    strokeWidth: '1.4px',
+                                    strokeLinejoin: 'round'
+                                  }}
+                                >
+                                  {slice.topText}
+                                </text>
+                                <text
+                                  x={72}
+                                  y={52.8}
+                                  fill="#FEF08A"
+                                  fontSize="3.2"
+                                  fontWeight="900"
+                                  letterSpacing="0.3"
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  style={{
+                                    paintOrder: 'stroke fill',
+                                    stroke: '#0f172a',
+                                    strokeWidth: '1.2px',
+                                    strokeLinejoin: 'round'
+                                  }}
+                                >
+                                  {slice.bottomText}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </g>
+                      </svg>
 
-                  {/* Center Hub Cap */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-slate-900 border-4 border-amber-400 rounded-full flex items-center justify-center shadow-xl z-20">
-                    <Gift size={22} className="text-amber-400 animate-pulse" />
+                      {/* Center Hub Cap */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-slate-900 border-4 border-amber-400 rounded-full flex items-center justify-center shadow-xl z-20">
+                        <Gift size={22} className="text-amber-400 animate-pulse" />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Spin Button */}
-              <div className="mt-6">
-                <button
-                  onClick={handleSpinItemWheel}
-                  disabled={isSpinning}
-                  className="w-full max-w-sm py-4 px-8 rounded-2xl font-black text-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 transition-all shadow-xl shadow-amber-500/20 cursor-pointer transform active:scale-95"
-                >
-                  {isSpinning ? 'Girando a Roleta de Brindes...' : 'Girar 2º Sorteio: Meu Brinde!'}
-                </button>
-              </div>
+                  {/* Spin Button */}
+                  <div className="mt-6">
+                    <button
+                      onClick={handleSpinItemWheel}
+                      disabled={isSpinning}
+                      className="w-full max-w-sm py-4 px-8 rounded-2xl font-black text-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 transition-all shadow-xl shadow-amber-500/20 cursor-pointer transform active:scale-95"
+                    >
+                      {isSpinning ? 'Girando a Roleta de Brindes...' : 'Girar 2º Sorteio: Meu Brinde!'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* RASPADINHA MODE STAGE 2 */
+                <div className="py-2 space-y-4">
+                  <h3 className="text-2xl sm:text-4xl font-extrabold text-white mb-2">
+                    Raspe seu Brinde Físico!
+                  </h3>
+                  <p className="text-slate-300 text-sm mb-4 leading-relaxed">
+                    Passe o dedo ou mouse sobre a raspadinha para revelar qual brinde oficial você vai levar: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Caneta</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Bloco de anotações</strong>!
+                  </p>
+
+                  <div className="flex justify-center my-6">
+                    <ScratchCard
+                      prizeText={scratchItemPrize.name}
+                      onComplete={handleScratchItemComplete}
+                    />
+                  </div>
+
+                  <p className="text-slate-400 text-xs font-semibold">
+                    🎁 Raspe a área para descobrir seu brinde oficial e gerar seu voucher unificado!
+                  </p>
+                </div>
+              )}
 
             </div>
           </div>
@@ -1216,6 +1306,7 @@ export default function RoletaPremioPage() {
                   </div>
                   <div><strong>Participante:</strong> {participant.nome} ({participant.empresa})</div>
                   <div><strong>Crachá:</strong> {participant.crachaId}</div>
+                  <div><strong>Dinâmica:</strong> {selectedGame === 'raspadinha' ? '✨ Raspadinha Digital' : '🎡 Roleta Premiada'}</div>
                   {selectedProduct && (
                     <div style={{ color: selectedProduct.color }}>
                       <strong>Solução:</strong> {selectedProduct.fullName}
@@ -1317,7 +1408,7 @@ export default function RoletaPremioPage() {
                       desconto: wonDiscount.name,
                       brinde: wonItem.name,
                       voucher: voucherCode,
-                      jogo: 'roleta_dupla',
+                      jogo: selectedGame === 'raspadinha' ? 'raspadinha' : 'roleta_dupla',
                       produto: selectedProduct ? selectedProduct.name : undefined,
                       produtoId: selectedProduct ? selectedProduct.id : undefined,
                       produtoNome: selectedProduct ? selectedProduct.fullName : undefined,

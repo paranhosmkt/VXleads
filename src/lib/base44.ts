@@ -131,7 +131,20 @@ export function buildBase44ReturnUrl(payload: Base44LeadPayload): string {
   if (payload.brinde) {
     p.set('brinde', payload.brinde);
     p.set('brinde_ganho', payload.brinde);
+    p.set('brinde_sorteado', payload.brinde);
+    p.set('brinde_fisico', payload.brinde);
+    p.set('brindeFisico', payload.brinde);
+    p.set('brindeGanho', payload.brinde);
+    p.set('premio_brinde', payload.brinde);
+    p.set('brinde_nome', payload.brinde);
+    p.set('brinde_conquistado', payload.brinde);
+    p.set('brinde_escolhido', payload.brinde);
+    p.set('segundo_sorteio', payload.brinde);
     p.set('item', payload.brinde);
+    p.set('item_ganho', payload.brinde);
+    p.set('item_sorteado', payload.brinde);
+    p.set('gift', payload.brinde);
+    p.set('physical_item', payload.brinde);
   } else {
     p.set('brinde', premioVal);
   }
@@ -232,7 +245,12 @@ export async function executeBase44Return(payload: Base44LeadPayload) {
         produtoNome: resolvedProdFullName,
         premio: normalizedPayload.premio,
         desconto: normalizedPayload.desconto,
+        descontoGanho: normalizedPayload.desconto,
         brinde: normalizedPayload.brinde,
+        brindeGanho: normalizedPayload.brinde,
+        brindeFisico: normalizedPayload.brinde,
+        premioBrinde: normalizedPayload.brinde,
+        item: normalizedPayload.brinde,
         voucher: normalizedPayload.voucher,
         evento: normalizedPayload.evento || 'Mercopar 2026',
         url: returnUrl
@@ -256,7 +274,12 @@ export async function executeBase44Return(payload: Base44LeadPayload) {
           produtoNome: resolvedProdFullName,
           premio: normalizedPayload.premio,
           desconto: normalizedPayload.desconto,
+          descontoGanho: normalizedPayload.desconto,
           brinde: normalizedPayload.brinde,
+          brindeGanho: normalizedPayload.brinde,
+          brindeFisico: normalizedPayload.brinde,
+          premioBrinde: normalizedPayload.brinde,
+          item: normalizedPayload.brinde,
           voucher: normalizedPayload.voucher,
           evento: normalizedPayload.evento || 'Mercopar 2026'
         })

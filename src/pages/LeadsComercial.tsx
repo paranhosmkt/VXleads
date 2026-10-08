@@ -1873,7 +1873,7 @@ export default function LeadsComercial() {
                   </div>
                   <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
                     <strong className="text-amber-400 block mb-0.5">2º Sorteio: Brinde Físico Oficial</strong>
-                    <span>O participante gira uma 2ª vez para ganhar: <strong>Abridor de garrafa</strong>, <strong>Caneta</strong> ou <strong>Eco copo</strong>.</span>
+                    <span>O participante gira uma 2ª vez para ganhar: <strong>Abridor de garrafa</strong>, <strong>Caneta</strong>, <strong>Eco copo</strong> ou <strong>Bloco de anotações</strong>.</span>
                   </div>
                 </div>
                 <p className="text-[11px] text-emerald-400 font-semibold pt-1">
@@ -1925,7 +1925,7 @@ export default function LeadsComercial() {
                             🏷️ {isTdm ? 'Descontos: 10% a 40%' : 'Descontos: 3,5% • 5,0% • 6,5%'}
                           </span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                            🎁 Abridor, Caneta ou Copo
+                            🎁 Abridor, Caneta, Eco copo ou Bloco de anotações
                           </span>
                         </div>
                       </div>

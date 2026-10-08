@@ -22,6 +22,8 @@ export interface ExistingDrawRecord {
   premioGanho: string;
   premioDesconto?: string;
   premioBrinde?: string;
+  desconto?: string;
+  brinde?: string;
   produto?: string;
   produtoId?: string;
   produtoNome?: string;
@@ -74,6 +76,8 @@ function parseLeadRecord(id: string, data: any, participant: ParticipantIdentifi
     premioGanho: premio,
     premioDesconto,
     premioBrinde,
+    desconto: premioDesconto,
+    brinde: premioBrinde,
     produto: produtoNome,
     produtoId,
     produtoNome,
