@@ -6,7 +6,7 @@ import {
   ArrowRight, Award, PackageCheck, Flame
 } from 'lucide-react';
 import { db } from '../lib/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
 import ScratchCard from '../components/ScratchCard';
@@ -378,16 +378,37 @@ export default function RoletaPremioPage() {
   };
 
   const persistConsolidatedResult = async (discountName: string, itemName: string, voucher: string) => {
-    const cleanDocId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : `sub_${Date.now()}`;
+    const rawCleanId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : `sub_${Date.now()}`;
+    const targetEvent = participant.evento || CURRENT_EVENT.name;
+    const eventSlug = targetEvent.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // Check if an existing doc with rawCleanId belongs to a DIFFERENT event (e.g. Grob Experience)
+    // If so, preserve it and save this new draw under an event-scoped ID
+    let finalDocId = rawCleanId;
+    if (participant.crachaId && participant.crachaId !== 'CR-0000') {
+      try {
+        const existingSnap = await getDoc(doc(db, 'event_leads', rawCleanId));
+        if (existingSnap.exists()) {
+          const exData = existingSnap.data();
+          const exEvent = resolveEventName(exData.evento, false);
+          if (exEvent.toLowerCase() !== targetEvent.toLowerCase()) {
+            finalDocId = `${rawCleanId}_${eventSlug}`;
+          }
+        }
+      } catch (checkErr) {
+        // ignore
+      }
+    }
+
     const prodName = selectedProduct ? selectedProduct.name : 'Geral';
     const prodFullName = selectedProduct ? selectedProduct.fullName : 'Soluções Gerais';
     const combinedPrize = `${discountName} + ${itemName}`;
 
     const record = {
-      id: cleanDocId,
+      id: finalDocId,
       dataHora: new Date().toLocaleString('pt-BR'),
-      evento: participant.evento || CURRENT_EVENT.name,
-      nomeEvento: participant.evento || CURRENT_EVENT.name,
+      evento: targetEvent,
+      nomeEvento: targetEvent,
       nome: participant.nome,
       email: participant.email,
       whatsapp: participant.whatsapp,
@@ -426,7 +447,7 @@ export default function RoletaPremioPage() {
 
     // 1. Firebase Firestore Real-Time Cloud Storage
     try {
-      await setDoc(doc(db, 'event_leads', cleanDocId), {
+      await setDoc(doc(db, 'event_leads', finalDocId), {
         ...record,
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp()
@@ -744,14 +765,14 @@ export default function RoletaPremioPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-3 text-red-400 font-black text-base sm:text-lg">
                     <AlertTriangle size={24} className="shrink-0 text-red-400" />
-                    <span>Sorteio já efetuado.</span>
+                    <span>Sorteio já efetuado neste evento.</span>
                   </div>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    {existingDraw?.evento || 'Mercopar 2026'}
+                    {existingDraw?.evento || participant.evento || 'Mercopar 2026'}
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
-                  Identificamos que o participante <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono font-bold text-blue-300">{participant.crachaId}</span>) já realizou o seu sorteio. <strong>Regra Oficial do Evento:</strong> cada participante tem direito a concorrer a <strong>apenas 1 produto</strong> durante o evento.
+                  Identificamos que o participante <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono font-bold text-blue-300">{participant.crachaId}</span>) já realizou o sorteio no evento <strong className="text-emerald-400">{existingDraw?.evento || participant.evento || 'Mercopar 2026'}</strong>. <strong>Regra Oficial do Evento:</strong> cada participante pode concorrer a 1 sorteio por evento (participações em eventos anteriores não impedem novos sorteios neste evento, mas não é permitido participar 2 vezes no mesmo evento).
                 </p>
 
                 {existingDraw && (

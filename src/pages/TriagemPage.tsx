@@ -8,7 +8,7 @@ import {
 import ScratchCard from '../components/ScratchCard';
 import SlotMachine from '../components/SlotMachine';
 import { db } from '../lib/firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { buildBase44ReturnUrl, executeBase44Return } from '../lib/base44';
 import { checkUserDrawStatus, ExistingDrawRecord } from '../lib/leadVerification';
 import { extractProductFromUrl, PRODUCTS_CONFIG, ProductConfig } from '../data/productConfig';
@@ -272,15 +272,35 @@ export default function TriagemPage() {
 
   // Persist result upon completion of both draws
   const persistConsolidatedDrawResult = async (discount: DiscountPrize, item: PhysicalItemPrize, code: string) => {
+    const rawCleanId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : `sub_${Date.now()}`;
+    const targetEvent = participant.evento || CURRENT_EVENT.name;
+    const eventSlug = targetEvent.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    let finalDocId = rawCleanId;
+    if (participant.crachaId && participant.crachaId !== 'CR-0000') {
+      try {
+        const existingSnap = await getDoc(doc(db, 'event_leads', rawCleanId));
+        if (existingSnap.exists()) {
+          const exData = existingSnap.data();
+          const exEvent = resolveEventName(exData.evento, false);
+          if (exEvent.toLowerCase() !== targetEvent.toLowerCase()) {
+            finalDocId = `${rawCleanId}_${eventSlug}`;
+          }
+        }
+      } catch (checkErr) {
+        // ignore
+      }
+    }
+
     const prodName = detectedProduct ? detectedProduct.name : 'Geral';
     const prodFullName = detectedProduct ? detectedProduct.fullName : 'Geral';
     const combinedPrize = `${discount.name} + ${item.name}`;
 
     const record = {
-      id: 'sub_' + Date.now(),
+      id: finalDocId,
       dataHora: new Date().toLocaleString('pt-BR'),
-      evento: participant.evento || CURRENT_EVENT.name,
-      nomeEvento: participant.evento || CURRENT_EVENT.name,
+      evento: targetEvent,
+      nomeEvento: targetEvent,
       nome: participant.nome,
       email: participant.email,
       whatsapp: participant.whatsapp,
@@ -309,11 +329,10 @@ export default function TriagemPage() {
     };
 
     // 1. Cloud Firestore Database
-    const cleanDocId = participant.crachaId ? participant.crachaId.trim().replace(/[^a-zA-Z0-9_-]/g, '_') : record.id;
     try {
-      await setDoc(doc(db, 'event_leads', cleanDocId), {
+      await setDoc(doc(db, 'event_leads', finalDocId), {
         ...record,
-        leadId: participant.crachaId || cleanDocId,
+        leadId: participant.crachaId || finalDocId,
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp()
       }, { merge: true });
@@ -707,7 +726,7 @@ export default function TriagemPage() {
                 </div>
 
                 <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                  Identificamos que o participante <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono text-blue-300 font-bold">{participant.crachaId}</span>) já realizou o sorteio. <strong>Regra Oficial:</strong> cada participante tem direito a concorrer a <strong>apenas 1 produto</strong> durante o evento.
+                  Identificamos que o participante <strong className="text-white font-bold">{participant.nome}</strong> (Crachá: <span className="font-mono text-blue-300 font-bold">{participant.crachaId}</span>) já realizou o sorteio no evento <strong className="text-emerald-400">{existingDraw?.evento || participant.evento || 'Mercopar 2026'}</strong>. <strong>Regra Oficial do Evento:</strong> cada participante pode concorrer a 1 sorteio por evento (participações em eventos anteriores não impedem novos sorteios neste evento, mas não é permitido participar 2 vezes no mesmo evento).
                 </p>
 
                 {existingDraw && (

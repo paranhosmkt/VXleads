@@ -1,6 +1,6 @@
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
-import { resolveEventName } from '../data/eventConfig';
+import { resolveEventName, CURRENT_EVENT } from '../data/eventConfig';
 import { getProductBySlugOrParam } from '../data/productConfig';
 
 export interface ParticipantIdentifiers {
@@ -9,6 +9,7 @@ export interface ParticipantIdentifiers {
   whatsapp?: string;
   nome?: string;
   empresa?: string;
+  evento?: string;
 }
 
 export interface ExistingDrawRecord {
@@ -92,12 +93,33 @@ function parseLeadRecord(id: string, data: any, participant: ParticipantIdentifi
 }
 
 /**
- * Checks if a participant has already performed a draw in the event.
- * Each user is strictly allowed to participate in the draw only ONCE.
+ * Checks if a candidate lead record represents a completed draw in the target event.
+ * Each participant can participate once per event.
+ * Participation in a previous event (e.g. Grob Experience) does NOT block participation in the current event (e.g. Mercopar 2026).
+ */
+export function isDrawInSameEvent(data: any, targetEventName: string): boolean {
+  if (!data) return false;
+  const hasPrizeOrVoucher = !!(data.premioGanho || data.premio || data.voucher || data.codigoVoucher || data.voucherCode);
+  if (!hasPrizeOrVoucher) return false;
+
+  // Resolve event of the record (defaults to Grob Experience if unset)
+  const recordEvent = resolveEventName(data.evento || data.nomeEvento, false);
+  const targetResolved = resolveEventName(targetEventName, true);
+
+  return recordEvent.trim().toLowerCase() === targetResolved.trim().toLowerCase();
+}
+
+/**
+ * Checks if a participant has already performed a draw in the SPECIFIC target event.
+ * Participants who took part in a previous event (e.g. Grob Experience) CAN participate again in Mercopar 2026.
+ * They are only blocked if they try to participate 2 times in the SAME event.
  */
 export async function checkUserDrawStatus(
   participant: ParticipantIdentifiers
 ): Promise<CheckDrawResult> {
+  const targetEvent = resolveEventName(participant.evento || CURRENT_EVENT.name, true);
+  const eventSlug = targetEvent.toLowerCase().replace(/[^a-z0-9]/g, '');
+
   const crachaClean = participant.crachaId ? participant.crachaId.trim() : '';
   const emailClean = participant.email ? participant.email.trim().toLowerCase() : '';
   const whatsappClean = participant.whatsapp ? participant.whatsapp.trim().replace(/\D/g, '') : '';
@@ -105,35 +127,34 @@ export async function checkUserDrawStatus(
 
   // 1. Check in Firestore (event_leads collection)
   try {
-    // 1a. Try direct doc lookup by sanitized crachaId if available
+    // 1a. Try direct doc lookup by sanitized crachaId if available (both event-scoped and raw id)
     if (crachaClean && crachaClean !== 'CR-0000' && !crachaClean.startsWith('CR-NEW')) {
       const cleanDocId = crachaClean.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const directSnap = await getDoc(doc(db, 'event_leads', cleanDocId));
-      if (directSnap.exists()) {
-        const data = directSnap.data();
-        const premio = data.premioGanho || data.premio;
-        const voucher = data.voucher || data.codigoVoucher || data.voucherCode;
-        if (premio || voucher) {
-          return {
-            alreadyDrawn: true,
-            source: 'firestore',
-            lead: parseLeadRecord(directSnap.id, data, participant, crachaClean)
-          };
+      const candidateIds = [`${cleanDocId}_${eventSlug}`, cleanDocId];
+
+      for (const idToTry of candidateIds) {
+        const directSnap = await getDoc(doc(db, 'event_leads', idToTry));
+        if (directSnap.exists()) {
+          const data = directSnap.data();
+          if (isDrawInSameEvent(data, targetEvent)) {
+            return {
+              alreadyDrawn: true,
+              source: 'firestore',
+              lead: parseLeadRecord(directSnap.id, data, participant, crachaClean)
+            };
+          }
         }
       }
 
-      // 1b. Query by crachaId field
+      // 1b. Query by crachaId field across docs (check if any document matches this specific event)
       const crachaQuery = query(
         collection(db, 'event_leads'),
         where('crachaId', '==', crachaClean)
       );
       const crachaSnap = await getDocs(crachaQuery);
-      if (!crachaSnap.empty) {
-        const docItem = crachaSnap.docs[0];
+      for (const docItem of crachaSnap.docs) {
         const data = docItem.data();
-        const premio = data.premioGanho || data.premio;
-        const voucher = data.voucher || data.codigoVoucher || data.voucherCode;
-        if (premio || voucher) {
+        if (isDrawInSameEvent(data, targetEvent)) {
           return {
             alreadyDrawn: true,
             source: 'firestore',
@@ -143,19 +164,16 @@ export async function checkUserDrawStatus(
       }
     }
 
-    // 1c. Query by email if provided and valid
+    // 1c. Query by email if provided and valid (check only for current event)
     if (emailClean && emailClean.includes('@')) {
       const emailQuery = query(
         collection(db, 'event_leads'),
         where('email', '==', emailClean)
       );
       const emailSnap = await getDocs(emailQuery);
-      if (!emailSnap.empty) {
-        const docItem = emailSnap.docs[0];
+      for (const docItem of emailSnap.docs) {
         const data = docItem.data();
-        const premio = data.premioGanho || data.premio;
-        const voucher = data.voucher || data.codigoVoucher;
-        if (premio || voucher) {
+        if (isDrawInSameEvent(data, targetEvent)) {
           return {
             alreadyDrawn: true,
             source: 'firestore',
@@ -165,19 +183,16 @@ export async function checkUserDrawStatus(
       }
     }
 
-    // 1d. Query by WhatsApp if provided
+    // 1d. Query by WhatsApp if provided (check only for current event)
     if (whatsappClean && whatsappClean.length >= 8) {
       const waQuery = query(
         collection(db, 'event_leads'),
         where('whatsapp', '==', participant.whatsapp)
       );
       const waSnap = await getDocs(waQuery);
-      if (!waSnap.empty) {
-        const docItem = waSnap.docs[0];
+      for (const docItem of waSnap.docs) {
         const data = docItem.data();
-        const premio = data.premioGanho || data.premio;
-        const voucher = data.voucher || data.codigoVoucher;
-        if (premio || voucher) {
+        if (isDrawInSameEvent(data, targetEvent)) {
           return {
             alreadyDrawn: true,
             source: 'firestore',
@@ -190,13 +205,16 @@ export async function checkUserDrawStatus(
     console.warn('Erro ao verificar status do sorteio no Firestore:', err);
   }
 
-  // 2. Check in LocalStorage fallback
+  // 2. Check in LocalStorage fallback (only block if drawn in the SAME event)
   try {
     const saved = localStorage.getItem('vx_proto_submissions');
     if (saved) {
       const list = JSON.parse(saved);
       if (Array.isArray(list)) {
         const match = list.find((item: any) => {
+          if (!isDrawInSameEvent(item, targetEvent)) {
+            return false;
+          }
           if (crachaClean && crachaClean !== 'CR-0000' && item.crachaId === crachaClean) {
             return true;
           }
@@ -212,7 +230,7 @@ export async function checkUserDrawStatus(
           return false;
         });
 
-        if (match && (match.voucher || match.premioGanho || match.premio)) {
+        if (match) {
           return {
             alreadyDrawn: true,
             source: 'localStorage',

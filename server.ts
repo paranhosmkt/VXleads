@@ -397,14 +397,14 @@ async function startServer() {
     const firestoreLeads = await getAllLeadsFromFirestore();
     const memoryLeads = Object.values(base44Leads);
     
-    // Merge without duplicates
+    // Merge without duplicates, preserving distinct draws across different events
     const map = new Map<string, any>();
     for (const l of firestoreLeads) {
-      const key = l.crachaId || l.id;
+      const key = `${l.crachaId || l.id}_${l.evento || ''}`;
       if (key) map.set(key, l);
     }
     for (const l of memoryLeads) {
-      const key = l.crachaId || l.id;
+      const key = `${l.crachaId || l.id}_${l.evento || ''}`;
       if (key && !map.has(key)) map.set(key, l);
     }
 
