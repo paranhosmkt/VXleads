@@ -585,12 +585,14 @@ export default function TriagemPage() {
       {/* Top Header */}
       <header className="border-b border-slate-700/60 bg-[#17232d] px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-1.5 rounded-lg text-white shadow-md shadow-blue-500/20">
-            <Smartphone size={20} />
-          </div>
-          <div>
-            <span className="font-extrabold text-lg tracking-tight text-white">
-              VX<span className="text-blue-500">Leads</span>
+          <div className="flex items-center gap-2">
+            <img
+              src="https://i.ibb.co/605k0kmf/atrivelo-assinatura-branca-transparente.png"
+              alt="Logo"
+              className="h-7 sm:h-8 w-auto object-contain"
+            />
+            <span className="font-extrabold text-lg tracking-tight text-blue-500">
+              Leads
             </span>
           </div>
 

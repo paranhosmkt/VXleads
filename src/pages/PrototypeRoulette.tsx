@@ -495,11 +495,13 @@ Content-Type: application/json
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <RouterLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="bg-blue-600 p-1.5 rounded-lg text-white">
-              <Target size={20} />
-            </div>
-            <span className="font-extrabold text-lg tracking-tight text-white">
-              VX<span className="text-blue-500">Leads</span>
+            <img
+              src="https://i.ibb.co/605k0kmf/atrivelo-assinatura-branca-transparente.png"
+              alt="Logo"
+              className="h-7 sm:h-8 w-auto object-contain"
+            />
+            <span className="font-extrabold text-lg tracking-tight text-blue-500">
+              Leads
             </span>
           </RouterLink>
           <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">

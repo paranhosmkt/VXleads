@@ -157,12 +157,14 @@ export default function Landing() {
     <div className="min-h-screen bg-white">
       {/* Cabeçalho */}
       <header className="flex items-center justify-between px-6 py-5 border-b border-gray-100 max-w-7xl mx-auto w-full">
-        <div className="flex items-center gap-3 cursor-pointer">
-          <div className="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-md shadow-blue-600/20">
-            <Target size={22} strokeWidth={2.5} />
-          </div>
-          <div className="text-2xl font-black text-gray-900 tracking-tighter">
-            VX<span className="text-blue-600">Leads</span>
+        <div className="flex items-center gap-2.5 cursor-pointer">
+          <img
+            src="https://i.ibb.co/zWjfM5fx/atrivelo-assinatura-grafite-transparente.png"
+            alt="Logo"
+            className="h-8 md:h-9 w-auto object-contain"
+          />
+          <div className="text-2xl font-black text-blue-600 tracking-tighter">
+            Leads
           </div>
         </div>
         <div className="flex items-center gap-4">
