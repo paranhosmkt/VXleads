@@ -8,7 +8,7 @@ export interface DiscountPrize {
 
 export interface PhysicalItemPrize {
   id: string;
-  key: 'abridor' | 'caneta' | 'ecocopo' | 'bloco';
+  key: 'abridor' | 'ecocopo' | 'caneta_bloco' | 'caneta' | 'bloco';
   name: string;
   shortName: string;
   color: string;
@@ -117,7 +117,7 @@ export function getDiscountPercentagesText(productIdOrKey?: string | null): stri
 }
 
 /**
- * 2º Sorteio: Itens físicos (Abridor de garrafa, caneta, eco copo e bloco de anotações)
+ * 2º Sorteio: Itens físicos (Abridor de garrafa, Eco copo, Caneta e Bloco de notas unificados)
  */
 export const PHYSICAL_ITEM_PRIZES: PhysicalItemPrize[] = [
   {
@@ -130,15 +130,6 @@ export const PHYSICAL_ITEM_PRIZES: PhysicalItemPrize[] = [
     description: 'Abridor de garrafa metálico personalizado'
   },
   {
-    id: 'item-caneta',
-    key: 'caneta',
-    name: 'Caneta',
-    shortName: 'Caneta',
-    color: '#8B5CF6',
-    icon: '🖊️',
-    description: 'Caneta executiva exclusiva do estande'
-  },
-  {
     id: 'item-ecocopo',
     key: 'ecocopo',
     name: 'Eco copo',
@@ -148,18 +139,18 @@ export const PHYSICAL_ITEM_PRIZES: PhysicalItemPrize[] = [
     description: 'Eco copo sustentável colecionável'
   },
   {
-    id: 'item-bloco',
-    key: 'bloco',
-    name: 'Bloco de anotações',
-    shortName: 'Bloco de Notas',
-    color: '#3B82F6',
+    id: 'item-caneta-bloco',
+    key: 'caneta_bloco',
+    name: 'Caneta e Bloco de notas',
+    shortName: 'Caneta + Bloco',
+    color: '#8B5CF6',
     icon: '📝',
-    description: 'Bloco de anotações oficial personalizado'
+    description: 'Kit oficial exclusivo com caneta executiva e bloco de anotações'
   }
 ];
 
 /**
- * Fatias da roleta do 2º sorteio (8 fatias balanceadas de 45° alternando os 4 itens oficiais)
+ * Fatias da roleta do 2º sorteio (6 fatias balanceadas de 60° alternando os 3 itens oficiais)
  */
 export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
   {
@@ -172,15 +163,6 @@ export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
     icon: '🍾'
   },
   {
-    id: 'slice-caneta-1',
-    prizeKey: 'caneta',
-    name: 'Caneta',
-    topText: 'CANETA',
-    bottomText: 'OFICIAL',
-    color: '#8B5CF6',
-    icon: '🖊️'
-  },
-  {
     id: 'slice-ecocopo-1',
     prizeKey: 'ecocopo',
     name: 'Eco copo',
@@ -190,12 +172,12 @@ export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
     icon: '🥤'
   },
   {
-    id: 'slice-bloco-1',
-    prizeKey: 'bloco',
-    name: 'Bloco de anotações',
-    topText: 'BLOCO DE',
-    bottomText: 'ANOTAÇÕES',
-    color: '#3B82F6',
+    id: 'slice-caneta-bloco-1',
+    prizeKey: 'caneta_bloco',
+    name: 'Caneta e Bloco de notas',
+    topText: 'CANETA +',
+    bottomText: 'BLOCO DE NOTAS',
+    color: '#8B5CF6',
     icon: '📝'
   },
   {
@@ -208,15 +190,6 @@ export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
     icon: '🍾'
   },
   {
-    id: 'slice-caneta-2',
-    prizeKey: 'caneta',
-    name: 'Caneta',
-    topText: 'CANETA',
-    bottomText: 'OFICIAL',
-    color: '#EC4899',
-    icon: '🖊️'
-  },
-  {
     id: 'slice-ecocopo-2',
     prizeKey: 'ecocopo',
     name: 'Eco copo',
@@ -226,12 +199,12 @@ export const ITEM_ROULETTE_SLICES: RouletteSlice[] = [
     icon: '🥤'
   },
   {
-    id: 'slice-bloco-2',
-    prizeKey: 'bloco',
-    name: 'Bloco de anotações',
-    topText: 'BLOCO DE',
-    bottomText: 'ANOTAÇÕES',
-    color: '#2563EB',
+    id: 'slice-caneta-bloco-2',
+    prizeKey: 'caneta_bloco',
+    name: 'Caneta e Bloco de notas',
+    topText: 'CANETA +',
+    bottomText: 'BLOCO DE NOTAS',
+    color: '#3B82F6',
     icon: '📝'
   }
 ];
@@ -255,11 +228,14 @@ export function getPrizeSliceDisplay(name: string): { top: string; bottom: strin
   if (/abridor/i.test(name)) {
     return { top: 'ABRIDOR DE', bottom: 'GARRAFA' };
   }
-  if (/caneta/i.test(name)) {
-    return { top: 'CANETA', bottom: 'OFICIAL' };
-  }
   if (/copo/i.test(name)) {
     return { top: 'ECO', bottom: 'COPO' };
+  }
+  if ((/caneta/i.test(name) && (/bloco/i.test(name) || /nota/i.test(name))) || /caneta.*bloco/i.test(name)) {
+    return { top: 'CANETA +', bottom: 'BLOCO DE NOTAS' };
+  }
+  if (/caneta/i.test(name)) {
+    return { top: 'CANETA', bottom: 'OFICIAL' };
   }
   if (/bloco/i.test(name) || /anota/i.test(name)) {
     return { top: 'BLOCO DE', bottom: 'ANOTAÇÕES' };

@@ -652,7 +652,7 @@ export default function RoletaPremioPage() {
                 <div className="min-w-0">
                   <div className="font-bold text-white truncate text-xs">2º Sorteio: Brinde Físico</div>
                   <div className="text-[11px] text-slate-300 truncate">
-                    {wonItem ? wonItem.name : 'Abridor, Caneta, Eco copo ou Bloco de anotações'}
+                    {wonItem ? wonItem.name : 'Abridor de garrafa, Eco copo ou Caneta e Bloco de notas'}
                   </div>
                 </div>
               </div>
@@ -706,7 +706,7 @@ export default function RoletaPremioPage() {
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">2º Sorteio: Brinde</span>
                     <span className="font-extrabold text-amber-300">
-                      Abridor, Caneta, Eco copo ou Bloco de anotações
+                      Abridor de garrafa, Eco copo ou Caneta e Bloco de notas
                     </span>
                   </div>
                 </div>
@@ -1072,7 +1072,7 @@ export default function RoletaPremioPage() {
                   <span>Agora é hora do seu 2º Sorteio: Brinde Físico!</span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
-                  Você tem direito a girar a roleta ou raspar mais uma vez para levar um brinde físico oficial do nosso estande: <strong>Abridor de garrafa</strong>, <strong>Caneta</strong>, <strong>Eco copo</strong> ou <strong>Bloco de anotações</strong>!
+                  Você tem direito a girar a roleta ou raspar mais uma vez para levar um brinde físico oficial do nosso estande: <strong>Abridor de garrafa</strong>, <strong>Eco copo</strong> ou <strong>Caneta e Bloco de notas</strong>!
                 </p>
               </div>
 
@@ -1110,7 +1110,7 @@ export default function RoletaPremioPage() {
                     Gire para seu Brinde Físico!
                   </h3>
                   <p className="text-slate-300 text-sm mb-5 leading-relaxed">
-                    Descubra qual item exclusivo você vai retirar no nosso estande: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Caneta</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Bloco de anotações</strong>!
+                    Descubra qual item exclusivo você vai retirar no nosso estande: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Caneta e Bloco de notas</strong>!
                   </p>
 
                   {/* ROULETTE SVG DISK FOR PHYSICAL ITEMS (6 Slices) */}
@@ -1223,7 +1223,7 @@ export default function RoletaPremioPage() {
                     Raspe seu Brinde Físico!
                   </h3>
                   <p className="text-slate-300 text-sm mb-4 leading-relaxed">
-                    Passe o dedo ou mouse sobre a raspadinha para revelar qual brinde oficial você vai levar: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Caneta</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Bloco de anotações</strong>!
+                    Passe o dedo ou mouse sobre a raspadinha para revelar qual brinde oficial você vai levar: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Caneta e Bloco de notas</strong>!
                   </p>
 
                   <div className="flex justify-center my-6">

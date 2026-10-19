@@ -695,7 +695,7 @@ export default function TriagemPage() {
                 <div className="min-w-0">
                   <div className="font-bold text-white truncate text-xs">2º Sorteio: Brinde Físico</div>
                   <div className="text-[11px] text-slate-300 truncate">
-                    {currentStep === 'voucher_final' ? wonItem.name : 'Abridor, Caneta, Eco copo ou Bloco de anotações'}
+                    {currentStep === 'voucher_final' ? wonItem.name : 'Abridor de garrafa, Eco copo ou Caneta e Bloco de notas'}
                   </div>
                 </div>
               </div>
@@ -1100,7 +1100,7 @@ export default function TriagemPage() {
                 Gire para seu Brinde Físico!
               </h3>
               <p className="text-slate-300 text-sm leading-relaxed">
-                Descubra qual item oficial você vai levar: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Caneta</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Bloco de anotações</strong>!
+                Descubra qual item oficial você vai levar: <strong className="text-white">Abridor de garrafa</strong>, <strong className="text-white">Eco copo</strong> ou <strong className="text-white">Caneta e Bloco de notas</strong>!
               </p>
 
               {/* ROULETTE SVG DISK FOR BRINDES (6 Slices) */}
