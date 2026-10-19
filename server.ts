@@ -468,6 +468,46 @@ async function startServer() {
   app.get(["/api/leads/:leadId", "/api/lead/:leadId", "/api/integracao/base44/:leadId", "/api/integration/base44/:leadId", "/api/base44/:leadId"], handleBase44Get);
   app.delete(["/api/leads/:leadId", "/api/lead/:leadId", "/api/integracao/base44/:leadId", "/api/integration/base44/:leadId", "/api/base44/:leadId", "/api/leads"], handleBase44Delete);
 
+  // Controle Sequencial Oficial dos Brindes (Abridor -> Eco Copo -> Caneta e Bloco -> Abridor...)
+  let giftSequenceIndex = 0;
+  const SERVER_GIFT_ITEMS = [
+    { id: 'item-abridor', key: 'abridor', name: 'Abridor de garrafa', shortName: 'Abridor', color: '#F59E0B', icon: '🍾' },
+    { id: 'item-ecocopo', key: 'ecocopo', name: 'Eco copo', shortName: 'Eco Copo', color: '#10B981', icon: '🥤' },
+    { id: 'item-caneta-bloco', key: 'caneta_bloco', name: 'Caneta e Bloco de notas', shortName: 'Caneta + Bloco', color: '#8B5CF6', icon: '📝' }
+  ];
+
+  app.get("/api/gift-sequence", (_req, res) => {
+    const idx = giftSequenceIndex % SERVER_GIFT_ITEMS.length;
+    res.json({
+      currentIndex: idx,
+      gift: SERVER_GIFT_ITEMS[idx],
+      sequence: SERVER_GIFT_ITEMS.map((g, i) => ({ ...g, isNext: i === idx }))
+    });
+  });
+
+  app.post("/api/gift-sequence/advance", (_req, res) => {
+    const awarded = giftSequenceIndex % SERVER_GIFT_ITEMS.length;
+    const awardedGift = SERVER_GIFT_ITEMS[awarded];
+    giftSequenceIndex = (giftSequenceIndex + 1) % SERVER_GIFT_ITEMS.length;
+    const nextGift = SERVER_GIFT_ITEMS[giftSequenceIndex];
+    res.json({
+      success: true,
+      awardedIndex: awarded,
+      awardedGift,
+      currentIndex: giftSequenceIndex,
+      nextGift
+    });
+  });
+
+  app.post("/api/gift-sequence/reset", (_req, res) => {
+    giftSequenceIndex = 0;
+    res.json({
+      success: true,
+      currentIndex: 0,
+      currentGift: SERVER_GIFT_ITEMS[0]
+    });
+  });
+
   // API routes FIRST
   app.post("/api/chat", async (req, res) => {
     try {

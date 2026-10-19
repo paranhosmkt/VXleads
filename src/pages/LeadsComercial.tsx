@@ -1872,8 +1872,8 @@ export default function LeadsComercial() {
                     </span>
                   </div>
                   <div className="bg-[#17232d] p-2.5 rounded-xl border border-slate-700/60">
-                    <strong className="text-amber-400 block mb-0.5">2º Sorteio: Brinde Físico Oficial</strong>
-                    <span>O participante gira uma 2ª vez para ganhar: <strong>Abridor de garrafa</strong>, <strong>Eco copo</strong> ou <strong>Caneta e Bloco de notas</strong>.</span>
+                    <strong className="text-amber-400 block mb-0.5">2º Sorteio: Sequência Oficial de Brindes (1 de cada vez)</strong>
+                    <span>Ordem contínua: <strong>1º Abridor de garrafa</strong> ➔ <strong>2º Eco copo</strong> ➔ <strong>3º Caneta e Bloco de notas</strong> (acerto de um por vez).</span>
                   </div>
                 </div>
                 <p className="text-[11px] text-emerald-400 font-semibold pt-1">

@@ -27,8 +27,11 @@ import {
   getUniqueDiscountsForProduct,
   getDiscountRangeLabel,
   getDiscountPercentagesText,
-  getPrizeSliceDisplay 
+  getPrizeSliceDisplay,
+  getRandomItemSlice,
+  getRandomPhysicalItem
 } from '../data/prizesConfig';
+import { getCurrentSequentialGift, advanceGiftSequence } from '../lib/giftSequence';
 
 function triggerConfetti() {
   const canvas = document.createElement('canvas');
@@ -245,9 +248,14 @@ export default function RoletaPremioPage() {
     return list[Math.floor(Math.random() * list.length)] || list[0];
   });
 
-  const [scratchItemPrize, setScratchItemPrize] = useState<PhysicalItemPrize>(() => {
-    return PHYSICAL_ITEM_PRIZES[Math.floor(Math.random() * PHYSICAL_ITEM_PRIZES.length)] || PHYSICAL_ITEM_PRIZES[0];
-  });
+  const [scratchItemPrize, setScratchItemPrize] = useState<PhysicalItemPrize>(PHYSICAL_ITEM_PRIZES[0]);
+
+  // Sincroniza o brinde da raspadinha com a sequência oficial (Abridor -> Eco copo -> Caneta e Bloco)
+  useEffect(() => {
+    getCurrentSequentialGift().then(seq => {
+      setScratchItemPrize(seq.gift);
+    }).catch(() => {});
+  }, [drawPhase]);
 
   // Keep scratch discount prize in sync if product changes
   useEffect(() => {
@@ -265,12 +273,15 @@ export default function RoletaPremioPage() {
     setDrawPhase('draw1_completed');
   };
 
-  // 2º Sorteio: Raspadinha de Brinde Físico
+  // 2º Sorteio: Raspadinha de Brinde Físico Sequencial
   const handleScratchItemComplete = () => {
     if (drawPhase !== 'draw2_spin' || isSpinning) return;
     playWinSound();
     triggerConfetti();
     setWonItem(scratchItemPrize);
+
+    // Avança para o próximo brinde na sequência oficial (1 de cada vez)
+    advanceGiftSequence().catch(() => {});
 
     const code = `VX-${Math.floor(10000 + Math.random() * 90000)}`;
     setVoucherCode(code);
@@ -325,10 +336,13 @@ export default function RoletaPremioPage() {
   const handleProceedToDraw2 = () => {
     setDrawPhase('draw2_spin');
     setRotation(0); // Reset wheel rotation for fresh second spin
+    getCurrentSequentialGift().then(seq => {
+      setScratchItemPrize(seq.gift);
+    }).catch(() => {});
   };
 
-  // 2º Sorteio: Gira para itens físicos (Abridor de garrafa, caneta e eco copo)
-  const handleSpinItemWheel = () => {
+  // 2º Sorteio: Gira para itens físicos na sequência oficial (1º Abridor -> 2º Eco copo -> 3º Caneta e Bloco de notas)
+  const handleSpinItemWheel = async () => {
     if (isSpinning) return;
     if (hasAlreadyDrawn) {
       setStatusMessage('Sorteio já efetuado.');
@@ -336,9 +350,11 @@ export default function RoletaPremioPage() {
     }
     setIsSpinning(true);
 
-    const randomIndex = Math.floor(Math.random() * ITEM_ROULETTE_SLICES.length);
-    const chosenSlice = ITEM_ROULETTE_SLICES[randomIndex];
-    const physicalItem = PHYSICAL_ITEM_PRIZES.find(item => item.key === chosenSlice.prizeKey) || PHYSICAL_ITEM_PRIZES[0];
+    // Obtém o brinde da vez na sequência oficial (1 de cada vez)
+    const seq = await getCurrentSequentialGift();
+    const chosenSlice = seq.slice;
+    const randomIndex = seq.sliceIndex;
+    const physicalItem = seq.gift;
 
     const segmentAngle = 360 / ITEM_ROULETTE_SLICES.length;
     const targetAngle = 360 - (randomIndex * segmentAngle + segmentAngle / 2);
@@ -364,6 +380,9 @@ export default function RoletaPremioPage() {
       setIsSpinning(false);
       playWinSound();
       setWonItem(physicalItem);
+
+      // Avança para o próximo brinde na sequência oficial para o próximo sorteio
+      advanceGiftSequence().catch(() => {});
 
       // Generate consolidated voucher
       const code = `VX-${Math.floor(10000 + Math.random() * 90000)}`;

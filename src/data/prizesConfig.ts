@@ -252,3 +252,36 @@ export function getPrizeSliceDisplay(name: string): { top: string; bottom: strin
 
   return { top: name, bottom: '' };
 }
+
+/**
+ * Retorna um índice uniformemente aleatório com alta entropia (usando crypto.getRandomValues quando disponível)
+ */
+export function getCryptoRandomIndex(length: number): number {
+  if (length <= 0) return 0;
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    return array[0] % length;
+  }
+  return Math.floor(Math.random() * length);
+}
+
+/**
+ * Sorteia aleatoriamente um brinde físico entre os 3 itens oficiais disponíveis:
+ * 1. Abridor de garrafa (33,33%)
+ * 2. Eco copo (33,33%)
+ * 3. Caneta e Bloco de notas (33,33%)
+ * Garantindo aleatoriedade real em cada sorteio individual.
+ */
+export function getRandomPhysicalItem(): PhysicalItemPrize {
+  const index = getCryptoRandomIndex(PHYSICAL_ITEM_PRIZES.length);
+  return PHYSICAL_ITEM_PRIZES[index] || PHYSICAL_ITEM_PRIZES[0];
+}
+
+/**
+ * Retorna uma fatia aleatória da roleta de itens físicos (6 fatias balanceadas, 2 para cada brinde)
+ */
+export function getRandomItemSlice(): { slice: RouletteSlice; index: number } {
+  const index = getCryptoRandomIndex(ITEM_ROULETTE_SLICES.length);
+  return { slice: ITEM_ROULETTE_SLICES[index], index };
+}

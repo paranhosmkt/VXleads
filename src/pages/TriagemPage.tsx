@@ -27,8 +27,11 @@ import {
   getUniqueDiscountsForProduct,
   getDiscountRangeLabel,
   getDiscountPercentagesText,
-  getPrizeSliceDisplay 
+  getPrizeSliceDisplay,
+  getRandomItemSlice,
+  getRandomPhysicalItem
 } from '../data/prizesConfig';
+import { getCurrentSequentialGift, advanceGiftSequence } from '../lib/giftSequence';
 
 // Audio click and fanfare effect using Web Audio API
 function playTickSound() {
@@ -484,14 +487,16 @@ export default function TriagemPage() {
     }, 1200);
   };
 
-  // Handler: Spin 2nd Draw Wheel (Brindes Físicos: Abridor, Caneta, Eco Copo)
-  const handleSpinItemWheel = () => {
+  // Handler: Spin 2nd Draw Wheel (Brindes Físicos Sequenciais: 1º Abridor -> 2º Eco Copo -> 3º Caneta e Bloco)
+  const handleSpinItemWheel = async () => {
     if (isSpinningItemWheel) return;
     setIsSpinningItemWheel(true);
 
-    const randomIndex = Math.floor(Math.random() * ITEM_ROULETTE_SLICES.length);
-    const chosenSlice = ITEM_ROULETTE_SLICES[randomIndex];
-    const physicalItem = PHYSICAL_ITEM_PRIZES.find(it => it.key === chosenSlice.prizeKey) || PHYSICAL_ITEM_PRIZES[0];
+    // Obtém o brinde da vez na sequência oficial (1 de cada vez)
+    const seq = await getCurrentSequentialGift();
+    const chosenSlice = seq.slice;
+    const randomIndex = seq.sliceIndex;
+    const physicalItem = seq.gift;
 
     const segmentAngle = 360 / ITEM_ROULETTE_SLICES.length;
     const targetAngle = 360 - (randomIndex * segmentAngle + segmentAngle / 2);
@@ -517,6 +522,9 @@ export default function TriagemPage() {
       playWinSound();
       triggerConfetti();
       setWonItem(physicalItem);
+
+      // Avança a sequência para o próximo brinde físico oficial
+      advanceGiftSequence().catch(() => {});
 
       const code = voucherCode || `VX-${Math.floor(10000 + Math.random() * 90000)}`;
       setVoucherCode(code);
